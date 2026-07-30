@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>SnapClaim · 使用场景流程</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Emblema+One&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg-mint: #d8f0e0;
+    --bg-mint-2: #c2e8cd;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --border-soft: #f1f5f9;
+    --fg: #0f172a;
+    --fg-muted: #64748b;
+    --fg-soft: #94a3b8;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --warn: #f59e0b;
+    --danger: #dc2626;
+    --danger-light: #fee2e2;
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --dur-base: 280ms;
+  }
+  body {
+    background: #0f172a;
+    color: var(--fg);
+    font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+  }
+  .font-title { font-family: "Emblema One", "Noto Sans SC", sans-serif; }
+
+  .stage {
+    min-height: 100vh;
+    padding: 32px 24px 64px;
+    background:
+      radial-gradient(circle at 20% 0%, rgba(16,185,129,0.10), transparent 50%),
+      radial-gradient(circle at 80% 100%, rgba(14,165,233,0.06), transparent 50%),
+      #0f172a;
+  }
+
+  .header {
+    color: #fff; text-align: center; margin-bottom: 40px;
+  }
+  .header h1 {
+    font-family: "Emblema One", sans-serif; font-size: 36px; font-weight: 400;
+    margin: 0; letter-spacing: -0.01em;
+  }
+  .header p { color: #94a3b8; font-size: 13px; margin-top: 6px; }
+
+  /* ===== 流程图主网格 ===== */
+  .flow-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    max-width: 1800px; margin: 0 auto;
+  }
+  @media (max-width: 1400px) {
+    .flow-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 900px) {
+    .flow-grid { grid-template-columns: 1fr; }
+  }
+
+  .step {
+    display: flex; flex-direction: column;
+  }
+  .step-label {
+    color: #fff; padding: 0 8px 8px;
+  }
+  .step-num {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff; font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 999px;
+    margin-bottom: 6px;
+  }
+  .step-num .num { color: var(--accent); }
+  .step-title { font-size: 15px; font-weight: 600; color: #fff; }
+  .step-desc { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+  /* ===== 手机框 ===== */
+  .phone {
+    background: var(--bg-mint);
+    border-radius: 28px; overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 50px -10px rgba(0,0,0,0.5);
+    height: 720px;
+    display: flex; flex-direction: column;
+  }
+  .phone-status {
+    background: var(--bg-mint);
+    padding: 12px 22px 8px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; font-weight: 600;
+  }
+  .phone-body {
+    flex: 1; overflow-y: auto;
+    background: var(--bg-mint);
+    padding: 0 16px 16px;
+  }
+  .phone-body::-webkit-scrollbar { width: 3px; }
+  .phone-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 2px; }
+
+  .hero-title {
+    font-family: "Emblema One", sans-serif;
+    font-size: 28px; line-height: 1; color: var(--fg);
+    letter-spacing: -0.01em;
+  }
+  .hero-sub { font-size: 11px; color: var(--fg-muted); margin-top: 4px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+  }
+  .rec-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+  }
+  .rec-icon {
+    width: 30px; height: 30px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 500;
+    border: 1px solid; line-height: 1.4;
+  }
+  .badge-train  { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+  .badge-flight { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+  .badge-hotel  { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+  .badge-car    { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+  .badge-new    { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+  .badge-warn   { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+  .badge-del    { background: var(--danger-light); color: var(--danger); border-color: #fca5a5; text-decoration: line-through; }
+
+  .pill-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 500;
+    border: 1px solid; cursor: pointer; background: var(--card);
+  }
+  .pill-btn.scan { background: #ecfdf5; color: #065f46; border-color: #6ee7b7; }
+  .pill-btn.cam  { background: #eff6ff; color: #1e40af; border-color: #93c5fd; }
+  .pill-btn.add  { background: #f8fafc; color: #475569; border-color: #cbd5e1; }
+
+  .badge-hint {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 6px;
+    font-size: 10px; font-weight: 600;
+    background: rgba(16,185,129,0.15); color: #10b981;
+    border: 1px solid rgba(16,185,129,0.3);
+  }
+  .badge-hint.warn  { background: rgba(245,158,11,0.15); color: var(--warn); border-color: rgba(245,158,11,0.3); }
+  .badge-hint.danger{ background: rgba(220,38,38,0.15); color: var(--danger); border-color: rgba(220,38,38,0.3); }
+
+  .row-highlight {
+    box-shadow: 0 0 0 2px var(--accent), 0 0 0 4px rgba(16,185,129,0.2);
+  }
+  .row-warning {
+    box-shadow: 0 0 0 2px var(--warn), 0 0 0 4px rgba(245,158,11,0.2);
+  }
+  .row-danger {
+    box-shadow: 0 0 0 2px var(--danger), 0 0 0 4px rgba(220,38,38,0.2);
+  }
+
+  .toast {
+    position: absolute; left: 12px; right: 12px; bottom: 12px;
+    background: var(--fg); color: #fff; border-radius: 8px;
+    padding: 8px 12px; font-size: 11px; font-weight: 500;
+    display: flex; align-items: center; gap: 6px;
+    box-shadow: 0 8px 20px -4px rgba(0,0,0,0.4);
+    z-index: 10;
+  }
+  .toast.warn { background: var(--warn); }
+  .toast.danger { background: var(--danger); }
+  .toast button { color: inherit; opacity: 0.8; font-size: 10px; text-decoration: underline; }
+
+  .row-enter { animation: row-enter var(--dur-base) var(--ease-out-expo) both; }
+  .row-del { animation: row-del 0.3s var(--ease-out-expo) forwards; }
+  @keyframes row-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes row-del {
+    to { opacity: 0.4; transform: translateX(20px) scale(0.95); }
+  }
+
+  /* FAB */
+  .fab {
+    position: absolute; right: 14px; bottom: 14px;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(145deg, var(--accent), var(--accent-light));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    border: none; cursor: pointer;
+    box-shadow: 0 8px 20px -4px rgba(16,185,129,0.5);
+  }
+  .fab:active { transform: scale(0.92); }
+
+  /* 底部 Tab */
+  .phone-tab {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: space-around;
+    padding: 8px 4px 14px;
+  }
+  .tab {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    color: var(--fg-soft); font-size: 10px; font-weight: 500;
+  }
+  .tab.active { color: var(--accent); }
+
+  /* 注释说明条 */
+  .annotation {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; padding: 8px 12px;
+    color: #cbd5e1; font-size: 11px; line-height: 1.5;
+    margin-top: 8px;
+  }
+  .annotation .k { color: #fff; font-weight: 600; }
+
+  /* 通用行高亮（视觉强调） */
+  .key-action {
+    border-left: 3px solid var(--accent);
+    padding-left: 8px; margin-left: -11px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .row-enter, .row-del { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <div class="header">
+    <h1>SnapClaim Mobile</h1>
+    <p>使用场景：如何创建/补录/删除一个完整的报销单</p>
+  </div>
+
+  <div class="flow-grid">
+
+    <!-- ========== Step 1: 起点 ========== -->
+    <div class="step">
+      <div class="step-label">
+        <span class="step-num"><span class="num">01</span>起点</span>
+        <div class="step-title">创建报销单</div>
+        <div class="step-desc">新建空白草稿，准备录入</div>
+      </div>
+      <div class="phone">
+        <div class="phone-status">
+          <span>9:41</span>
+          <span class="flex items-center gap-1">
+            <i data-lucide="signal" class="w-3 h-3"></i>
+            <i data-lucide="wifi" class="w-3 h-3"></i>
+            <i data-lucide="battery-full" class="w-3.5 h-3.5"></i>
+          </span>
+        </div>
+        <div class="phone-body">
+          <div class="flex items-start justify-between mt-1 mb-3">
+            <div>
+              <h1 class="hero-title">报销单</h1>
+              <p class="hero-sub">新建草稿 · 2026-07-15 出差</p>
+            </div>
+          </div>
+          <div class="card p-3 mb-3">
+            <p class="text-[11px] font-semibold mb-1" style="color:var(--fg-muted)">出行人 / 备注</p>
+            <p class="text-[12px]">上海客户拜访，预计 4 天</p>
+          </div>
+          <p class="text-[11px] font-semibold mb-2" style="color:var(--fg-muted)">录入方式（任选）</p>
+          <div class="grid grid-cols-2 gap-2 mb-4">
+            <button class="pill-btn scan"><i data-lucide="scan-line" class="w-3 h-3"></i>扫码</button>
+            <button class="pill-btn cam"><i data-lucide="camera" class="w-3 h-3"></i>拍照</button>
+            <button class="pill-btn add"><i data-lucide="edit-3" class="w-3 h-3"></i>手动</button>
+            <button class="pill-btn add"><i data-lucide="upload" class="w-3 h-3"></i>相册</button>
+          </div>
+          <p class="text-[11px] font-semibold mb-2" style="color:var(--fg-muted)">条目（0）</p>
+          <div class="card p-4 text-center" style="color:var(--fg-soft)">
+            <i data-lucide="inbox" class="w-6 h-6 mx-auto mb-1"></i>
+            <p class="text-[11px]">还没有条目</p>
+            <p class="text-[10px] mt-0.5">点击下方 + 开始添加</p>
+          </div>
+        </div>
+        <button class="fab"><i data-lucide="plus" class="w-5 h-5"></i></button>
+        <div class="phone-tab">
+          <div class="tab active"><i data-lucide="camera" class="w-4 h-4"></i><span>采集</span></div>
+          <div class="tab"><i data-lucide="list-checks" class="w-4 h-4"></i><span>记录</span></div>
+          <div class="tab"><i data-lucide="archive" class="w-4 h-4"></i><span>历史</span></div>
+          <div class="tab"><i data-lucide="user" class="w-4 h-4"></i><span>我的</span></div>
+        </div>
+      </div>
+      <div class="annotation">
+        <span class="k">场景：</span> 抵达酒店/机场前，先在 App 里开一个空报销单。
+      </div>
+    </div>
+
+    <!-- ========== Step 2: 扫码加酒店/用车/飞机 ========== -->
+    <div class="step">
+      <div class="step-label">
+        <span class="step-num"><span class="num">02</span>扫码添加</span>
+        <div class="step-title">酒店/用车/飞机确认函</div>
+        <div class="step-desc">etrip 二维码 → 自动归类</div>
+      </div>
+      <div class="phone">
+        <div class="phone-status">
+          <span>9:41</span>
+          <span class="flex items-center gap-1">
+            <i data-lucide="signal" class="w-3 h-3"></i>
+            <i data-lucide="wifi" class="w-3 h-3"></i>
+            <i data-lucide="battery-full" class="w-3.5 h-3.5"></i>
+          </span>
+        </div>
+        <div class="phone-body">
+          <div class="flex items-start justify-between mt-1 mb-3">
+            <div>
+              <h1 class="hero-title">报销单</h1>
+              <p class="hero-sub">上海客户拜访 · 草稿</p>
+            </div>
+          </div>
+          <p class="text-[11px] font-semibold mb-2" style="color:var(--fg-muted)">条目（3）</p>
+          <div class="space-y-1.5">
+            <div class="card rec-row row-enter">
+              <div class="rec-icon" style="background:#fffbeb;color:#92400e"><i data-lucide="bed-double" class="w-3.5 h-3.5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[12px] font-medium truncate">上海浦东希尔顿</p>
+                <p class="text-[10px] truncate" style="color:var(--fg-muted)">07-15 → 07-18 · 3 晚</p>
+              </div>
+              <div class="text-right">
+                <p class="text-[12px] font-semibold">¥398.00</p>
+                <span class="badge badge-hotel">酒店</span>
+              </div>
+            </div>
+            <div class="card rec-row row-enter" style="animation-delay:0.05s">
+              <div class="rec-icon" style="background:#eef2ff;color:#4338ca"><i data-lucide="plane" class="w-3.5 h-3.5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[12px] font-medium truncate">MU5136 北京 → 上海</p>
+                <p class="text-[10px] truncate" style="color:var(--fg-muted)">07-15 14:30 · 经济舱</p>
+              </div>
+              <div class="text-right">
+                <p class="text-[12px] font-semibold">¥680.00</p>
+                <span class="badge badge-flight">飞机</span>
+              </div>
+            </div>
+            <div class="card rec-row row-enter" style="animation-delay:0.1s">
+              <div class="rec-icon" style="background:#f1f5f9;color:#475569"><i data-lucide="car" class="w-3.5 h-3.5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[12px] font-medium truncate">滴滴出行</p>
+                <p class="text-[10px] truncate" style="color:var(--fg-muted)">07-15 · 8.2 km · 市内</p>
+              </div>
+              <div class="text-right">
+                <p class="text-[12px] font-semibold">¥22.00</p>
+                <span class="badge badge-car">用车</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 mb-2 p-2.5 rounded-lg" style="background:#d1fae5;border:1px solid #6ee7b7">
+            <p class="text-[11px] font-semibold" style="color:#065f46">
+              <i data-lucide="check-circle-2" class="w-3 h-3 inline"></i> 已识别 3 条
+            </p>
+            <p class="text-[10px] mt-0.5" style="color:#047857">酒店 ¥398 · 飞机 ¥680 · 用车 ¥22</p>
+          </div>
+        </div>
+        <button class="fab"><i data-lucide="plus" class="w-5 h-5"></i></button>
+        <div class="phone-tab">
+          <div class="tab active"><i data-lucide="camera" class="w-4 h-4"></i><span>采集</span></div>
+          <div class="tab"><i data-lucide="list-checks" class="w-4 h-4"></i><span>记录</span></div>
+          <div class="tab"><i data-lucide="archive" class="w-4 h-4"></i><span>历史</span></div>
+          <div class="tab"><i data-lucide="user" class="w-4 h-4"></i><span>我的</span></div>
+        </div>
+      </div>
+      <div class="annotation">
+        <span class="k">使用：</span> 入住酒店/收到用车/登机前扫 etrip 二维码 → 自动归类到酒店/用车/飞机三类，金额+日期自动填。
+      </div>
+    </div>
+
+    <!-- ========== Step 3: 漏了高铁 → 拍照补 ========== -->
+    <div class="step">
+      <div class="step-label">
+        <span class="badge-hint warn"><i data-lucide="alert-triangle" class="w-3 h-3"></i>漏补</span>
+        <div class="step-title">发现漏了高铁</div>
+        <div class="step-desc">拍照识别火车票</div>
+      </div>
+      <div class="phone">
+        <div class="phone-status">
+          <span>9:41</span>
+          <span class="flex items-center gap-1">
+            <i data-lucide="signal" class="w-3 h-3"></i>
+            <i data-lucide="wifi" class="w-3 h-3"></i>
+            <i data-lucide="battery-full" class="w-3.5 h-3.5"></i>
+          </span>
+        </div>
+        <div class="phone-body">
+          <div class="flex items-start justify-between mt-1 mb-3">
+            <div>
+              <h1 class="hero-title">报销单</h1>
+              <p class="hero-sub">上海客户拜访 · 草稿</p>
+            </div>
+          </div>
+          <div class="card p-2.5 mb-3" style="background:#fffbeb;border-color:#fcd34d">
+            <p class="text-[11px] font-semibold flex items-center gap-1" style="color:#92400e">
+              <i data-lucide="alert-triangle" class="w-3 h-3"></i>提示：还差一段高铁
+            </p>
+            <p class="text-[10px] mt-0.5" style="color:#a16207">当前 3 条记录，去/返程高铁未录入</p>
+          </div>
+          <p class="text-[11px] font-semibold mb-2" style="color:var(--fg-muted)">已有条目（3）</p>
+          <div class="space-y-1.5 mb-3">
+            <div class="card rec-row">
+              <div class="rec-icon" style="background:#fffbeb;color:#92400e"><i data-lucide="bed-double" class="w-3.5 h-3.5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[12px] font-medium truncate">上海浦东希尔顿</p>
+                <p class="text-[10px]" style="color:var(--fg-muted)">07-15 → 07-18 · 3 晚</p>
+              </div>
+              <span class="badge badge-hotel">酒店</span>
+            </div>
+            <div class="card rec-row">
+              <div class="rec-icon" style="background:#eef2ff;color:#4338ca"><i data-lucide="plane" class="w-3.5 h-3.5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[12px] font-medium truncate">MU5136 北京 → 上海</p>
+                <p class="text-[10px]" style="color:var(--fg-muted)">07-15 14:30</p>
+              </div>
+              <span class="badge badge-flight">飞机</span>
+            </div>
+            <div class="card rec-row">
+              <div class="rec-icon" style="background:#f1f5f9;color:#475569"><i data-lucide="car" class="w-3.5 h-3.5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[12px] font-medium truncate">滴滴出行</p>
+                <p class="text-[10px]" style="color:var(--fg-muted)">07-15 · 8.2 km</p>
+              </div>
+              <span class="badge badge-car">用车</span>
+            </div>
+          </div>
+          <div class="card p-3 mb-3" style="background:#eff6ff;border:1px dashed #93c5fd">
+            <p class="text-[11px] font-semibold flex items-center gap-1.5" style="color:#1e40af">
+              <i data-lucide="camera" class="w-3.5 h-3.5"></i>拍照补高铁票
+            </p>
+            <p class="text-[10px] mt-1" style="color:#1d4ed8">从相册选 / 拍火车票照片</p>
+            <p class="text-[10px] mt-0.5" style="color:#1d4ed8">→ 自动识别车次、出发到达、金额</p>
+          </div>
+        </div>
+        <button class="fab"><i data-lucide="camera" class="w-5 h-5"></i></button>
+        <div class="phone-tab">
+          <div class="tab active"><i data-lucide="camera" class="w-4 h-4"></i><span>采集</span></div>
+          <div class="tab"><i data-lucide="list-checks" class="w-4 h-4"></i><span>记录</span></div>
+          <div class="tab"><i data-lucide="archive" class="w-4 h-4"></i><span>历史</span></div>
+          <div class="tab"><i data-lucide="user" class="w-4 h-4"></i><span>我的</span></div>
+        </div>
+        <div class="toast warn">
+          <i data-lucide="info" class="w-3.5 h-3.5"></i>
+          <span class="flex-1">已添加 G123 北京南→上海虹桥 ¥553</span>
+        </div>
+      </div>
+      <div class="annotation">
+        <span class="k">漏补路径：</span> 报销单缺关键项时，App 顶部黄条提示「还差高铁」。点 FAB 选「拍照」→ 拍火车票 → ML Kit 识别。
+      </div>
+    </div>
+
+    <!-- ========== Step 4: 右滑删除（误删恢复）============ -->
+    <div class="step">
+      <div class="step-label">
+        <span class="badge-hint danger"><i data-lucide="trash-2" class="w-3 h-3"></i>删除</span>
+        <div class="step-title">多了 / 误加 → 右滑删除</div>
+        <div class="step-desc">3 秒内可撤销</div>
+      </div>
+      <div class="phone">
+        <div class="phone-status">
+          <span>9:41</span>
+          <span class="flex items-center gap-1">
+            <i data-lucide="signal" class="w-3 h-3"></i>
+            <i data-lucide="wifi" class="w-3 h-3"></i>
+            <i data-lucide="battery-full" class="w-3.5 h-3.5"></i>
+          </span>
+        </div>
+        <div class="phone-body">
+          <div class="flex items-start justify-between mt-1 mb-3">
+            <div>
+              <h1 class="hero-title">报销单</h1>
+              <p class="hero-sub">上海客户拜访 · 草稿</p>
+            </div>
+          </div>
+          <p class="text-[10px] mb-2 flex items-center gap-1" style="color:var(--fg-muted)">
+            <i data-lucide="hand" class="w-3 h-3"></i>在卡片上<strong style="color:var(--fg)">右滑</strong>可删除
+          </p>
+          <p class="text-[11px] font-semibold mb-2" style="color:var(--fg-muted)">条目（4）</p>
+          <div class="space-y-1.5">
+            <!-- 已右滑露删除按钮的卡片 -->
+            <div class="relative rounded-lg overflow-hidden" style="background:var(--danger);height:52px">
+              <div class="absolute inset-y-0 left-0 flex items-center justify-center text-white" style="width:60px">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </div>
+              <div class="card rec-row row-danger" style="transform:translateX(60px);height:52px;align-items:center">
+                <div class="rec-icon" style="background:#eff6ff;color:#1e40af"><i data-lucide="train-front" class="w-3.5 h-3.5"></i></div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[12px] font-medium truncate">G123 北京南 → 上海虹桥</p>
+                  <p class="text-[10px] truncate" style="color:var(--fg-muted)">07-15 08:00 · 二等座</p>
+                </div>
+                <p class="text-[12px] font-semibold">¥553.00</p>
+              </div>
+            </div>
+            <div class="card rec-row">
+              <div class="rec-icon" style="background:#eef2ff;color:#4338ca"><i data-lucide="plane" class="w-3.5 h-3.5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[12px] font-medium truncate">MU5136 北京 → 上海</p>
+                <p class="text-[10px] truncate" style="color:var(--fg-muted)">07-15 14:30</p>
+              </div>
+              <p class="text-[12px] font-semibold">¥680.00</p>
+            </div>
+            <div class="card rec-row">
+              <div class="rec-icon" style="background:#fffbeb;color:#92400e"><i data-lucide="bed-double" class="w-3.5 h-3.5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[12px] font-medium truncate">上海浦东希尔顿</p>
+                <p class="text-[10px] truncate" style="color:var(--fg-muted)">07-15 → 07-18 · 3 晚</p>
+              </div>
+              <p class="text-[12px] font-semibold">¥398.00</p>
+            </div>
+            <div class="card rec-row">
+              <div class="rec-icon" style="background:#f1f5f9;color:#475569"><i data-lucide="car" class="w-3.5 h-3.5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[12px] font-medium truncate">滴滴出行</p>
+                <p class="text-[10px] truncate" style="color:var(--fg-muted)">07-15 · 8.2 km</p>
+              </div>
+              <p class="text-[12px] font-semibold">¥22.00</p>
+            </div>
+          </div>
+        </div>
+        <div class="toast danger">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <span class="flex-1">已删除 G123 北京南→上海虹桥</span>
+          <button>撤销</button>
+        </div>
+      </div>
+      <div class="annotation">
+        <span class="k">误删恢复：</span> 右滑→点红色删除→底部 Toast 提示「已删除 XX」+「撤销」按钮，3 秒内可恢复，避免误操作。
+      </div>
+    </div>
+
+    <!-- ========== Step 5: 汇总保存 ========== -->
+    <div class="step">
+      <div class="step-label">
+        <span class="step-num"><span class="num">05</span>完成</span>
+        <div class="step-title">检查 → 保存</div>
+        <div class="step-desc">自动汇总 + 报销单落库</div>
+      </div>
+      <div class="phone">
+        <div class="phone-status">
+          <span>9:41</span>
+          <span class="flex items-center gap-1">
+            <i data-lucide="signal" class="w-3 h-3"></i>
+            <i data-lucide="wifi" class="w-3 h-3"></i>
+            <i data-lucide="battery-full" class="w-3.5 h-3.5"></i>
+          </span>
+        </div>
+        <div class="phone-body">
+          <div class="flex items-start justify-between mt-1 mb-3">
+            <div>
+              <h1 class="hero-title">报销单</h1>
+              <p class="hero-sub">上海客户拜访 · 4 天</p>
+            </div>
+            <button class="pill-btn scan" style="font-weight:600">
+              <i data-lucide="save" class="w-3 h-3"></i>保存
+            </button>
+          </div>
+          <div class="grid grid-cols-4 gap-1.5 mb-3">
+            <div class="card p-2 text-center">
+              <p class="text-[10px]" style="color:var(--fg-muted)">火车</p>
+              <p class="text-[12px] font-semibold">¥553</p>
+              <p class="text-[9px]" style="color:var(--fg-soft)">1 条</p>
+            </div>
+            <div class="card p-2 text-center">
+              <p class="text-[10px]" style="color:var(--fg-muted)">飞机</p>
+              <p class="text-[12px] font-semibold">¥680</p>
+              <p class="text-[9px]" style="color:var(--fg-soft)">1 条</p>
+            </div>
+            <div class="card p-2 text-center">
+              <p class="text-[10px]" style="color:var(--fg-muted)">酒店</p>
+              <p class="text-[12px] font-semibold">¥398</p>
+              <p class="text-[9px]" style="color:var(--fg-soft)">1 条</p>
+            </div>
+            <div class="card p-2 text-center">
+              <p class="text-[10px]" style="color:var(--fg-muted)">用车</p>
+              <p class="text-[12px] font-semibold">¥22</p>
+              <p class="text-[9px]" style="color:var(--fg-soft)">1 条</p>
+            </div>
+          </div>
+          <div class="card p-3 mb-3 text-center" style="background:linear-gradient(180deg, #f0fdf4, #fff)">
+            <p class="text-[10px]" style="color:var(--fg-muted)">报销合计（含差补 ¥200）</p>
+            <p class="font-title text-[28px] mt-1" style="color:var(--accent);line-height:1">¥1,853.00</p>
+            <p class="text-[10px] mt-1" style="color:var(--fg-muted)">人民币 壹仟捌佰伍拾叁元整</p>
+          </div>
+          <p class="text-[11px] font-semibold mb-2" style="color:var(--fg-muted)">完整条目（4）</p>
+          <div class="space-y-1.5">
+            <div class="card rec-row">
+              <div class="rec-icon" style="background:#eff6ff;color:#1e40af"><i data-lucide="train-front" class="w-3.5 h-3.5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[12px] font-medium truncate">G123 北京南 → 上海虹桥</p>
+                <p class="text-[10px]" style="color:var(--fg-muted)">07-15 08:00</p>
+              </div>
+              <p class="text-[12px] font-semibold">¥553.00</p>
+            </div>
+            <div class="card rec-row">
+              <div class="rec-icon" style="background:#eef2ff;color:#4338ca"><i data-lucide="plane" class="w-3.5 h-3.5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[12px] font-medium truncate">MU5136 北京 → 上海</p>
+                <p class="text-[10px]" style="color:var(--fg-muted)">07-15 14:30</p>
+              </div>
+              <p class="text-[12px] font-semibold">¥680.00</p>
+            </div>
+            <div class="card rec-row">
+              <div class="rec-icon" style="background:#fffbeb;color:#92400e"><i data-lucide="bed-double" class="w-3.5 h-3.5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[12px] font-medium truncate">上海浦东希尔顿</p>
+                <p class="text-[10px]" style="color:var(--fg-muted)">07-15 → 07-18 · 3 晚</p>
+              </div>
+              <p class="text-[12px] font-semibold">¥398.00</p>
+            </div>
+            <div class="card rec-row">
+              <div class="rec-icon" style="background:#f1f5f9;color:#475569"><i data-lucide="car" class="w-3.5 h-3.5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[12px] font-medium truncate">滴滴出行</p>
+                <p class="text-[10px]" style="color:var(--fg-muted)">07-15 · 8.2 km</p>
+              </div>
+              <p class="text-[12px] font-semibold">¥22.00</p>
+            </div>
+          </div>
+        </div>
+        <div class="phone-tab">
+          <div class="tab"><i data-lucide="camera" class="w-4 h-4"></i><span>采集</span></div>
+          <div class="tab active"><i data-lucide="list-checks" class="w-4 h-4"></i><span>记录</span></div>
+          <div class="tab"><i data-lucide="archive" class="w-4 h-4"></i><span>历史</span></div>
+          <div class="tab"><i data-lucide="user" class="w-4 h-4"></i><span>我的</span></div>
+        </div>
+      </div>
+      <div class="annotation">
+        <span class="k">验收：</span> 火车 1 + 飞机 1 + 酒店 1 + 用车 1 = ¥1,653 + 差补 ¥200 = ¥1,853。点保存→ 落本地 SQLite → 历史可查/分享/二次编辑。
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== 底部说明：使用场景全流程 ===== -->
+  <div class="max-w-5xl mx-auto mt-12">
+    <h2 class="text-white text-lg font-semibold mb-3 text-center">典型使用流程（出差 4 天）</h2>
+    <div class="card p-5" style="background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);color:#cbd5e1">
+      <ol class="space-y-2 text-[13px]">
+        <li><span class="text-white font-semibold">① 出差前：</span>打开 App → 「采集」Tab → 点 FAB「+」选「新建」→ 空报销单建好</li>
+        <li><span class="text-white font-semibold">② 抵达酒店：</span>前台办理入住时让对方发 etrip 确认函 → 扫 QR → 自动添加酒店记录</li>
+        <li><span class="text-white font-semibold">③ 每次用车：</span>上车前扫滴滴/曹操二维码 → 自动添加用车记录（带里程）</li>
+        <li><span class="text-white font-semibold">④ 坐飞机：</span>值机前扫航司确认函 → 自动添加飞机记录</li>
+        <li><span class="text-white font-semibold">⑤ 漏了高铁：</span>App 顶部黄条提示「还差高铁」→ 点 FAB 选「拍照」→ 拍 12306 票面 → ML Kit 识别车次/起止站/金额</li>
+        <li><span class="text-white font-semibold">⑥ 误加/多加：</span>记录卡上<strong class="text-white">右滑</strong> → 露出红色删除按钮 → 点击删除 → 底部 Toast 3 秒内可「撤销」</li>
+        <li><span class="text-white font-semibold">⑦ 完工：</span>切到「记录」Tab → 检查 4 类小计 + 合计 + 中文大写 → 点「保存」→ 落本地数据库（可查可分享可二次编辑）</li>
+      </ol>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ponytail: lucide CDN 异步加载，DOMContentLoaded 时可能未就绪——轮询 50ms 最多 2s。
+  function waitLucide(cb) {
+    if (window.lucide) { cb(); return; }
+    let t = 0;
+    const id = setInterval(() => {
+      if (window.lucide) { clearInterval(id); cb(); }
+      else if ((t += 50) > 2000) { clearInterval(id); }
+    }, 50);
+  }
+  window.addEventListener('DOMContentLoaded', () => {
+    waitLucide(() => {
+      lucide.createIcons();
+      gsap.from('.step', {
+        y: 30, opacity: 0, duration: 0.6, stagger: 0.12, ease: 'expo.out'
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

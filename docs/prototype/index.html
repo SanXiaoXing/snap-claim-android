@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SnapClaim App Prototype</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Emblema+One&display=swap');
+
+    :root {
+      --bg: #ffffff;
+      --bg-secondary: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --fg: #0f172a;
+      --fg-muted: #64748b;
+      --fg-soft: #94a3b8;
+      --accent: #10b981;
+      --accent-light: #34d399;
+      --accent-bg: #ecfdf5;
+      --danger: #ef4444;
+      --danger-bg: #fef2f2;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --bg-secondary: #1e293b;
+      --card: #1e293b;
+      --border: #334155;
+      --fg: #f8fafc;
+      --fg-muted: #94a3b8;
+      --fg-soft: #64748b;
+      --accent: #10b981;
+      --accent-light: #34d399;
+      --accent-bg: #064e3b;
+      --danger: #f87171;
+      --danger-bg: #450a0a;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0b1120;
+      color: #fff;
+      padding: 40px 24px;
+    }
+    .font-display { font-family: 'Emblema One', cursive; }
+
+    /* Gallery layout */
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 32px;
+      max-width: 1600px;
+      margin: 0 auto;
+      justify-items: center;
+    }
+    .device-pair {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+    }
+    .device-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      letter-spacing: 0.02em;
+    }
+
+    /* Phone mockup */
+    .phone {
+      width: 360px;
+      height: 760px;
+      border-radius: 48px;
+      background: var(--bg);
+      border: 12px solid #1e293b;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 30px 60px -12px rgba(0,0,0,0.45);
+      flex-shrink: 0;
+    }
+    [data-theme="dark"] .phone { border-color: #334155; }
+
+    .notch {
+      position: absolute;
+      top: 0; left: 50%; transform: translateX(-50%);
+      width: 126px; height: 30px;
+      background: #1e293b;
+      border-bottom-left-radius: 16px;
+      border-bottom-right-radius: 16px;
+      z-index: 50;
+    }
+
+    .screen {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      background: var(--bg);
+      color: var(--fg);
+      position: relative;
+    }
+
+    .status-bar {
+      height: 48px;
+      display: flex; align-items: flex-end; justify-content: space-between;
+      padding: 10px 24px 6px;
+      font-size: 14px; font-weight: 600;
+      color: var(--fg);
+      z-index: 40;
+    }
+    .status-right { display: flex; align-items: center; gap: 5px; }
+
+    /* Scroll area */
+    .scroll {
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .scroll::-webkit-scrollbar { display: none; }
+
+    /* Header */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 20px 14px;
+    }
+    .topbar-left, .topbar-right { display: flex; align-items: center; gap: 10px; min-width: 72px; }
+    .topbar-right { justify-content: flex-end; }
+    .topbar-title { font-size: 18px; font-weight: 700; text-align: center; }
+    .icon-btn {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 10px;
+      color: var(--fg);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: transform .12s ease, background .15s ease;
+    }
+    .icon-btn:active { transform: scale(0.95); }
+    .text-btn {
+      font-size: 14px; font-weight: 600;
+      color: var(--accent);
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+
+    /* Primary CTA */
+    .btn-primary {
+      width: 100%;
+      background: linear-gradient(145deg, var(--accent), var(--accent-light));
+      color: #fff;
+      border: none;
+      border-radius: 16px;
+      padding: 16px;
+      font-size: 16px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 10px 24px -8px rgba(16,185,129,0.45);
+      transition: transform .12s ease, box-shadow .2s ease;
+    }
+    .btn-primary:active { transform: scale(0.98); }
+
+    /* Tabbar */
+    .tabbar {
+      height: 82px;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      display: flex; align-items: flex-start; justify-content: space-around;
+      padding-top: 8px;
+      z-index: 40;
+    }
+    .tab {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 500;
+      color: var(--fg-soft);
+      padding: 6px 18px;
+      cursor: pointer;
+      transition: color .15s ease;
+    }
+    .tab.active { color: var(--accent); }
+
+    /* Home recent cards */
+    .recent-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: transform .12s ease;
+    }
+    .recent-card:active { transform: scale(0.99); }
+    .recent-thumb {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--accent-bg);
+      color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Form fields */
+    .field-label {
+      font-size: 11px; font-weight: 600;
+      color: var(--fg-muted);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .input-line {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      padding: 6px 0;
+      font-size: 15px;
+      color: var(--fg);
+      outline: none;
+      transition: border-color .15s ease;
+    }
+    .input-line:focus { border-color: var(--accent); }
+    .input-line::placeholder { color: var(--fg-soft); }
+    .date-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 13px; font-weight: 500;
+      color: var(--fg);
+      cursor: pointer;
+    }
+    .date-pill span { color: var(--fg-soft); font-weight: 400; }
+
+    /* Record rows + swipe delete */
+    .rec-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px;
+      background: var(--card);
+      border-radius: 16px;
+    }
+    .rec-icon {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      background: var(--accent-bg);
+      color: var(--accent);
+    }
+    .rec-icon.train { background: rgba(59,130,246,0.12); color: #3b82f6; }
+    .rec-icon.flight { background: rgba(139,92,246,0.12); color: #8b5cf6; }
+    .rec-icon.hotel { background: rgba(245,158,11,0.12); color: #f59e0b; }
+    .rec-icon.car { background: rgba(16,185,129,0.12); color: #10b981; }
+    [data-theme="dark"] .rec-icon.train { background: rgba(59,130,246,0.18); }
+    [data-theme="dark"] .rec-icon.flight { background: rgba(139,92,246,0.18); }
+    [data-theme="dark"] .rec-icon.hotel { background: rgba(245,158,11,0.18); }
+    [data-theme="dark"] .rec-icon.car { background: rgba(16,185,129,0.18); }
+
+    .badge {
+      display: inline-flex; align-items: center;
+      font-size: 10px; font-weight: 600;
+      padding: 3px 7px; border-radius: 6px;
+      background: var(--bg-secondary); color: var(--fg-muted);
+      border: 1px solid var(--border);
+    }
+    .badge-train { background: rgba(59,130,246,0.12); color: #2563eb; border-color: rgba(59,130,246,0.22); }
+    .badge-flight { background: rgba(139,92,246,0.12); color: #7c3aed; border-color: rgba(139,92,246,0.22); }
+    .badge-hotel { background: rgba(245,158,11,0.12); color: #d97706; border-color: rgba(245,158,11,0.22); }
+    .badge-car { background: rgba(16,185,129,0.12); color: #059669; border-color: rgba(16,185,129,0.22); }
+    [data-theme="dark"] .badge-train { background: rgba(59,130,246,0.22); color: #60a5fa; border-color: rgba(59,130,246,0.35); }
+    [data-theme="dark"] .badge-flight { background: rgba(139,92,246,0.22); color: #a78bfa; border-color: rgba(139,92,246,0.35); }
+    [data-theme="dark"] .badge-hotel { background: rgba(245,158,11,0.22); color: #fbbf24; border-color: rgba(245,158,11,0.35); }
+    [data-theme="dark"] .badge-car { background: rgba(16,185,129,0.22); color: #34d399; border-color: rgba(16,185,129,0.35); }
+
+    /* Card visibility boost for record rows */
+    .rec-row {
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      border: 1px solid var(--border);
+    }
+
+    .tag-summary {
+      display: flex; align-items: center; gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .tag-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: 600;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--fg);
+    }
+    .tag-chip .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+    }
+    .tag-chip .dot.train { background: #3b82f6; }
+    .tag-chip .dot.flight { background: #8b5cf6; }
+    .tag-chip .dot.hotel { background: #f59e0b; }
+    .tag-chip .dot.car { background: #10b981; }
+
+    .swipe-row {
+      position: relative;
+      overflow: hidden;
+      border-radius: 16px;
+      margin-bottom: 10px;
+      touch-action: pan-y;
+    }
+    .swipe-bg {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: flex-end;
+      padding-right: 18px;
+      background: var(--danger-bg);
+      color: var(--danger);
+      font-size: 13px; font-weight: 600;
+      border-radius: 16px;
+      z-index: 1;
+    }
+    .swipe-bg i { margin-right: 6px; }
+    .swipe-content {
+      position: relative; z-index: 2;
+      transition: transform .22s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+
+    /* Summary card */
+    .summary-card { padding: 18px; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 28px;
+      font-size: 12px;
+    }
+    .summary-total {
+      font-size: 32px; font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    /* FAB */
+    .fab-wrap {
+      position: absolute;
+      right: 18px;
+      bottom: 26px;
+      z-index: 35;
+      display: flex; flex-direction: column; align-items: flex-end;
+      gap: 10px;
+    }
+    .fab-menu {
+      display: flex; flex-direction: column; gap: 8px;
+      opacity: 0; transform: translateY(10px) scale(0.92);
+      pointer-events: none;
+      transition: opacity .2s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform .2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .fab-wrap.open .fab-menu {
+      opacity: 1; transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+    .fab-item {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 14px 6px 6px;
+      font-size: 13px; font-weight: 500;
+      color: var(--fg);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .fab-item-icon {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .fab-main {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(145deg, var(--accent), var(--accent-light));
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      border: none; cursor: pointer;
+      box-shadow: 0 10px 26px -6px rgba(16,185,129,0.5);
+      transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .fab-main:active { transform: scale(0.92); }
+    .fab-wrap.open .fab-main { transform: rotate(45deg); }
+    .fab-wrap.open .fab-main:active { transform: rotate(45deg) scale(0.92); }
+    .fab-backdrop {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 30;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s ease;
+    }
+    .fab-backdrop.show { opacity: 1; pointer-events: auto; }
+
+    /* Mine page */
+    .mine-avatar {
+      width: 64px; height: 64px; border-radius: 20px;
+      background: linear-gradient(145deg, var(--accent), var(--accent-light));
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; font-weight: 800;
+    }
+    .mine-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px;
+      cursor: pointer;
+      transition: background .12s ease;
+    }
+    .mine-row:active { background: var(--bg-secondary); }
+    .mine-row-left { display: flex; align-items: center; gap: 12px; }
+    .mine-row-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--bg-secondary);
+      color: var(--fg-muted);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Theme toggle */
+    .theme-toggle {
+      width: 52px; height: 30px;
+      border-radius: 999px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      position: relative;
+      cursor: pointer;
+      transition: background .2s ease;
+    }
+    .theme-toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      transition: transform .2s ease;
+    }
+    [data-theme="dark"] .theme-toggle { background: var(--accent); }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(22px); }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="text-center mb-8">
+  <h1 class="font-display text-3xl mb-2">SnapClaim</h1>
+  <p class="text-sm text-slate-400">5 screens × light & dark mode = 10 device previews</p>
+</div>
+
+<div class="gallery">
+
+  <!-- ===== 01 Home - Light ===== -->
+  <div class="device-pair">
+    <div class="device-label">01 首页 · 浅色</div>
+    <div class="phone" data-theme="light">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-right">
+            <i data-lucide="signal" class="w-3.5 h-3.5"></i>
+            <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
+            <i data-lucide="battery-full" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div class="topbar">
+          <div class="topbar-left"></div>
+          <div class="topbar-title font-display">SnapClaim</div>
+          <div class="topbar-right">
+            <button class="icon-btn"><i data-lucide="bell" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+        <div class="scroll px-5">
+          <div class="mb-5">
+            <p class="text-sm" style="color:var(--fg-muted)">下午好，准备开始报销了吗？</p>
+            <h2 class="text-2xl font-bold mt-1">新建报销单</h2>
+          </div>
+
+          <button class="btn-primary mb-6">
+            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+            创建报销单
+          </button>
+
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold">最近报销单</h3>
+            <span class="text-xs" style="color:var(--fg-soft)">查看全部</span>
+          </div>
+
+          <div class="space-y-3 mb-4">
+            <div class="card recent-card row-enter">
+              <div class="recent-thumb"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate">2026-07-15至18 出差</p>
+                <p class="text-xs truncate" style="color:var(--fg-muted)">4 张票据 · 07-18 保存</p>
+              </div>
+              <span class="text-sm font-bold" style="color:var(--accent)">¥1,866</span>
+            </div>
+            <div class="card recent-card row-enter" style="animation-delay:0.04s">
+              <div class="recent-thumb"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate">2026-07-03 北京培训</p>
+                <p class="text-xs truncate" style="color:var(--fg-muted)">5 张票据 · 07-05 保存</p>
+              </div>
+              <span class="text-sm font-bold" style="color:var(--accent)">¥2,340</span>
+            </div>
+            <div class="card recent-card row-enter" style="animation-delay:0.08s">
+              <div class="recent-thumb"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate">2026-06-20 广州出差</p>
+                <p class="text-xs truncate" style="color:var(--fg-muted)">3 张票据 · 06-22 保存</p>
+              </div>
+              <span class="text-sm font-bold" style="color:var(--accent)">¥1,120</span>
+            </div>
+          </div>
+
+          <div class="card p-4 mt-2" style="background:var(--accent-bg); border-color:transparent">
+            <p class="text-xs font-medium" style="color:var(--accent)">提示</p>
+            <p class="text-sm mt-1" style="color:var(--fg)">点击上方按钮创建新报销单，或从历史记录中打开已有单据继续编辑。</p>
+          </div>
+
+          <div class="h-6"></div>
+        </div>
+
+        <div class="tabbar">
+          <div class="tab active"><i data-lucide="home" class="w-5 h-5"></i><span>首页</span></div>
+          <div class="tab"><i data-lucide="archive" class="w-5 h-5"></i><span>历史</span></div>
+          <div class="tab"><i data-lucide="user" class="w-5 h-5"></i><span>我的</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 01 Home - Dark ===== -->
+  <div class="device-pair">
+    <div class="device-label">01 首页 · 深色</div>
+    <div class="phone" data-theme="dark">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-right">
+            <i data-lucide="signal" class="w-3.5 h-3.5"></i>
+            <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
+            <i data-lucide="battery-full" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div class="topbar">
+          <div class="topbar-left"></div>
+          <div class="topbar-title font-display">SnapClaim</div>
+          <div class="topbar-right">
+            <button class="icon-btn"><i data-lucide="bell" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+        <div class="scroll px-5">
+          <div class="mb-5">
+            <p class="text-sm" style="color:var(--fg-muted)">下午好，准备开始报销了吗？</p>
+            <h2 class="text-2xl font-bold mt-1">新建报销单</h2>
+          </div>
+
+          <button class="btn-primary mb-6">
+            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+            创建报销单
+          </button>
+
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold">最近报销单</h3>
+            <span class="text-xs" style="color:var(--fg-soft)">查看全部</span>
+          </div>
+
+          <div class="space-y-3 mb-4">
+            <div class="card recent-card row-enter">
+              <div class="recent-thumb"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate">2026-07-15至18 出差</p>
+                <p class="text-xs truncate" style="color:var(--fg-muted)">4 张票据 · 07-18 保存</p>
+              </div>
+              <span class="text-sm font-bold" style="color:var(--accent)">¥1,866</span>
+            </div>
+            <div class="card recent-card row-enter" style="animation-delay:0.04s">
+              <div class="recent-thumb"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate">2026-07-03 北京培训</p>
+                <p class="text-xs truncate" style="color:var(--fg-muted)">5 张票据 · 07-05 保存</p>
+              </div>
+              <span class="text-sm font-bold" style="color:var(--accent)">¥2,340</span>
+            </div>
+            <div class="card recent-card row-enter" style="animation-delay:0.08s">
+              <div class="recent-thumb"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate">2026-06-20 广州出差</p>
+                <p class="text-xs truncate" style="color:var(--fg-muted)">3 张票据 · 06-22 保存</p>
+              </div>
+              <span class="text-sm font-bold" style="color:var(--accent)">¥1,120</span>
+            </div>
+          </div>
+
+          <div class="card p-4 mt-2" style="background:var(--accent-bg); border-color:transparent">
+            <p class="text-xs font-medium" style="color:var(--accent-light)">提示</p>
+            <p class="text-sm mt-1" style="color:var(--fg)">点击上方按钮创建新报销单，或从历史记录中打开已有单据继续编辑。</p>
+          </div>
+
+          <div class="h-6"></div>
+        </div>
+
+        <div class="tabbar">
+          <div class="tab active"><i data-lucide="home" class="w-5 h-5"></i><span>首页</span></div>
+          <div class="tab"><i data-lucide="archive" class="w-5 h-5"></i><span>历史</span></div>
+          <div class="tab"><i data-lucide="user" class="w-5 h-5"></i><span>我的</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 02 Editor - Light ===== -->
+  <div class="device-pair">
+    <div class="device-label">02 报销单编辑 · 浅色</div>
+    <div class="phone" data-theme="light">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-right">
+            <i data-lucide="signal" class="w-3.5 h-3.5"></i>
+            <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
+            <i data-lucide="battery-full" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div class="topbar">
+          <div class="topbar-left"><button class="icon-btn"><i data-lucide="chevron-left" class="w-5 h-5"></i></button></div>
+          <div class="topbar-title">报销单</div>
+          <div class="topbar-right"><span class="text-btn">保存</span></div>
+        </div>
+        <div class="scroll px-5">
+          <div class="card p-4 mb-4">
+            <div class="mb-4">
+              <label class="field-label">报销单名称</label>
+              <input class="input-line" type="text" value="2026-07-15至18 出差" />
+            </div>
+            <div>
+              <label class="field-label">出差日期</label>
+              <div class="flex items-center gap-2 mt-1">
+                <button class="date-pill"><i data-lucide="calendar" class="w-3.5 h-3.5" style="color:var(--accent)"></i>07-15 <span>开始</span></button>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5" style="color:var(--fg-soft)"></i>
+                <button class="date-pill"><i data-lucide="calendar" class="w-3.5 h-3.5" style="color:var(--accent)"></i>07-18 <span>结束</span></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card summary-card mb-4">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-semibold">报销汇总</span>
+              <i data-lucide="calculator" class="w-4 h-4" style="color:var(--fg-muted)"></i>
+            </div>
+            <div class="summary-total mb-1">¥1,866.00</div>
+            <p class="text-xs mb-4" style="color:var(--fg-muted)">人民币 壹仟捌佰陆拾陆元整</p>
+            <div class="summary-grid">
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">火车</span><span class="font-semibold">¥553.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">飞机</span><span class="font-semibold">¥680.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">酒店</span><span class="font-semibold">¥398.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">市内交通</span><span class="font-semibold">¥35.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">往返交通</span><span class="font-semibold">¥0.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">差补</span><span class="font-semibold">¥200.00</span></div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold">明细记录（5）</h3>
+            <span class="text-[10px]" style="color:var(--fg-soft)">左滑删除</span>
+          </div>
+
+          <div class="tag-summary">
+            <span class="tag-chip"><span class="dot train"></span>火车 1</span>
+            <span class="tag-chip"><span class="dot flight"></span>飞机 1</span>
+            <span class="tag-chip"><span class="dot hotel"></span>酒店 1</span>
+            <span class="tag-chip"><span class="dot car"></span>用车 2</span>
+          </div>
+
+          <div class="space-y-2.5 mb-24 editor-list">
+            <div class="swipe-row" data-swipe>
+              <div class="swipe-bg"><i data-lucide="trash-2" class="w-4 h-4"></i>删除</div>
+              <div class="swipe-content">
+                <div class="rec-row">
+                  <div class="rec-icon train"><i data-lucide="train-front" class="w-4 h-4"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">G123 北京南 → 上海虹桥</p>
+                    <p class="text-xs truncate" style="color:var(--fg-muted)">07-15 08:00 · 二等座</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold">¥553.00</p>
+                    <span class="badge badge-train mt-1">火车</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="swipe-row" data-swipe>
+              <div class="swipe-bg"><i data-lucide="trash-2" class="w-4 h-4"></i>删除</div>
+              <div class="swipe-content">
+                <div class="rec-row">
+                  <div class="rec-icon flight"><i data-lucide="plane" class="w-4 h-4"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">MU5136 上海 → 北京</p>
+                    <p class="text-xs truncate" style="color:var(--fg-muted)">07-18 19:30 · 经济舱</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold">¥680.00</p>
+                    <span class="badge badge-flight mt-1">飞机</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="swipe-row" data-swipe>
+              <div class="swipe-bg"><i data-lucide="trash-2" class="w-4 h-4"></i>删除</div>
+              <div class="swipe-content">
+                <div class="rec-row">
+                  <div class="rec-icon hotel"><i data-lucide="bed-double" class="w-4 h-4"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">上海浦东希尔顿</p>
+                    <p class="text-xs truncate" style="color:var(--fg-muted)">07-15 → 07-18 · 3 晚</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold">¥398.00</p>
+                    <span class="badge badge-hotel mt-1">酒店</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="swipe-row" data-swipe>
+              <div class="swipe-bg"><i data-lucide="trash-2" class="w-4 h-4"></i>删除</div>
+              <div class="swipe-content">
+                <div class="rec-row">
+                  <div class="rec-icon car"><i data-lucide="car" class="w-4 h-4"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">滴滴出行</p>
+                    <p class="text-xs truncate" style="color:var(--fg-muted)">07-16 · 12.5 km</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold">¥35.00</p>
+                    <span class="badge badge-car mt-1">用车</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="swipe-row" data-swipe>
+              <div class="swipe-bg"><i data-lucide="trash-2" class="w-4 h-4"></i>删除</div>
+              <div class="swipe-content">
+                <div class="rec-row">
+                  <div class="rec-icon car"><i data-lucide="car" class="w-4 h-4"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">滴滴出行</p>
+                    <p class="text-xs truncate" style="color:var(--fg-muted)">07-17 · 48.2 km · 往返</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold">¥0.00</p>
+                    <span class="badge badge-car mt-1">用车</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fab-backdrop" id="fab-bd-2" onclick="closeFab('editor')"></div>
+        <div class="fab-wrap" id="editor-fab">
+          <div class="fab-menu">
+            <button class="fab-item" onclick="fabAction('扫码添加')"><span class="fab-item-icon"><i data-lucide="scan-line" class="w-3.5 h-3.5"></i></span>扫码添加</button>
+            <button class="fab-item" onclick="fabAction('上传图片')"><span class="fab-item-icon"><i data-lucide="image" class="w-3.5 h-3.5"></i></span>上传图片</button>
+            <button class="fab-item" onclick="fabAction('手动添加')"><span class="fab-item-icon"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></span>手动添加</button>
+          </div>
+          <button class="fab-main" onclick="toggleFab('editor')" aria-label="追加记录"><i data-lucide="plus" class="w-6 h-6"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 02 Editor - Dark ===== -->
+  <div class="device-pair">
+    <div class="device-label">02 报销单编辑 · 深色</div>
+    <div class="phone" data-theme="dark">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-right">
+            <i data-lucide="signal" class="w-3.5 h-3.5"></i>
+            <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
+            <i data-lucide="battery-full" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div class="topbar">
+          <div class="topbar-left"><button class="icon-btn"><i data-lucide="chevron-left" class="w-5 h-5"></i></button></div>
+          <div class="topbar-title">报销单</div>
+          <div class="topbar-right"><span class="text-btn">保存</span></div>
+        </div>
+        <div class="scroll px-5">
+          <div class="card p-4 mb-4">
+            <div class="mb-4">
+              <label class="field-label">报销单名称</label>
+              <input class="input-line" type="text" value="2026-07-15至18 出差" />
+            </div>
+            <div>
+              <label class="field-label">出差日期</label>
+              <div class="flex items-center gap-2 mt-1">
+                <button class="date-pill"><i data-lucide="calendar" class="w-3.5 h-3.5" style="color:var(--accent)"></i>07-15 <span>开始</span></button>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5" style="color:var(--fg-soft)"></i>
+                <button class="date-pill"><i data-lucide="calendar" class="w-3.5 h-3.5" style="color:var(--accent)"></i>07-18 <span>结束</span></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card summary-card mb-4">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-semibold">报销汇总</span>
+              <i data-lucide="calculator" class="w-4 h-4" style="color:var(--fg-muted)"></i>
+            </div>
+            <div class="summary-total mb-1">¥1,866.00</div>
+            <p class="text-xs mb-4" style="color:var(--fg-muted)">人民币 壹仟捌佰陆拾陆元整</p>
+            <div class="summary-grid">
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">火车</span><span class="font-semibold">¥553.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">飞机</span><span class="font-semibold">¥680.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">酒店</span><span class="font-semibold">¥398.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">市内交通</span><span class="font-semibold">¥35.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">往返交通</span><span class="font-semibold">¥0.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">差补</span><span class="font-semibold">¥200.00</span></div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold">明细记录（5）</h3>
+            <span class="text-[10px]" style="color:var(--fg-soft)">左滑删除</span>
+          </div>
+
+          <div class="tag-summary">
+            <span class="tag-chip"><span class="dot train"></span>火车 1</span>
+            <span class="tag-chip"><span class="dot flight"></span>飞机 1</span>
+            <span class="tag-chip"><span class="dot hotel"></span>酒店 1</span>
+            <span class="tag-chip"><span class="dot car"></span>用车 2</span>
+          </div>
+
+          <div class="space-y-2.5 mb-24 editor-list">
+            <div class="swipe-row" data-swipe>
+              <div class="swipe-bg"><i data-lucide="trash-2" class="w-4 h-4"></i>删除</div>
+              <div class="swipe-content">
+                <div class="rec-row">
+                  <div class="rec-icon train"><i data-lucide="train-front" class="w-4 h-4"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">G123 北京南 → 上海虹桥</p>
+                    <p class="text-xs truncate" style="color:var(--fg-muted)">07-15 08:00 · 二等座</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold">¥553.00</p>
+                    <span class="badge badge-train mt-1">火车</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="swipe-row" data-swipe>
+              <div class="swipe-bg"><i data-lucide="trash-2" class="w-4 h-4"></i>删除</div>
+              <div class="swipe-content">
+                <div class="rec-row">
+                  <div class="rec-icon flight"><i data-lucide="plane" class="w-4 h-4"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">MU5136 上海 → 北京</p>
+                    <p class="text-xs truncate" style="color:var(--fg-muted)">07-18 19:30 · 经济舱</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold">¥680.00</p>
+                    <span class="badge badge-flight mt-1">飞机</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="swipe-row" data-swipe>
+              <div class="swipe-bg"><i data-lucide="trash-2" class="w-4 h-4"></i>删除</div>
+              <div class="swipe-content">
+                <div class="rec-row">
+                  <div class="rec-icon hotel"><i data-lucide="bed-double" class="w-4 h-4"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">上海浦东希尔顿</p>
+                    <p class="text-xs truncate" style="color:var(--fg-muted)">07-15 → 07-18 · 3 晚</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold">¥398.00</p>
+                    <span class="badge badge-hotel mt-1">酒店</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="swipe-row" data-swipe>
+              <div class="swipe-bg"><i data-lucide="trash-2" class="w-4 h-4"></i>删除</div>
+              <div class="swipe-content">
+                <div class="rec-row">
+                  <div class="rec-icon car"><i data-lucide="car" class="w-4 h-4"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">滴滴出行</p>
+                    <p class="text-xs truncate" style="color:var(--fg-muted)">07-16 · 12.5 km</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold">¥35.00</p>
+                    <span class="badge badge-car mt-1">用车</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="swipe-row" data-swipe>
+              <div class="swipe-bg"><i data-lucide="trash-2" class="w-4 h-4"></i>删除</div>
+              <div class="swipe-content">
+                <div class="rec-row">
+                  <div class="rec-icon car"><i data-lucide="car" class="w-4 h-4"></i></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">滴滴出行</p>
+                    <p class="text-xs truncate" style="color:var(--fg-muted)">07-17 · 48.2 km · 往返</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold">¥0.00</p>
+                    <span class="badge badge-car mt-1">用车</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fab-backdrop" id="fab-bd-2d" onclick="closeFab('editorD')"></div>
+        <div class="fab-wrap" id="editorD-fab">
+          <div class="fab-menu">
+            <button class="fab-item" onclick="fabAction('扫码添加')"><span class="fab-item-icon"><i data-lucide="scan-line" class="w-3.5 h-3.5"></i></span>扫码添加</button>
+            <button class="fab-item" onclick="fabAction('上传图片')"><span class="fab-item-icon"><i data-lucide="image" class="w-3.5 h-3.5"></i></span>上传图片</button>
+            <button class="fab-item" onclick="fabAction('手动添加')"><span class="fab-item-icon"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></span>手动添加</button>
+          </div>
+          <button class="fab-main" onclick="toggleFab('editorD')" aria-label="追加记录"><i data-lucide="plus" class="w-6 h-6"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 03 History - Light ===== -->
+  <div class="device-pair">
+    <div class="device-label">03 历史记录 · 浅色</div>
+    <div class="phone" data-theme="light">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-right">
+            <i data-lucide="signal" class="w-3.5 h-3.5"></i>
+            <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
+            <i data-lucide="battery-full" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div class="topbar">
+          <div class="topbar-left"></div>
+          <div class="topbar-title">历史记录</div>
+          <div class="topbar-right">
+            <button class="icon-btn"><i data-lucide="search" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+        <div class="scroll px-5 pt-1">
+          <div class="text-xs font-semibold mb-2" style="color:var(--fg-muted)">2026 年 7 月</div>
+          <div class="space-y-3 mb-5">
+            <div class="card p-4 recent-card row-enter">
+              <div class="recent-thumb"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate">2026-07-15至18 出差</p>
+                <p class="text-xs truncate" style="color:var(--fg-muted)">上海客户拜访 · 4 天</p>
+              </div>
+              <span class="text-base font-bold" style="color:var(--accent)">¥1,866</span>
+            </div>
+            <div class="card p-4 recent-card row-enter" style="animation-delay:0.04s">
+              <div class="recent-thumb"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate">2026-07-03 北京培训</p>
+                <p class="text-xs truncate" style="color:var(--fg-muted)">3 天</p>
+              </div>
+              <span class="text-base font-bold" style="color:var(--accent)">¥2,340</span>
+            </div>
+          </div>
+          <div class="text-xs font-semibold mb-2" style="color:var(--fg-muted)">2026 年 6 月</div>
+          <div class="space-y-3 pb-4">
+            <div class="card p-4 recent-card row-enter">
+              <div class="recent-thumb"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate">2026-06-20 广州出差</p>
+                <p class="text-xs truncate" style="color:var(--fg-muted)">2 天</p>
+              </div>
+              <span class="text-base font-bold" style="color:var(--accent)">¥1,120</span>
+            </div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><i data-lucide="home" class="w-5 h-5"></i><span>首页</span></div>
+          <div class="tab active"><i data-lucide="archive" class="w-5 h-5"></i><span>历史</span></div>
+          <div class="tab"><i data-lucide="user" class="w-5 h-5"></i><span>我的</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 03 History - Dark ===== -->
+  <div class="device-pair">
+    <div class="device-label">03 历史记录 · 深色</div>
+    <div class="phone" data-theme="dark">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-right">
+            <i data-lucide="signal" class="w-3.5 h-3.5"></i>
+            <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
+            <i data-lucide="battery-full" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div class="topbar">
+          <div class="topbar-left"></div>
+          <div class="topbar-title">历史记录</div>
+          <div class="topbar-right">
+            <button class="icon-btn"><i data-lucide="search" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+        <div class="scroll px-5 pt-1">
+          <div class="text-xs font-semibold mb-2" style="color:var(--fg-muted)">2026 年 7 月</div>
+          <div class="space-y-3 mb-5">
+            <div class="card p-4 recent-card row-enter">
+              <div class="recent-thumb"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate">2026-07-15至18 出差</p>
+                <p class="text-xs truncate" style="color:var(--fg-muted)">上海客户拜访 · 4 天</p>
+              </div>
+              <span class="text-base font-bold" style="color:var(--accent)">¥1,866</span>
+            </div>
+            <div class="card p-4 recent-card row-enter" style="animation-delay:0.04s">
+              <div class="recent-thumb"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate">2026-07-03 北京培训</p>
+                <p class="text-xs truncate" style="color:var(--fg-muted)">3 天</p>
+              </div>
+              <span class="text-base font-bold" style="color:var(--accent)">¥2,340</span>
+            </div>
+          </div>
+          <div class="text-xs font-semibold mb-2" style="color:var(--fg-muted)">2026 年 6 月</div>
+          <div class="space-y-3 pb-4">
+            <div class="card p-4 recent-card row-enter">
+              <div class="recent-thumb"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate">2026-06-20 广州出差</p>
+                <p class="text-xs truncate" style="color:var(--fg-muted)">2 天</p>
+              </div>
+              <span class="text-base font-bold" style="color:var(--accent)">¥1,120</span>
+            </div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><i data-lucide="home" class="w-5 h-5"></i><span>首页</span></div>
+          <div class="tab active"><i data-lucide="archive" class="w-5 h-5"></i><span>历史</span></div>
+          <div class="tab"><i data-lucide="user" class="w-5 h-5"></i><span>我的</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 04 Detail - Light ===== -->
+  <div class="device-pair">
+    <div class="device-label">04 报销单详情 · 浅色</div>
+    <div class="phone" data-theme="light">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-right">
+            <i data-lucide="signal" class="w-3.5 h-3.5"></i>
+            <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
+            <i data-lucide="battery-full" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div class="topbar">
+          <div class="topbar-left"><button class="icon-btn"><i data-lucide="chevron-left" class="w-5 h-5"></i></button></div>
+          <div class="topbar-title">报销详情</div>
+          <div class="topbar-right"><button class="icon-btn"><i data-lucide="share-2" class="w-4 h-4"></i></button></div>
+        </div>
+        <div class="scroll px-5">
+          <div class="card p-4 mb-4">
+            <div class="mb-4">
+              <label class="field-label">报销单名称</label>
+              <div class="text-[15px] font-semibold py-1.5">2026-07-15至18 出差</div>
+            </div>
+            <div>
+              <label class="field-label">出差日期</label>
+              <div class="flex items-center gap-2 mt-1">
+                <div class="date-pill" style="cursor:default"><i data-lucide="calendar" class="w-3.5 h-3.5" style="color:var(--accent)"></i>07-15 <span>开始</span></div>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5" style="color:var(--fg-soft)"></i>
+                <div class="date-pill" style="cursor:default"><i data-lucide="calendar" class="w-3.5 h-3.5" style="color:var(--accent)"></i>07-18 <span>结束</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card summary-card mb-4">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-semibold">报销汇总</span>
+              <i data-lucide="calculator" class="w-4 h-4" style="color:var(--fg-muted)"></i>
+            </div>
+            <div class="summary-total mb-1">¥1,866.00</div>
+            <p class="text-xs mb-4" style="color:var(--fg-muted)">人民币 壹仟捌佰陆拾陆元整</p>
+            <div class="summary-grid">
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">火车</span><span class="font-semibold">¥553.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">飞机</span><span class="font-semibold">¥680.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">酒店</span><span class="font-semibold">¥398.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">市内交通</span><span class="font-semibold">¥35.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">往返交通</span><span class="font-semibold">¥0.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">差补</span><span class="font-semibold">¥200.00</span></div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold">明细记录（5）</h3>
+          </div>
+
+          <div class="tag-summary">
+            <span class="tag-chip"><span class="dot train"></span>火车 1</span>
+            <span class="tag-chip"><span class="dot flight"></span>飞机 1</span>
+            <span class="tag-chip"><span class="dot hotel"></span>酒店 1</span>
+            <span class="tag-chip"><span class="dot car"></span>用车 2</span>
+          </div>
+
+          <div class="space-y-2.5 mb-24 detail-list">
+            <div class="rec-row"><div class="rec-icon train"><i data-lucide="train-front" class="w-4 h-4"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">G123 北京南 → 上海虹桥</p><p class="text-xs truncate" style="color:var(--fg-muted)">07-15 08:00 · 二等座</p></div><div class="text-right"><p class="text-sm font-semibold">¥553.00</p><span class="badge badge-train mt-1">火车</span></div></div>
+            <div class="rec-row"><div class="rec-icon flight"><i data-lucide="plane" class="w-4 h-4"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">MU5136 上海 → 北京</p><p class="text-xs truncate" style="color:var(--fg-muted)">07-18 19:30 · 经济舱</p></div><div class="text-right"><p class="text-sm font-semibold">¥680.00</p><span class="badge badge-flight mt-1">飞机</span></div></div>
+            <div class="rec-row"><div class="rec-icon hotel"><i data-lucide="bed-double" class="w-4 h-4"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">上海浦东希尔顿</p><p class="text-xs truncate" style="color:var(--fg-muted)">07-15 → 07-18 · 3 晚</p></div><div class="text-right"><p class="text-sm font-semibold">¥398.00</p><span class="badge badge-hotel mt-1">酒店</span></div></div>
+            <div class="rec-row"><div class="rec-icon car"><i data-lucide="car" class="w-4 h-4"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">滴滴出行</p><p class="text-xs truncate" style="color:var(--fg-muted)">07-16 · 12.5 km</p></div><div class="text-right"><p class="text-sm font-semibold">¥35.00</p><span class="badge badge-car mt-1">用车</span></div></div>
+            <div class="rec-row"><div class="rec-icon car"><i data-lucide="car" class="w-4 h-4"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">滴滴出行</p><p class="text-xs truncate" style="color:var(--fg-muted)">07-17 · 48.2 km · 往返</p></div><div class="text-right"><p class="text-sm font-semibold">¥0.00</p><span class="badge badge-car mt-1">用车</span></div></div>
+          </div>
+        </div>
+
+        <div class="fab-backdrop" id="fab-bd-4" onclick="closeFab('detail')"></div>
+        <div class="fab-wrap" id="detail-fab">
+          <div class="fab-menu">
+            <button class="fab-item" onclick="fabAction('扫码添加')"><span class="fab-item-icon"><i data-lucide="scan-line" class="w-3.5 h-3.5"></i></span>扫码添加</button>
+            <button class="fab-item" onclick="fabAction('上传图片')"><span class="fab-item-icon"><i data-lucide="image" class="w-3.5 h-3.5"></i></span>上传图片</button>
+            <button class="fab-item" onclick="fabAction('手动添加')"><span class="fab-item-icon"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></span>手动添加</button>
+          </div>
+          <button class="fab-main" onclick="toggleFab('detail')" aria-label="追加记录"><i data-lucide="plus" class="w-6 h-6"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 04 Detail - Dark ===== -->
+  <div class="device-pair">
+    <div class="device-label">04 报销单详情 · 深色</div>
+    <div class="phone" data-theme="dark">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-right">
+            <i data-lucide="signal" class="w-3.5 h-3.5"></i>
+            <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
+            <i data-lucide="battery-full" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div class="topbar">
+          <div class="topbar-left"><button class="icon-btn"><i data-lucide="chevron-left" class="w-5 h-5"></i></button></div>
+          <div class="topbar-title">报销详情</div>
+          <div class="topbar-right"><button class="icon-btn"><i data-lucide="share-2" class="w-4 h-4"></i></button></div>
+        </div>
+        <div class="scroll px-5">
+          <div class="card p-4 mb-4">
+            <div class="mb-4">
+              <label class="field-label">报销单名称</label>
+              <div class="text-[15px] font-semibold py-1.5">2026-07-15至18 出差</div>
+            </div>
+            <div>
+              <label class="field-label">出差日期</label>
+              <div class="flex items-center gap-2 mt-1">
+                <div class="date-pill" style="cursor:default"><i data-lucide="calendar" class="w-3.5 h-3.5" style="color:var(--accent)"></i>07-15 <span>开始</span></div>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5" style="color:var(--fg-soft)"></i>
+                <div class="date-pill" style="cursor:default"><i data-lucide="calendar" class="w-3.5 h-3.5" style="color:var(--accent)"></i>07-18 <span>结束</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card summary-card mb-4">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-semibold">报销汇总</span>
+              <i data-lucide="calculator" class="w-4 h-4" style="color:var(--fg-muted)"></i>
+            </div>
+            <div class="summary-total mb-1">¥1,866.00</div>
+            <p class="text-xs mb-4" style="color:var(--fg-muted)">人民币 壹仟捌佰陆拾陆元整</p>
+            <div class="summary-grid">
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">火车</span><span class="font-semibold">¥553.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">飞机</span><span class="font-semibold">¥680.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">酒店</span><span class="font-semibold">¥398.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">市内交通</span><span class="font-semibold">¥35.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">往返交通</span><span class="font-semibold">¥0.00</span></div>
+              <div class="flex justify-between"><span style="color:var(--fg-muted)">差补</span><span class="font-semibold">¥200.00</span></div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold">明细记录（5）</h3>
+          </div>
+
+          <div class="tag-summary">
+            <span class="tag-chip"><span class="dot train"></span>火车 1</span>
+            <span class="tag-chip"><span class="dot flight"></span>飞机 1</span>
+            <span class="tag-chip"><span class="dot hotel"></span>酒店 1</span>
+            <span class="tag-chip"><span class="dot car"></span>用车 2</span>
+          </div>
+
+          <div class="space-y-2.5 mb-24 detail-list">
+            <div class="rec-row"><div class="rec-icon train"><i data-lucide="train-front" class="w-4 h-4"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">G123 北京南 → 上海虹桥</p><p class="text-xs truncate" style="color:var(--fg-muted)">07-15 08:00 · 二等座</p></div><div class="text-right"><p class="text-sm font-semibold">¥553.00</p><span class="badge badge-train mt-1">火车</span></div></div>
+            <div class="rec-row"><div class="rec-icon flight"><i data-lucide="plane" class="w-4 h-4"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">MU5136 上海 → 北京</p><p class="text-xs truncate" style="color:var(--fg-muted)">07-18 19:30 · 经济舱</p></div><div class="text-right"><p class="text-sm font-semibold">¥680.00</p><span class="badge badge-flight mt-1">飞机</span></div></div>
+            <div class="rec-row"><div class="rec-icon hotel"><i data-lucide="bed-double" class="w-4 h-4"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">上海浦东希尔顿</p><p class="text-xs truncate" style="color:var(--fg-muted)">07-15 → 07-18 · 3 晚</p></div><div class="text-right"><p class="text-sm font-semibold">¥398.00</p><span class="badge badge-hotel mt-1">酒店</span></div></div>
+            <div class="rec-row"><div class="rec-icon car"><i data-lucide="car" class="w-4 h-4"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">滴滴出行</p><p class="text-xs truncate" style="color:var(--fg-muted)">07-16 · 12.5 km</p></div><div class="text-right"><p class="text-sm font-semibold">¥35.00</p><span class="badge badge-car mt-1">用车</span></div></div>
+            <div class="rec-row"><div class="rec-icon car"><i data-lucide="car" class="w-4 h-4"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">滴滴出行</p><p class="text-xs truncate" style="color:var(--fg-muted)">07-17 · 48.2 km · 往返</p></div><div class="text-right"><p class="text-sm font-semibold">¥0.00</p><span class="badge badge-car mt-1">用车</span></div></div>
+          </div>
+        </div>
+
+        <div class="fab-backdrop" id="fab-bd-4d" onclick="closeFab('detailD')"></div>
+        <div class="fab-wrap" id="detailD-fab">
+          <div class="fab-menu">
+            <button class="fab-item" onclick="fabAction('扫码添加')"><span class="fab-item-icon"><i data-lucide="scan-line" class="w-3.5 h-3.5"></i></span>扫码添加</button>
+            <button class="fab-item" onclick="fabAction('上传图片')"><span class="fab-item-icon"><i data-lucide="image" class="w-3.5 h-3.5"></i></span>上传图片</button>
+            <button class="fab-item" onclick="fabAction('手动添加')"><span class="fab-item-icon"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></span>手动添加</button>
+          </div>
+          <button class="fab-main" onclick="toggleFab('detailD')" aria-label="追加记录"><i data-lucide="plus" class="w-6 h-6"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 05 Mine - Light ===== -->
+  <div class="device-pair">
+    <div class="device-label">05 我的 · 浅色</div>
+    <div class="phone" data-theme="light">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-right">
+            <i data-lucide="signal" class="w-3.5 h-3.5"></i>
+            <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
+            <i data-lucide="battery-full" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div class="topbar">
+          <div class="topbar-left"></div>
+          <div class="topbar-title">我的</div>
+          <div class="topbar-right"></div>
+        </div>
+        <div class="scroll px-5">
+          <div class="card p-4 mb-4 flex items-center gap-4">
+            <div class="mine-avatar">S</div>
+            <div>
+              <p class="text-base font-bold">SanXiaoXing</p>
+              <p class="text-xs" style="color:var(--fg-muted)">sanxiaoxing@example.com</p>
+            </div>
+          </div>
+
+          <div class="card mb-4 overflow-hidden">
+            <div class="mine-row border-b" style="border-color:var(--border)">
+              <div class="mine-row-left">
+                <div class="mine-row-icon"><i data-lucide="pie-chart" class="w-4 h-4"></i></div>
+                <div>
+                  <p class="text-sm font-semibold">报销统计</p>
+                  <p class="text-xs" style="color:var(--fg-muted)">查看月度/年度汇总</p>
+                </div>
+              </div>
+              <i data-lucide="chevron-right" class="w-4 h-4" style="color:var(--fg-soft)"></i>
+            </div>
+            <div class="mine-row">
+              <div class="mine-row-left">
+                <div class="mine-row-icon"><i data-lucide="moon" class="w-4 h-4"></i></div>
+                <div>
+                  <p class="text-sm font-semibold">深色模式</p>
+                  <p class="text-xs" style="color:var(--fg-muted)">切换界面主题</p>
+                </div>
+              </div>
+              <div class="theme-toggle" role="switch" aria-checked="false"></div>
+            </div>
+          </div>
+
+          <div class="card overflow-hidden mb-4">
+            <div class="mine-row border-b" style="border-color:var(--border)">
+              <div class="mine-row-left">
+                <div class="mine-row-icon"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+                <span class="text-sm font-semibold">隐私政策</span>
+              </div>
+              <i data-lucide="chevron-right" class="w-4 h-4" style="color:var(--fg-soft)"></i>
+            </div>
+            <div class="mine-row border-b" style="border-color:var(--border)">
+              <div class="mine-row-left">
+                <div class="mine-row-icon"><i data-lucide="file-text" class="w-4 h-4"></i></div>
+                <span class="text-sm font-semibold">用户协议</span>
+              </div>
+              <i data-lucide="chevron-right" class="w-4 h-4" style="color:var(--fg-soft)"></i>
+            </div>
+            <div class="mine-row">
+              <div class="mine-row-left">
+                <div class="mine-row-icon"><i data-lucide="help-circle" class="w-4 h-4"></i></div>
+                <span class="text-sm font-semibold">帮助与反馈</span>
+              </div>
+              <i data-lucide="chevron-right" class="w-4 h-4" style="color:var(--fg-soft)"></i>
+            </div>
+          </div>
+
+          <div class="card p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-semibold">版本信息</span>
+              <span class="text-xs" style="color:var(--fg-muted)">v1.0.0</span>
+            </div>
+            <p class="text-xs" style="color:var(--fg-muted)">SnapClaim · Copyright 2026 SanXiaoXing. All rights reserved.</p>
+          </div>
+
+          <div class="h-6"></div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><i data-lucide="home" class="w-5 h-5"></i><span>首页</span></div>
+          <div class="tab"><i data-lucide="archive" class="w-5 h-5"></i><span>历史</span></div>
+          <div class="tab active"><i data-lucide="user" class="w-5 h-5"></i><span>我的</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 05 Mine - Dark ===== -->
+  <div class="device-pair">
+    <div class="device-label">05 我的 · 深色</div>
+    <div class="phone" data-theme="dark">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-right">
+            <i data-lucide="signal" class="w-3.5 h-3.5"></i>
+            <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
+            <i data-lucide="battery-full" class="w-4 h-4"></i>
+          </div>
+        </div>
+        <div class="topbar">
+          <div class="topbar-left"></div>
+          <div class="topbar-title">我的</div>
+          <div class="topbar-right"></div>
+        </div>
+        <div class="scroll px-5">
+          <div class="card p-4 mb-4 flex items-center gap-4">
+            <div class="mine-avatar">S</div>
+            <div>
+              <p class="text-base font-bold">SanXiaoXing</p>
+              <p class="text-xs" style="color:var(--fg-muted)">sanxiaoxing@example.com</p>
+            </div>
+          </div>
+
+          <div class="card mb-4 overflow-hidden">
+            <div class="mine-row border-b" style="border-color:var(--border)">
+              <div class="mine-row-left">
+                <div class="mine-row-icon"><i data-lucide="pie-chart" class="w-4 h-4"></i></div>
+                <div>
+                  <p class="text-sm font-semibold">报销统计</p>
+                  <p class="text-xs" style="color:var(--fg-muted)">查看月度/年度汇总</p>
+                </div>
+              </div>
+              <i data-lucide="chevron-right" class="w-4 h-4" style="color:var(--fg-soft)"></i>
+            </div>
+            <div class="mine-row">
+              <div class="mine-row-left">
+                <div class="mine-row-icon"><i data-lucide="moon" class="w-4 h-4"></i></div>
+                <div>
+                  <p class="text-sm font-semibold">深色模式</p>
+                  <p class="text-xs" style="color:var(--fg-muted)">切换界面主题</p>
+                </div>
+              </div>
+              <div class="theme-toggle" role="switch" aria-checked="true"></div>
+            </div>
+          </div>
+
+          <div class="card overflow-hidden mb-4">
+            <div class="mine-row border-b" style="border-color:var(--border)">
+              <div class="mine-row-left">
+                <div class="mine-row-icon"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+                <span class="text-sm font-semibold">隐私政策</span>
+              </div>
+              <i data-lucide="chevron-right" class="w-4 h-4" style="color:var(--fg-soft)"></i>
+            </div>
+            <div class="mine-row border-b" style="border-color:var(--border)">
+              <div class="mine-row-left">
+                <div class="mine-row-icon"><i data-lucide="file-text" class="w-4 h-4"></i></div>
+                <span class="text-sm font-semibold">用户协议</span>
+              </div>
+              <i data-lucide="chevron-right" class="w-4 h-4" style="color:var(--fg-soft)"></i>
+            </div>
+            <div class="mine-row">
+              <div class="mine-row-left">
+                <div class="mine-row-icon"><i data-lucide="help-circle" class="w-4 h-4"></i></div>
+                <span class="text-sm font-semibold">帮助与反馈</span>
+              </div>
+              <i data-lucide="chevron-right" class="w-4 h-4" style="color:var(--fg-soft)"></i>
+            </div>
+          </div>
+
+          <div class="card p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-semibold">版本信息</span>
+              <span class="text-xs" style="color:var(--fg-muted)">v1.0.0</span>
+            </div>
+            <p class="text-xs" style="color:var(--fg-muted)">SnapClaim · Copyright 2026 SanXiaoXing. All rights reserved.</p>
+          </div>
+
+          <div class="h-6"></div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><i data-lucide="home" class="w-5 h-5"></i><span>首页</span></div>
+          <div class="tab"><i data-lucide="archive" class="w-5 h-5"></i><span>历史</span></div>
+          <div class="tab active"><i data-lucide="user" class="w-5 h-5"></i><span>我的</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // lucide async loader
+  function waitLucide(cb) {
+    if (window.lucide) { cb(); return; }
+    let t = 0;
+    const id = setInterval(() => {
+      if (window.lucide) { clearInterval(id); cb(); }
+      else if ((t += 50) > 2000) { clearInterval(id); }
+    }, 50);
+  }
+
+  // FAB toggles
+  function toggleFab(id) {
+    const fab = document.getElementById(id + '-fab');
+    const map = { editor: 'fab-bd-2', editorD: 'fab-bd-2d', detail: 'fab-bd-4', detailD: 'fab-bd-4d' };
+    const bd = document.getElementById(map[id]);
+    if (!fab) return;
+    if (fab.classList.contains('open')) {
+      fab.classList.remove('open');
+      bd?.classList.remove('show');
+    } else {
+      fab.classList.add('open');
+      bd?.classList.add('show');
+    }
+  }
+  function closeFab(id) {
+    const fab = document.getElementById(id + '-fab');
+    const map = { editor: 'fab-bd-2', editorD: 'fab-bd-2d', detail: 'fab-bd-4', detailD: 'fab-bd-4d' };
+    fab?.classList.remove('open');
+    document.getElementById(map[id])?.classList.remove('show');
+  }
+  function fabAction(name) {
+    closeFab('editor'); closeFab('editorD'); closeFab('detail'); closeFab('detailD');
+    // ponytail: prototype demo only - real app routes to scanner / picker / form
+    console.log('FAB action:', name);
+  }
+
+  // Left-swipe to delete (touch + mouse)
+  function initSwipe() {
+    document.querySelectorAll('[data-swipe]').forEach(row => {
+      const content = row.querySelector('.swipe-content');
+      let startX = 0, current = 0, dragging = false, isOpen = false;
+
+      function start(x) {
+        startX = x;
+        dragging = true;
+        content.style.transition = 'none';
+      }
+      function move(x) {
+        if (!dragging) return;
+        const delta = x - startX;
+        if (delta < 0) {
+          current = Math.max(delta, -88);
+          content.style.transform = `translateX(${current}px)`;
+        }
+      }
+      function end() {
+        dragging = false;
+        content.style.transition = 'transform .22s cubic-bezier(0.16, 1, 0.3, 1)';
+        if (current < -44) {
+          content.style.transform = 'translateX(-88px)';
+          isOpen = true;
+        } else {
+          content.style.transform = 'translateX(0)';
+          isOpen = false;
+        }
+      }
+
+      content.addEventListener('touchstart', e => start(e.touches[0].clientX), { passive: true });
+      content.addEventListener('touchmove', e => move(e.touches[0].clientX), { passive: true });
+      content.addEventListener('touchend', end);
+      content.addEventListener('mousedown', e => start(e.clientX));
+      window.addEventListener('mousemove', e => { if (dragging) move(e.clientX); });
+      window.addEventListener('mouseup', () => { if (dragging) end(); });
+
+      // click background delete to reset (demo)
+      row.querySelector('.swipe-bg').addEventListener('click', () => {
+        content.style.transform = 'translateX(0)';
+        isOpen = false;
+      });
+
+      // close on scroll to avoid stuck rows
+      row.closest('.scroll')?.addEventListener('scroll', () => {
+        if (isOpen) { content.style.transform = 'translateX(0)'; isOpen = false; }
+      });
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    waitLucide(() => {
+      lucide.createIcons();
+      gsap.from('.device-pair', {
+        y: 30, opacity: 0, duration: 0.6, stagger: 0.08, ease: 'expo.out'
+      });
+      initSwipe();
+    });
+  });
+</script>
+
+</body>
+</html>
