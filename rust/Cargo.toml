@@ -1,0 +1,14 @@
+[package]
+name = "snap_claim_core"
+version = "0.1.0"
+edition = "2021"
+description = "snap_claim 核心逻辑：发票解析、OCR、设置等"
+
+[lib]
+name = "snap_claim_core"
+crate-type = ["cdylib", "staticlib"]
+path = "src/lib.rs"
+
+[dependencies]
+# 与 flutter_rust_bridge_codegen / Dart 包保持同版本。
+flutter_rust_bridge = "=2.12.0"
