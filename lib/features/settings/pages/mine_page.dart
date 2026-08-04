@@ -215,7 +215,7 @@ class _MinePageState extends State<MinePage> {
                           ),
                           const Spacer(),
                           Text(
-                            'v1.0.0',
+                            'v1.1.0',
                             style: TextStyle(fontSize: 12, color: c.fgMuted),
                           ),
                         ],
