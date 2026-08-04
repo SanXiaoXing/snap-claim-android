@@ -47,6 +47,8 @@ dependencies:
   path_provider: ^2.1.5
   # 调起系统分享面板（分享报销单图片 / 文本）。
   share_plus: ^10.1.4
+  # 本地键值存储（持久化主题模式等偏好设置）。
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:

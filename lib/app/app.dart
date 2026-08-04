@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/database/database.dart';
 import '../core/utils/ocr.dart';
@@ -27,7 +28,10 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
   // 热启动（应用已在后台运行）时的分享图片事件订阅。
   StreamSubscription<List<String>>? _sharedSub;
 
-  ThemeMode _themeMode = ThemeMode.light;
+  // 主题偏好存储键：保存 ThemeMode 的名称（system / light / dark）。
+  static const _themePrefsKey = 'themeMode';
+
+  ThemeMode _themeMode = ThemeMode.system;
   List<Claim> _claims = [];
   bool _loading = true;
 
@@ -35,7 +39,7 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
   void initState() {
     super.initState();
     SharedImageReceiver.init();
-    _loadClaims();
+    _init();
     // 冷启动：应用从分享面板被拉起，取走待处理图片并走 OCR 解析。
     _consumePendingSharedImages();
     // 热启动：应用已在运行，监听新分享的图片路径。
@@ -43,32 +47,51 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
         SharedImageReceiver.onSharedImages.listen(_handleSharedImages);
   }
 
+  /// 首帧前的初始化：并行读取报销单与持久化的主题设置，
+  /// 两者都就绪后才渲染主界面，避免主题先以默认值闪一下再切换。
+  Future<void> _init() async {
+    List<Claim> claims;
+    try {
+      claims = await AppDatabase.instance.getAllClaims();
+    } catch (e) {
+      debugPrint('加载报销单失败（列表将为空）: $e');
+      claims = [];
+    }
+    var themeMode = ThemeMode.system;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      themeMode = _themeModeFromName(prefs.getString(_themePrefsKey));
+    } catch (e) {
+      debugPrint('读取主题设置失败（使用跟随系统）: $e');
+    }
+    if (!mounted) return;
+    setState(() {
+      _claims = claims;
+      _themeMode = themeMode;
+      _loading = false;
+    });
+  }
+
+  /// 外观模式三态切换：更新内存并持久化，重启应用后保持。
+  void _setThemeMode(ThemeMode mode) {
+    setState(() => _themeMode = mode);
+    _persist(() async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_themePrefsKey, mode.name);
+    }, '保存主题设置');
+  }
+
+  static ThemeMode _themeModeFromName(String? name) {
+    for (final m in ThemeMode.values) {
+      if (m.name == name) return m;
+    }
+    return ThemeMode.system;
+  }
+
   @override
   void dispose() {
     _sharedSub?.cancel();
     super.dispose();
-  }
-
-  Future<void> _loadClaims() async {
-    try {
-      final claims = await AppDatabase.instance.getAllClaims();
-      if (!mounted) return;
-      setState(() {
-        _claims = claims;
-        _loading = false;
-      });
-    } catch (e) {
-      debugPrint('加载报销单失败（列表将为空）: $e');
-      if (!mounted) return;
-      setState(() => _loading = false);
-    }
-  }
-
-  void _toggleTheme() {
-    setState(() {
-      _themeMode =
-          _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
-    });
   }
 
   void _saveClaim(Claim claim) {
@@ -213,7 +236,7 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
               onRestoreClaim: _restoreClaim,
               onDeleteClaim: _deleteClaim,
               themeMode: _themeMode,
-              onToggleTheme: _toggleTheme,
+              onChangeThemeMode: _setThemeMode,
             ),
     );
   }

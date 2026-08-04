@@ -16,19 +16,18 @@ import '../widgets/mine_owed_card.dart';
 import '../widgets/mine_result_line.dart';
 import '../widgets/mine_row.dart';
 import '../widgets/mine_stat_cell.dart';
-import '../widgets/mine_toggle.dart';
 import 'stats_page.dart';
 
 class MinePage extends StatefulWidget {
   final List<Claim> claims;
   final ThemeMode themeMode;
-  final VoidCallback onToggleTheme;
+  final ValueChanged<ThemeMode> onChangeThemeMode;
 
   const MinePage({
     super.key,
     required this.claims,
     required this.themeMode,
-    required this.onToggleTheme,
+    required this.onChangeThemeMode,
   });
 
   @override
@@ -39,7 +38,6 @@ class _MinePageState extends State<MinePage> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final isDark = widget.themeMode == ThemeMode.dark;
 
     // 从真实数据计算统计。
     final now = DateTime.now();
@@ -153,13 +151,11 @@ class _MinePageState extends State<MinePage> {
                       ),
                       MineDivider(),
                       MineRow(
-                        icon: Icons.nights_stay_outlined,
-                        title: '深色模式',
-                        subtitle: '切换界面主题',
-                        trailing: Toggle(
-                          value: isDark,
-                          onChanged: (_) => widget.onToggleTheme(),
-                        ),
+                        icon: Icons.brightness_6_outlined,
+                        title: '外观模式',
+                        subtitle: _themeModeLabel(widget.themeMode),
+                        trailing: Icon(Icons.chevron_right, size: 18, color: c.fgSoft),
+                        onTap: _pickThemeMode,
                       ),
                     ],
                   ),
@@ -265,6 +261,50 @@ class _MinePageState extends State<MinePage> {
 
   void _snack(String msg) {
     showAppSnack(context, msg);
+  }
+
+  /// 外观模式三态选择（跟随系统 / 浅色 / 深色），选中后立即生效并持久化。
+  Future<void> _pickThemeMode() async {
+    final c = context.colors;
+    final current = widget.themeMode;
+    final picked = await showDialog<ThemeMode>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          '外观模式',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: c.fg,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final mode in ThemeMode.values) ...[
+              _ThemeOptionRow(
+                label: _themeModeLabel(mode),
+                selected: mode == current,
+                onTap: () => Navigator.of(ctx).pop(mode),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    if (picked != null && picked != current) {
+      widget.onChangeThemeMode(picked);
+    }
+  }
+
+  static String _themeModeLabel(ThemeMode mode) {
+    return switch (mode) {
+      ThemeMode.system => '跟随系统',
+      ThemeMode.light => '浅色',
+      ThemeMode.dark => '深色',
+    };
   }
 
   /// 清除缓存：先查询大小 → 确认对话框 → 清除 → 反馈释放量。
@@ -403,6 +443,46 @@ class _MinePageState extends State<MinePage> {
               ],
             ],
       raw: result.raw,
+    );
+  }
+}
+
+/// 外观模式选择对话框里的单行选项：左侧名称，右侧选中态圆点。
+class _ThemeOptionRow extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ThemeOptionRow({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 14, color: c.fg),
+              ),
+            ),
+            Icon(
+              selected ? Icons.check_circle : Icons.circle_outlined,
+              size: 20,
+              color: selected ? c.accent : c.fgSoft,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
