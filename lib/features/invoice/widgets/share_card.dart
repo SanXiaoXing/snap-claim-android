@@ -8,6 +8,7 @@ import '../../../core/utils/format.dart';
 import '../models/claim.dart';
 import '../models/record.dart';
 import 'chips.dart';
+import 'summary_pill.dart';
 
 /// 报销单分享卡。
 ///
@@ -217,7 +218,7 @@ class ShareCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               toChineseCurrency(claim.total),
-              style: TextStyle(fontSize: 11, color: c.fgMuted),
+              style: TextStyle(fontSize: 14, color: c.fgMuted),
             ),
           ],
         ),
@@ -249,7 +250,7 @@ class ShareCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             for (final row in claim.summaryRows) ...[
-              _SummaryRowItem(label: row.label, amount: row.amount, c: c),
+              SummaryPill(label: row.label, amount: row.amount, c: c),
               if (row != claim.summaryRows.last) const SizedBox(height: 8),
             ],
           ],
@@ -332,38 +333,6 @@ class ShareCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SummaryRowItem extends StatelessWidget {
-  final String label;
-  final double amount;
-  final AppColorScheme c;
-  const _SummaryRowItem({
-    required this.label,
-    required this.amount,
-    required this.c,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: c.fgMuted),
-        ),
-        const Spacer(),
-        Text(
-          fmtMoneyShort(amount),
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: amount == 0 ? c.fgSoft : c.fg,
-          ),
-        ),
-      ],
     );
   }
 }

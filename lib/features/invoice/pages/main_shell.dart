@@ -29,7 +29,7 @@ class MainShell extends StatefulWidget {
   final ValueChanged<Claim> onRestoreClaim;
   final ValueChanged<Claim> onDeleteClaim;
   final ThemeMode themeMode;
-  final VoidCallback onToggleTheme;
+  final ValueChanged<ThemeMode> onChangeThemeMode;
 
   const MainShell({
     super.key,
@@ -39,7 +39,7 @@ class MainShell extends StatefulWidget {
     required this.onRestoreClaim,
     required this.onDeleteClaim,
     required this.themeMode,
-    required this.onToggleTheme,
+    required this.onChangeThemeMode,
   });
 
   @override
@@ -83,7 +83,7 @@ class _MainShellState extends State<MainShell> {
             MinePage(
               claims: widget.claims,
               themeMode: widget.themeMode,
-              onToggleTheme: widget.onToggleTheme,
+              onChangeThemeMode: widget.onChangeThemeMode,
             ),
           ),
         ],

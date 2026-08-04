@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../core/utils/format.dart';
 import '../models/claim.dart';
+import 'summary_pill.dart';
 
 class SummaryCard extends StatelessWidget {
   final Claim claim;
@@ -52,35 +53,21 @@ class SummaryCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             toChineseCurrency(claim.total),
-            style: TextStyle(fontSize: 12, color: c.fgMuted),
+            style: TextStyle(fontSize: 14, color: c.fgMuted),
           ),
-          const SizedBox(height: 16),
-          GridView.count(
-            crossAxisCount: 2,
+          const SizedBox(height: 10),
+          GridView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 6,
-            crossAxisSpacing: 28,
-            mainAxisSpacing: 10,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisExtent: 34,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 10,
+            ),
             children: [
               for (final row in claim.summaryRows)
-                Row(
-                  children: [
-                    Text(
-                      row.label,
-                      style: TextStyle(fontSize: 12, color: c.fgMuted),
-                    ),
-                    const Spacer(),
-                    Text(
-                      fmtMoney(row.amount),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: c.fg,
-                      ),
-                    ),
-                  ],
-                ),
+                SummaryPill(label: row.label, amount: row.amount, c: c),
             ],
           ),
         ],
