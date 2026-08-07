@@ -17,16 +17,17 @@ class DetailPage extends StatelessWidget {
 
   const DetailPage({super.key, required this.claim, this.onSave});
 
-  /// 进入编辑页；保存后关闭详情页回到列表，避免展示过期数据。
+  /// 进入编辑页；仅当编辑页确实保存了修改时才关闭详情页回到列表
+  /// （避免展示过期数据），未修改直接返回则留在详情页。
   Future<void> _edit(BuildContext context) async {
     final save = onSave;
     if (save == null) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
         builder: (_) => EditorPage(claim: claim, onSave: save),
       ),
     );
-    if (context.mounted) Navigator.of(context).pop();
+    if (context.mounted && saved == true) Navigator.of(context).pop();
   }
 
   /// 进入分享页：渲染分享卡片 → 抓图 → 调起系统分享面板。
@@ -49,15 +50,20 @@ class DetailPage extends StatelessWidget {
               onTap: () => Navigator.of(context).pop(),
             ),
             title: '报销详情',
+            // 右侧有两个操作按钮，加宽左右槽位（保持等宽）并给按钮留间距。
+            leadingWidth: 88,
+            trailingWidth: 88,
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (onSave != null)
+                if (onSave != null) ...[
                   AppIconButton(
                     icon: Icons.edit_outlined,
                     size: 18,
                     onTap: () => _edit(context),
                   ),
+                  const SizedBox(width: 8),
+                ],
                 AppIconButton(
                   icon: Icons.ios_share,
                   size: 18,

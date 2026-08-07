@@ -128,7 +128,8 @@ class _EditorPageState extends State<EditorPage> {
     widget.onSave(_buildCurrent());
     // 跳过后续 Pop 拦截，避免 _save 已经 pop 时再次被回弹拦下。
     _skipPopGuard = true;
-    Navigator.of(context).pop();
+    // 返回 true 告知调用方：本次编辑确实保存了修改。
+    Navigator.of(context).pop(true);
   }
 
   /// 当前表单相对原始报销单是否被修改：
@@ -156,7 +157,8 @@ class _EditorPageState extends State<EditorPage> {
   /// 「保存 / 不保存 / 取消」对话框，由用户决定保存、丢弃修改或留在页面。
   Future<void> _handleBack() async {
     if (!widget.promptSaveOnExit && !_isDirty) {
-      Navigator.of(context).pop();
+      // 未做修改直接退出：返回 false，调用方（详情页）应留在原地。
+      Navigator.of(context).pop(false);
       return;
     }
     final action = await showDialog<_ExitAction>(
@@ -172,7 +174,7 @@ class _EditorPageState extends State<EditorPage> {
       case _ExitAction.discard:
         // 丢弃修改直接退出，跳过 Pop 拦截。
         _skipPopGuard = true;
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(false);
       case _ExitAction.cancel:
         // 留在当前页，什么也不做。
         break;

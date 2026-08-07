@@ -69,11 +69,15 @@ class AppTextButton extends StatelessWidget {
 }
 
 /// 顶部栏：左侧 / 居中标题 / 右侧，左右各占 72 宽以保持标题居中。
+/// 需要更宽槽位（如右侧放两个操作按钮）时，可传 [leadingWidth] /
+/// [trailingWidth] 覆盖默认 72，左右等宽以保证标题仍居中。
 class AppTopBar extends StatelessWidget {
   final String title;
   final Widget? leading;
   final Widget? trailing;
   final bool displayFont;
+  final double leadingWidth;
+  final double trailingWidth;
 
   const AppTopBar({
     super.key,
@@ -81,6 +85,8 @@ class AppTopBar extends StatelessWidget {
     this.leading,
     this.trailing,
     this.displayFont = false,
+    this.leadingWidth = 72,
+    this.trailingWidth = 72,
   });
 
   @override
@@ -93,7 +99,7 @@ class AppTopBar extends StatelessWidget {
         child: Row(
           children: [
             SizedBox(
-              width: 72,
+              width: leadingWidth,
               height: 36,
               child: Align(alignment: Alignment.centerLeft, child: leading ?? const SizedBox()),
             ),
@@ -111,7 +117,7 @@ class AppTopBar extends StatelessWidget {
               ),
             ),
             SizedBox(
-              width: 72,
+              width: trailingWidth,
               height: 36,
               child: Align(alignment: Alignment.centerRight, child: trailing ?? const SizedBox()),
             ),
