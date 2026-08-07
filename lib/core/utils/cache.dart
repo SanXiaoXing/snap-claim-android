@@ -1,6 +1,7 @@
 // 缓存管理：计算和清除临时缓存（不触碰报销单数据库）。
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// 可清除的缓存目录：临时目录 + 应用缓存目录。
@@ -42,8 +43,10 @@ List<Directory> dedupeCacheDirs(List<Directory> dirs) {
   ];
 }
 
-/// 递归计算目录大小（字节）。
-int _dirSize(Directory dir) {
+/// 递归计算目录大小（字节）—— 顶层函数，供 compute 在后台 isolate 中执行，
+/// 避免在主线程同步遍历目录导致 UI 卡顿（缓存文件多时尤为明显）。
+int _dirSizeSync(String path) {
+  final dir = Directory(path);
   if (!dir.existsSync()) return 0;
   var total = 0;
   for (final entity in dir.listSync(recursive: true)) {
@@ -54,10 +57,23 @@ int _dirSize(Directory dir) {
   return total;
 }
 
+/// 在后台 isolate 中计算目录大小，失败时按 0 处理。
+Future<int> _dirSizeAsync(Directory dir) async {
+  try {
+    return await compute(_dirSizeSync, dir.path);
+  } catch (_) {
+    return 0;
+  }
+}
+
 /// 计算可清除缓存的总大小，返回字节。
 Future<int> cacheSizeBytes() async {
   final dirs = await _cacheDirs();
-  return dirs.fold<int>(0, (s, d) => s + _dirSize(d));
+  var total = 0;
+  for (final d in dirs) {
+    total += await _dirSizeAsync(d);
+  }
+  return total;
 }
 
 /// 格式化字节数为人类可读字符串。
@@ -81,7 +97,7 @@ Future<int> clearCache() async {
   var freed = 0;
   for (final dir in dirs) {
     if (!dir.existsSync()) continue;
-    freed += _dirSize(dir);
+    freed += await _dirSizeAsync(dir);
     // 删除目录内容但保留目录本身（部分插件期望目录存在）。
     for (final entity in dir.listSync()) {
       try {

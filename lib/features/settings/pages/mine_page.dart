@@ -44,6 +44,9 @@ class _MinePageState extends State<MinePage> {
   String _dbSize = '计算中…';
   String _lastBackup = '从未备份';
 
+  // 清除缓存后自增，通过 ValueKey 强制 CacheTrailing 重新计算大小。
+  int _cacheRefreshTick = 0;
+
   @override
   void initState() {
     super.initState();
@@ -224,7 +227,7 @@ class _MinePageState extends State<MinePage> {
                         icon: Icons.delete_outline,
                         title: '清除缓存',
                         subtitle: '释放本地存储空间',
-                        trailing: CacheTrailing(),
+                        trailing: CacheTrailing(key: ValueKey(_cacheRefreshTick)),
                         onTap: () => _showClearCacheDialog(context),
                       ),
                     ],
@@ -440,7 +443,7 @@ class _MinePageState extends State<MinePage> {
     if (!context.mounted) return;
     showAppSnack(context, '已清除缓存，释放 ${formatBytes(freed)}',
         background: c.accent);
-    setState(() {}); // 刷新 CacheTrailing 显示
+    setState(() => _cacheRefreshTick++); // 强制刷新 CacheTrailing 显示
   }
 
   /// 导出备份：生成 .snapbackup 并弹出系统保存对话框。
