@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/backup/backup_service.dart';
 import '../../../core/utils/cache.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/ocr.dart';
@@ -23,11 +24,15 @@ class MinePage extends StatefulWidget {
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onChangeThemeMode;
 
+  /// 备份导入替换数据库后，重新从数据库加载报销单。
+  final Future<void> Function() onDataRestored;
+
   const MinePage({
     super.key,
     required this.claims,
     required this.themeMode,
     required this.onChangeThemeMode,
+    required this.onDataRestored,
   });
 
   @override
@@ -35,6 +40,37 @@ class MinePage extends StatefulWidget {
 }
 
 class _MinePageState extends State<MinePage> {
+  // 数据管理卡片展示的信息：数据库大小与最后备份日期（异步加载）。
+  String _dbSize = '计算中…';
+  String _lastBackup = '从未备份';
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshBackupInfo();
+  }
+
+  /// 异步刷新数据库大小与最后备份日期。
+  Future<void> _refreshBackupInfo() async {
+    String size;
+    String last;
+    try {
+      size = formatBytes(await BackupService.instance.databaseSizeBytes());
+    } catch (_) {
+      size = '未知';
+    }
+    try {
+      last = await BackupService.instance.lastBackupDate() ?? '从未备份';
+    } catch (_) {
+      last = '从未备份';
+    }
+    if (!mounted) return;
+    setState(() {
+      _dbSize = size;
+      _lastBackup = last;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -190,6 +226,51 @@ class _MinePageState extends State<MinePage> {
                         subtitle: '释放本地存储空间',
                         trailing: CacheTrailing(),
                         onTap: () => _showClearCacheDialog(context),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // 数据管理：备份导出 / 导入恢复。
+                Container(
+                  decoration: cardDecoration(c),
+                  child: Column(
+                    children: [
+                      MineHeader(icon: Icons.save_outlined, title: '数据管理'),
+                      MineDivider(),
+                      MineRow(
+                        icon: Icons.file_upload_outlined,
+                        title: '导出数据',
+                        subtitle: '备份你的报销记录',
+                        trailing:
+                            Icon(Icons.chevron_right, size: 18, color: c.fgSoft),
+                        onTap: _exportData,
+                      ),
+                      MineDivider(),
+                      MineRow(
+                        icon: Icons.file_download_outlined,
+                        title: '导入数据',
+                        subtitle: '恢复之前的数据',
+                        trailing:
+                            Icon(Icons.chevron_right, size: 18, color: c.fgSoft),
+                        onTap: _importData,
+                      ),
+                      MineDivider(),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+                        child: Row(
+                          children: [
+                            Text(
+                              '数据库大小 $_dbSize',
+                              style: TextStyle(fontSize: 12, color: c.fgMuted),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '最后备份 $_lastBackup',
+                              style: TextStyle(fontSize: 12, color: c.fgMuted),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -360,6 +441,73 @@ class _MinePageState extends State<MinePage> {
     showAppSnack(context, '已清除缓存，释放 ${formatBytes(freed)}',
         background: c.accent);
     setState(() {}); // 刷新 CacheTrailing 显示
+  }
+
+  /// 导出备份：生成 .snapbackup 并弹出系统保存对话框。
+  Future<void> _exportData() async {
+    try {
+      final path = await BackupService.instance.export();
+      if (!mounted) return;
+      if (path == null) {
+        _snack('已取消导出');
+        return;
+      }
+      _snack('备份已保存到 $path');
+      _refreshBackupInfo();
+    } on BackupException catch (e) {
+      _snack(e.message);
+    } catch (e) {
+      _snack('导出失败：$e');
+    }
+  }
+
+  /// 导入备份：选择文件 → 校验 → 确认覆盖 → 替换数据库并重载。
+  Future<void> _importData() async {
+    try {
+      final parsed = await BackupService.instance.pickAndValidate();
+      if (!mounted) return;
+      final c = context.colors;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: c.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            '导入备份',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: c.fg,
+            ),
+          ),
+          content: Text(
+            '将用备份文件（备份于 ${parsed.manifest.createdAt}）'
+            '覆盖当前全部报销数据，确定继续吗？',
+            style: TextStyle(fontSize: 14, color: c.fgMuted, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text('取消', style: TextStyle(fontSize: 14, color: c.fgMuted)),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('导入'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      await BackupService.instance.restore(parsed.sqliteBytes);
+      await widget.onDataRestored();
+      if (!mounted) return;
+      _snack('导入成功');
+      _refreshBackupInfo();
+    } on BackupException catch (e) {
+      _snack(e.message);
+    } catch (e) {
+      _snack('导入失败：$e');
+    }
   }
 
   /// 展示识别 / 扫码结果：有明细时按分组字段行展示，否则展示原始内容。

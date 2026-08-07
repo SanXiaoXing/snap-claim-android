@@ -11,6 +11,15 @@ class AppDatabase {
 
   Database? _db;
 
+  /// 数据库文件完整路径（sqflite 默认目录下的 snap_claim.db）。
+  Future<String> dbFilePath() async {
+    final dir = await getDatabasesPath();
+    return '$dir/snap_claim.db';
+  }
+
+  /// 当前打开的数据库连接（惰性打开）。
+  Future<Database> get database => _database();
+
   Future<Database> _database() async {
     if (_db != null) return _db!;
     final dbPath = await getDatabasesPath();
@@ -112,6 +121,13 @@ class AppDatabase {
     final db = await _database();
     await db.delete('records', where: 'claim_id = ?', whereArgs: [id]);
     await db.delete('claims', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// 关闭并释放数据库连接（导入备份替换文件前调用），
+  /// 下次访问时自动重新打开。
+  Future<void> close() async {
+    await _db?.close();
+    _db = null;
   }
 
   Claim _claimFromRow(Map<String, Object?> row, List<Map<String, Object?>> recordRows) {

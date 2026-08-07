@@ -144,6 +144,19 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
     _persist(() => AppDatabase.instance.deleteClaim(claim.id), '删除报销单');
   }
 
+  /// 从数据库重新加载报销单（备份导入替换数据库文件后调用）。
+  Future<void> _reloadClaims() async {
+    List<Claim> claims;
+    try {
+      claims = await AppDatabase.instance.getAllClaims();
+    } catch (e) {
+      debugPrint('加载报销单失败（列表将为空）: $e');
+      claims = [];
+    }
+    if (!mounted) return;
+    setState(() => _claims = claims);
+  }
+
   /// 持久化到数据库：内存已先行更新，写入失败不打断 UI，
   /// 但必须打印错误——否则数据看似已保存、重启后却丢失且无从排查。
   void _persist(Future<void> Function() op, String what) {
@@ -235,6 +248,7 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
               onArchiveClaim: _archiveClaim,
               onRestoreClaim: _restoreClaim,
               onDeleteClaim: _deleteClaim,
+              onDataRestored: _reloadClaims,
               themeMode: _themeMode,
               onChangeThemeMode: _setThemeMode,
             ),

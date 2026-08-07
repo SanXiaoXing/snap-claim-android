@@ -49,6 +49,8 @@ dependencies:
   share_plus: ^10.1.4
   # 本地键值存储（持久化主题模式等偏好设置）。
   shared_preferences: ^2.5.3
+  archive: ^4.0.9
+  file_picker: 10.3.10
 
 dev_dependencies:
   flutter_test:

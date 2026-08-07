@@ -31,6 +31,9 @@ class MainShell extends StatefulWidget {
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onChangeThemeMode;
 
+  /// 备份导入替换数据库后，重新从数据库加载报销单。
+  final Future<void> Function() onDataRestored;
+
   const MainShell({
     super.key,
     required this.claims,
@@ -40,6 +43,7 @@ class MainShell extends StatefulWidget {
     required this.onDeleteClaim,
     required this.themeMode,
     required this.onChangeThemeMode,
+    required this.onDataRestored,
   });
 
   @override
@@ -84,6 +88,7 @@ class _MainShellState extends State<MainShell> {
               claims: widget.claims,
               themeMode: widget.themeMode,
               onChangeThemeMode: widget.onChangeThemeMode,
+              onDataRestored: widget.onDataRestored,
             ),
           ),
         ],
