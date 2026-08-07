@@ -9,7 +9,7 @@ import 'package:archive/archive.dart';
 const int kBackupFormatVersion = 1;
 
 /// 当前 App 版本号（写入 manifest，供导入时展示/校验来源版本）。
-const String kAppVersion = '1.1.0';
+const String kAppVersion = '1.2.0';
 
 /// 备份 zip 内的文件名约定。
 const String kBackupManifestName = 'manifest.json';

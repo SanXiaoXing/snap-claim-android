@@ -9,7 +9,7 @@ import 'package:snap_claim_android/core/backup/backup.dart';
 
 BackupManifest _manifest({
   int formatVersion = 1,
-  String appVersion = '1.1.0',
+  String appVersion = '1.2.0',
   int databaseVersion = 2,
   String createdAt = '2026-08-07',
 }) => BackupManifest(
@@ -23,7 +23,7 @@ void main() {
   test('打包后解析能完整还原 manifest 与 sqlite 字节', () {
     const manifest = BackupManifest(
       formatVersion: 1,
-      appVersion: '1.1.0',
+      appVersion: '1.2.0',
       databaseVersion: 2,
       createdAt: '2026-08-07',
     );
@@ -33,7 +33,7 @@ void main() {
     final parsed = parseBackupArchive(zip);
 
     expect(parsed.manifest.formatVersion, 1);
-    expect(parsed.manifest.appVersion, '1.1.0');
+    expect(parsed.manifest.appVersion, '1.2.0');
     expect(parsed.manifest.databaseVersion, 2);
     expect(parsed.manifest.createdAt, '2026-08-07');
     expect(parsed.sqliteBytes, sqlite);
@@ -56,7 +56,7 @@ void main() {
     final zip = buildBackupArchive(manifest: manifest, sqliteBytes: [1, 2, 3]);
     // 将 zip 解包后替换 manifest 内容再重新打包，制造非法 manifest。
     final decoded = parseBackupArchive(zip);
-    expect(decoded.manifest.appVersion, '1.1.0');
+    expect(decoded.manifest.appVersion, '1.2.0');
   });
 
   test('validateManifest：版本兼容时返回 null', () {
@@ -118,7 +118,7 @@ void main() {
     final m = _manifest();
     final json = jsonDecode(jsonEncode(m.toJson()));
     expect(json['format_version'], 1);
-    expect(json['app_version'], '1.1.0');
+    expect(json['app_version'], '1.2.0');
     expect(json['database_version'], 2);
     expect(json['created_at'], '2026-08-07');
   });
