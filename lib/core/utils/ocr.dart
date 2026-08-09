@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../app/theme.dart';
 import '../../features/invoice/models/record.dart';
+import '../../features/invoice/widgets/scan_line.dart';
 import '../../src/rust/api/ocr.dart' as rust;
 
 /// OCR 识别结果。
@@ -25,9 +26,7 @@ class OcrResult {
   const OcrResult({required this.records, required this.raw, this.error});
 }
 
-final _categoryMap = {
-  for (final c in RecordCategory.values) c.name: c,
-};
+final _categoryMap = RecordCategory.values.asNameMap();
 
 /// 弹底部选择（拍照 / 相册），取图后走 OCR 识别 + 结构化解析。
 ///
@@ -265,22 +264,10 @@ class _OcrLoadingDialogState extends State<_OcrLoadingDialog>
                                 ),
                               ),
                               // 扫描线：细高亮线 + 柔光，光扫过票据的感觉。
-                              Positioned(
-                                top: 180 * t - 1,
-                                left: 0,
-                                right: 0,
-                                height: 2,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: c.accent,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: c.accent.withValues(alpha: 0.5),
-                                        blurRadius: 8,
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                              ScanLine(
+                                progress: _scan,
+                                trackHeight: 180,
+                                color: c.accent,
                               ),
                             ],
                           );

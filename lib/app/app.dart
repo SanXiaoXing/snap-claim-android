@@ -81,12 +81,8 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
     }, '保存主题设置');
   }
 
-  static ThemeMode _themeModeFromName(String? name) {
-    for (final m in ThemeMode.values) {
-      if (m.name == name) return m;
-    }
-    return ThemeMode.system;
-  }
+  static ThemeMode _themeModeFromName(String? name) =>
+      ThemeMode.values.asNameMap()[name] ?? ThemeMode.system;
 
   @override
   void dispose() {

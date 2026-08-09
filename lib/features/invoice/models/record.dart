@@ -50,9 +50,6 @@ enum RecordCategory {
   Color iconBg(Brightness b) =>
       base.withValues(alpha: b == Brightness.dark ? 0.18 : 0.12);
 
-  /// 图标前景色，原型中两类主题均使用品牌色。
-  Color iconFg(Brightness b) => base;
-
   /// 徽章底色。
   Color badgeBg(Brightness b) =>
       base.withValues(alpha: b == Brightness.dark ? 0.22 : 0.12);

@@ -40,34 +40,6 @@ class AppIconButton extends StatelessWidget {
   }
 }
 
-/// 强调色文字按钮（保存等）。
-class AppTextButton extends StatelessWidget {
-  final String label;
-  final VoidCallback? onTap;
-
-  const AppTextButton({super.key, required this.label, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: c.accent,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// 顶部栏：左侧 / 居中标题 / 右侧，左右各占 72 宽以保持标题居中。
 /// 需要更宽槽位（如右侧放两个操作按钮）时，可传 [leadingWidth] /
 /// [trailingWidth] 覆盖默认 72，左右等宽以保证标题仍居中。

@@ -189,8 +189,6 @@ class _EditorPageState extends State<EditorPage> {
         _ocrToAdd();
       case '手动添加':
         _manualAdd();
-      default:
-        _notReady(label);
     }
   }
 
@@ -273,10 +271,6 @@ class _EditorPageState extends State<EditorPage> {
     showAppSnack(context, msg, ms: 1200);
   }
 
-  void _notReady(String label) {
-    _toast('$label功能开发中');
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -302,7 +296,19 @@ class _EditorPageState extends State<EditorPage> {
                     onTap: _handleBack,
                   ),
                   title: '报销单',
-                  trailing: AppTextButton(label: '保存', onTap: _save),
+                  trailing: TextButton(
+                    onPressed: _save,
+                    style: TextButton.styleFrom(
+                      foregroundColor: c.accent,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      textStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    child: const Text('保存'),
+                  ),
                 ),
               Expanded(
                 child: SingleChildScrollView(

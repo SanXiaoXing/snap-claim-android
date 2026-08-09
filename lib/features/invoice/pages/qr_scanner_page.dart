@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../app/theme.dart';
 import '../../../core/utils/qr_parser.dart';
 import '../widgets/app_top_bar.dart';
+import '../widgets/scan_line.dart';
 
 class QrScannerPage extends StatefulWidget {
   const QrScannerPage({super.key});
@@ -233,41 +234,14 @@ class _ScanOverlay extends StatelessWidget {
             rect: windowRect,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: AnimatedBuilder(
-                animation: lineCtrl,
-                builder: (context, _) {
-                  final y = windowSide * lineCtrl.value;
-                  return Stack(
-                    children: [
-                      Positioned(
-                        top: y,
-                        left: 0,
-                        right: 0,
-                        child: Container(
-                          height: 2,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.transparent,
-                                const Color(0xFF34D399),
-                                const Color(0xFF34D399),
-                                Colors.transparent,
-                              ],
-                              stops: [0, 0.2, 0.8, 1],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF34D399)
-                                    .withValues(alpha: 0.6),
-                                blurRadius: 8,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
+              child: Stack(
+                children: [
+                  ScanLine(
+                    progress: lineCtrl,
+                    trackHeight: windowSide,
+                    color: const Color(0xFF34D399),
+                  ),
+                ],
               ),
             ),
           ),
@@ -303,123 +277,50 @@ class _Corners extends StatelessWidget {
     final color = const Color(0xFF34D399);
     return Stack(
       children: [
-        // 左上
-        Positioned(
-          left: 0,
-          top: 0,
-          child: Container(
-            width: len,
-            height: thick,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          left: 0,
-          top: 0,
-          child: Container(
-            width: thick,
-            height: len,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4),
-              ),
-            ),
-          ),
-        ),
-        // 右上
-        Positioned(
-          right: 0,
-          top: 0,
-          child: Container(
-            width: len,
-            height: thick,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: const BorderRadius.only(
-                topRight: Radius.circular(4),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          right: 0,
-          top: 0,
-          child: Container(
-            width: thick,
-            height: len,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: const BorderRadius.only(
-                topRight: Radius.circular(4),
-              ),
-            ),
-          ),
-        ),
-        // 左下
-        Positioned(
-          left: 0,
-          bottom: 0,
-          child: Container(
-            width: len,
-            height: thick,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(4),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          left: 0,
-          bottom: 0,
-          child: Container(
-            width: thick,
-            height: len,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(4),
-              ),
-            ),
-          ),
-        ),
-        // 右下
-        Positioned(
-          right: 0,
-          bottom: 0,
-          child: Container(
-            width: len,
-            height: thick,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: const BorderRadius.only(
-                bottomRight: Radius.circular(4),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          right: 0,
-          bottom: 0,
-          child: Container(
-            width: thick,
-            height: len,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: const BorderRadius.only(
-                bottomRight: Radius.circular(4),
-              ),
-            ),
-          ),
-        ),
+        for (final corner in const [
+          Alignment.topLeft,
+          Alignment.topRight,
+          Alignment.bottomLeft,
+          Alignment.bottomRight,
+        ]) ...[
+          _bar(corner, len, thick, color, horizontal: true),
+          _bar(corner, len, thick, color, horizontal: false),
+        ],
       ],
+    );
+  }
+
+  /// 单个角落的一条 L 边：横向 / 纵向各一条，贴住对应角落。
+  Widget _bar(
+    Alignment corner,
+    double len,
+    double thick,
+    Color color, {
+    required bool horizontal,
+  }) {
+    return Align(
+      alignment: corner,
+      child: Container(
+        width: horizontal ? len : thick,
+        height: horizontal ? thick : len,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.only(
+            topLeft: corner == Alignment.topLeft
+                ? const Radius.circular(4)
+                : Radius.zero,
+            topRight: corner == Alignment.topRight
+                ? const Radius.circular(4)
+                : Radius.zero,
+            bottomLeft: corner == Alignment.bottomLeft
+                ? const Radius.circular(4)
+                : Radius.zero,
+            bottomRight: corner == Alignment.bottomRight
+                ? const Radius.circular(4)
+                : Radius.zero,
+          ),
+        ),
+      ),
     );
   }
 }

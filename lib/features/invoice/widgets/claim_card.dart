@@ -25,10 +25,7 @@ class ClaimCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: c.border),
-          ),
+          decoration: cardDecoration(c),
           child: Row(
             children: [
               Container(

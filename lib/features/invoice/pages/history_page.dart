@@ -8,6 +8,7 @@ import '../models/record.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/claim_card.dart';
 import '../widgets/empty_hint.dart';
+import '../widgets/swipe_background.dart';
 import 'archive_page.dart';
 import 'detail_page.dart';
 
@@ -93,7 +94,13 @@ class HistoryPage extends StatelessWidget {
                               DismissDirection.endToStart: 0.35,
                             },
                             onDismissed: (_) => onArchiveClaim(claim),
-                            background: _ArchiveBackground(c: c),
+                            background: SwipeBackground(
+                              icon: Icons.archive_outlined,
+                              label: '归档',
+                              from: RecordCategory.car.base,
+                              to: Color.lerp(RecordCategory.car.base, c.card, 0.35)!,
+                              alignment: Alignment.centerRight,
+                            ),
                             child: ClaimCard(
                               claim: claim,
                               onTap: () => Navigator.of(context).push(
@@ -118,43 +125,3 @@ class HistoryPage extends StatelessWidget {
   }
 }
 
-/// 左滑归档背景（绿色，右侧），提示归档即已报销。
-class _ArchiveBackground extends StatelessWidget {
-  final AppColorScheme c;
-  const _ArchiveBackground({required this.c});
-
-  @override
-  Widget build(BuildContext context) {
-    final base = RecordCategory.car.base;
-    return Container(
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: 18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            base,
-            Color.lerp(base, c.card, 0.35)!,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.archive_outlined, size: 16, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            '归档',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

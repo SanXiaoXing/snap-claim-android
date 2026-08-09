@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../database/database.dart';
+import '../utils/format.dart';
 import 'backup.dart';
 
 /// 备份失败（格式不合法 / 版本不兼容等）时抛出的用户可读错误。
@@ -25,9 +26,6 @@ class BackupService {
 
   /// SharedPreferences 中「最后备份日期」的键（yyyy-MM-dd）。
   static const String _lastBackupKey = 'lastBackupDate';
-
-  /// 当前数据库 schema 版本（与 AppDatabase 的 openDatabase version 保持一致）。
-  static const int _databaseVersion = 2;
 
   /// 生成 .snapbackup 字节：VACUUM INTO 一致性快照 + manifest + zip。
   Future<Uint8List> buildBackupBytes() async {
@@ -50,8 +48,8 @@ class BackupService {
     final manifest = BackupManifest(
       formatVersion: kBackupFormatVersion,
       appVersion: kAppVersion,
-      databaseVersion: _databaseVersion,
-      createdAt: _today(),
+      databaseVersion: AppDatabase.schemaVersion,
+      createdAt: fmtDateDashed(DateTime.now()),
     );
     return buildBackupArchive(manifest: manifest, sqliteBytes: sqliteBytes);
   }
@@ -60,14 +58,15 @@ class BackupService {
   /// 返回保存路径；用户取消返回 null。
   Future<String?> export() async {
     final bytes = await buildBackupBytes();
+    final today = fmtDateDashed(DateTime.now());
     final path = await FilePicker.platform.saveFile(
       dialogTitle: '保存备份',
-      fileName: 'SnapClaim_${_today()}.snapbackup',
+      fileName: 'SnapClaim_$today.snapbackup',
       bytes: bytes,
     );
     if (path != null) {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_lastBackupKey, _today());
+      await prefs.setString(_lastBackupKey, today);
     }
     return path;
   }
@@ -86,7 +85,7 @@ class BackupService {
     final bytes = await File(path).readAsBytes();
     final parsed = parseBackupArchive(Uint8List.fromList(bytes));
     final error =
-        validateManifest(parsed.manifest, currentDatabaseVersion: _databaseVersion);
+        validateManifest(parsed.manifest, currentDatabaseVersion: AppDatabase.schemaVersion);
     if (error != null) throw BackupException(error);
     return parsed;
   }
@@ -110,12 +109,4 @@ class BackupService {
     if (!await f.exists()) return 0;
     return f.length();
   }
-
-  static String _today() {
-    final d = DateTime.now();
-    final p2 = _pad2;
-    return '${d.year}-${p2(d.month)}-${p2(d.day)}';
-  }
-
-  static String _pad2(int n) => n.toString().padLeft(2, '0');
 }

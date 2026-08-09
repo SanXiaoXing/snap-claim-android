@@ -12,7 +12,6 @@ import '../../invoice/models/claim.dart';
 import '../../invoice/pages/qr_scanner_page.dart';
 import '../../invoice/widgets/app_top_bar.dart';
 import '../widgets/mine_cache_trailing.dart';
-import '../widgets/mine_info_line.dart';
 import '../widgets/mine_owed_card.dart';
 import '../widgets/mine_result_line.dart';
 import '../widgets/mine_row.dart';
@@ -305,9 +304,9 @@ class _MinePageState extends State<MinePage> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      MineInfoLine(label: '作者', value: 'SanXiaoXing'),
+                      ResultLine(label: '作者', value: 'SanXiaoXing'),
                       const SizedBox(height: 6),
-                      MineInfoLine(label: '版权', value: '© 2026 SanXiaoXing 保留所有权利'),
+                      ResultLine(label: '版权', value: '© 2026 SanXiaoXing 保留所有权利'),
                     ],
                   ),
                 ),

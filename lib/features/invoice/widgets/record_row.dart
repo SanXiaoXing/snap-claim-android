@@ -5,6 +5,7 @@ import '../../../app/theme.dart';
 import '../../../core/utils/format.dart';
 import '../models/record.dart';
 import 'chips.dart';
+import 'swipe_background.dart';
 
 class RecordRow extends StatelessWidget {
   final Record record;
@@ -17,10 +18,7 @@ class RecordRow extends StatelessWidget {
     final b = Theme.of(context).brightness;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.border),
+      decoration: cardDecoration(c).copyWith(
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -38,7 +36,7 @@ class RecordRow extends StatelessWidget {
               color: record.category.iconBg(b),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(record.category.icon, size: 18, color: record.category.iconFg(b)),
+            child: Icon(record.category.icon, size: 18, color: record.category.base),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -196,81 +194,27 @@ class _DismissibleRecordRowState extends State<DismissibleRecordRow> {
       },
       onDismissed: (_) => widget.onDismissed(),
       background: canSwapTrip
-          ? _buildSwapBackground(c, swapTarget.label)
-          : _buildDeleteBackground(c),
-      secondaryBackground:
-          canSwapTrip ? _buildDeleteBackground(c) : null,
+          ? SwipeBackground(
+              icon: Icons.swap_horiz,
+              label: '切换为${swapTarget.label}',
+              from: RecordCategory.car.base,
+              to: Color.lerp(RecordCategory.car.base, c.card, 0.35)!,
+              alignment: Alignment.centerLeft,
+            )
+          : _deleteBackground(c),
+      secondaryBackground: canSwapTrip ? _deleteBackground(c) : null,
       child: RecordRow(record: widget.record),
     );
   }
 
-  /// 左滑删除背景（右侧，品牌危险色渐变），与归档页删除效果保持一致。
-  Widget _buildDeleteBackground(AppColorScheme c) {
-    return Container(
+  /// 左滑删除背景（红色，右侧），与归档页删除效果保持一致。
+  Widget _deleteBackground(AppColorScheme c) {
+    return SwipeBackground(
+      icon: Icons.delete_outline,
+      label: '删除',
+      from: c.danger,
+      to: Color.lerp(c.danger, c.dangerBg, 0.3)!,
       alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: 18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            c.danger,
-            Color.lerp(c.danger, c.dangerBg, 0.3)!,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.delete_outline, size: 16, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            '删除',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 右滑切换背景（左侧，用车品牌色），与归档撤销效果保持一致，
-  /// 图标在前、文字在后，文案提示切换目标类型。
-  Widget _buildSwapBackground(AppColorScheme c, String targetLabel) {
-    final base = RecordCategory.car.base;
-    return Container(
-      alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.only(left: 18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [
-            base,
-            Color.lerp(base, c.card, 0.35)!,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.swap_horiz, size: 16, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            '切换为$targetLabel',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

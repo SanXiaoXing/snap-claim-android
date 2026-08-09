@@ -96,15 +96,7 @@ class _ClaimSharePageState extends State<ClaimSharePage> {
   }
 
   void _toast(String msg) {
-    final c = context.colors;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: c.fg,
-        duration: const Duration(milliseconds: 1500),
-      ),
-    );
+    showAppSnack(context, msg, ms: 1500);
   }
 
   @override

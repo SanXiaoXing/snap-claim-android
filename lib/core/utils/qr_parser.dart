@@ -12,15 +12,10 @@ class QrParseResult {
   /// 原始扫描内容（无论是否解析成功都会保留）。
   final String raw;
 
-  /// 是否成功解析为明细。
-  bool get ok => record != null;
-
   const QrParseResult({this.record, required this.raw});
 }
 
-final _categoryMap = {
-  for (final c in RecordCategory.values) c.name: c,
-};
+final _categoryMap = RecordCategory.values.asNameMap();
 
 /// 将扫码内容解析为 [QrParseResult]。
 Future<QrParseResult> parseQrContent(String content) async {

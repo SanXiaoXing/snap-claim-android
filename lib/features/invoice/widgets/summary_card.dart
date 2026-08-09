@@ -17,11 +17,7 @@ class SummaryCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.border),
-      ),
+      decoration: cardDecoration(c),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

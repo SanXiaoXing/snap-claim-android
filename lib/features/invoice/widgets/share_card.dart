@@ -13,26 +13,18 @@ import 'summary_pill.dart';
 /// 报销单分享卡。
 ///
 /// 固定渲染宽度 360，按内容自然撑高。
-/// 明细展示前 [maxRecords] 条（默认 8），超出折叠为「…等 N 条」摘要，
-/// 避免分享图过长。
+/// 明细展示前 8 条，超出折叠为「…等 N 条」摘要，避免分享图过长。
 class ShareCard extends StatelessWidget {
   final Claim claim;
-  final int maxRecords;
 
   const ShareCard({
     super.key,
     required this.claim,
-    this.maxRecords = 8,
   });
-
-  /// 卡片主题：根据当前主题深浅选择底色 + 前景，确保截图美观。
-  /// 分享场景通常希望卡片在微信 / 聊天窗里是浅色高对比的，
-/// 强制使用浅色配色，避免深色卡片在多数聊天背景中显得突兀。
-  AppColorScheme _palette(BuildContext context) => AppColorScheme.light;
 
   @override
   Widget build(BuildContext context) {
-    final c = _palette(context);
+    const c = AppColorScheme.light;
     final w = 360.0;
     return Material(
       type: MaterialType.transparency,
@@ -259,9 +251,9 @@ class ShareCard extends StatelessWidget {
     );
   }
 
-  // 明细列表：展示前 maxRecords 条，超出折叠。
+  // 明细列表：展示前 8 条，超出折叠。
   Widget _recordsSection(AppColorScheme c) {
-    final shown = claim.records.take(maxRecords).toList();
+    final shown = claim.records.take(8).toList();
     final hidden = claim.records.length - shown.length;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),

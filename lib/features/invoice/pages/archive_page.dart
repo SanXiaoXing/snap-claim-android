@@ -8,6 +8,7 @@ import '../models/record.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/claim_card.dart';
 import '../widgets/empty_hint.dart';
+import '../widgets/swipe_background.dart';
 
 class ArchivePage extends StatefulWidget {
   final List<Claim> claims;
@@ -137,93 +138,24 @@ class _ArchivePageState extends State<ArchivePage> {
                             _delete(claim);
                           }
                         },
-                        background: _RestoreBackground(c: c),
-                        secondaryBackground: _DeleteBackground(c: c),
+                        background: SwipeBackground(
+                          icon: Icons.undo,
+                          label: '撤销归档',
+                          from: RecordCategory.car.base,
+                          to: Color.lerp(RecordCategory.car.base, c.card, 0.35)!,
+                          alignment: Alignment.centerLeft,
+                        ),
+                        secondaryBackground: SwipeBackground(
+                          icon: Icons.delete_outline,
+                          label: '删除',
+                          from: c.danger,
+                          to: Color.lerp(c.danger, c.dangerBg, 0.3)!,
+                          alignment: Alignment.centerRight,
+                        ),
                         child: ClaimCard(claim: claim),
                       );
                     },
                   ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 右滑撤销归档背景（绿色，左侧）。
-class _RestoreBackground extends StatelessWidget {
-  final AppColorScheme c;
-  const _RestoreBackground({required this.c});
-
-  @override
-  Widget build(BuildContext context) {
-    final base = RecordCategory.car.base;
-    return Container(
-      alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.only(left: 18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [
-            base,
-            Color.lerp(base, c.card, 0.35)!,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.undo, size: 16, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            '撤销归档',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 左滑删除背景（红色，右侧）。
-class _DeleteBackground extends StatelessWidget {
-  final AppColorScheme c;
-  const _DeleteBackground({required this.c});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: 18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            c.danger,
-            Color.lerp(c.danger, c.dangerBg, 0.3)!,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.delete_outline, size: 16, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            '删除',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
           ),
         ],
       ),

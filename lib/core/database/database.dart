@@ -9,6 +9,9 @@ class AppDatabase {
   AppDatabase._();
   static final AppDatabase instance = AppDatabase._();
 
+  /// 当前数据库 schema 版本，备份校验与 openDatabase 共用同一来源。
+  static const int schemaVersion = 2;
+
   Database? _db;
 
   /// 数据库文件完整路径（sqflite 默认目录下的 snap_claim.db）。
@@ -25,7 +28,7 @@ class AppDatabase {
     final dbPath = await getDatabasesPath();
     _db = await openDatabase(
       '$dbPath/snap_claim.db',
-      version: 2,
+      version: schemaVersion,
       onCreate: (db, _) async {
         await db.execute('''
           CREATE TABLE claims (

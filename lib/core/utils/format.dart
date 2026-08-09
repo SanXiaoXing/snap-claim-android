@@ -8,6 +8,9 @@ String fmtMd(DateTime d) => '${_pad2(d.month)}-${_pad2(d.day)}';
 String fmtDateCompact(DateTime d) =>
     '${d.year}${_pad2(d.month)}${_pad2(d.day)}';
 
+/// yyyy-MM-dd，例如 2026-08-09（备份文件名与 manifest 日期用）。
+String fmtDateDashed(DateTime d) => '${d.year}-${_pad2(d.month)}-${_pad2(d.day)}';
+
 /// yyyy 年 M 月，例如 2026 年 7 月（月份不补零，与原型一致）。
 String fmtYm(DateTime d) => '${d.year} 年 ${d.month} 月';
 

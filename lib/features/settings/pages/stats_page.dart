@@ -228,11 +228,7 @@ class StatsPage extends StatelessWidget {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: c.card,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: c.border),
-                    ),
+                    decoration: cardDecoration(c),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -255,11 +251,7 @@ class StatsPage extends StatelessWidget {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: c.card,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: c.border),
-                    ),
+                    decoration: cardDecoration(c),
                     child: Column(
                       children: [
                         for (final cat in RecordCategory.values)
@@ -406,11 +398,7 @@ class _MetricCard extends StatelessWidget {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: c.card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.border),
-        ),
+        decoration: cardDecoration(c),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -476,11 +464,7 @@ class _FunCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.border),
-      ),
+      decoration: cardDecoration(c),
       child: Row(
         children: [
           Container(
@@ -624,7 +608,7 @@ class _CategoryBar extends StatelessWidget {
             color: category.iconBg(b),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(category.icon, size: 16, color: category.iconFg(b)),
+          child: Icon(category.icon, size: 16, color: category.base),
         ),
         const SizedBox(width: 12),
         Expanded(

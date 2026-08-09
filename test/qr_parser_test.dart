@@ -13,7 +13,7 @@ void main() {
   group('etrip 规则', () {
     test('etripHotel 解析为酒店，末尾为金额', () async {
       final r = await parseQrContent('etripHotel://870667,闫兴,2485235576652567552,3261.0');
-      expect(r.ok, isTrue);
+      expect(r.record, isNotNull);
       expect(r.record!.category, RecordCategory.hotel);
       expect(r.record!.title, '闫兴');
       expect(r.record!.subtitle, '订单号 2485235576652567552');
@@ -22,7 +22,7 @@ void main() {
 
     test('etrip 解析为飞机，金额在第三位', () async {
       final r = await parseQrContent('etrip://2811544509,赵文俊,577.0,2317.0');
-      expect(r.ok, isTrue);
+      expect(r.record, isNotNull);
       expect(r.record!.category, RecordCategory.flight);
       expect(r.record!.title, '赵文俊');
       expect(r.record!.subtitle, '订单号 2811544509');
@@ -31,7 +31,7 @@ void main() {
 
     test('etripCar 解析为用车', () async {
       final r = await parseQrContent('etripCar://870667,闫兴,2485235576652567552,86.0');
-      expect(r.ok, isTrue);
+      expect(r.record, isNotNull);
       expect(r.record!.category, RecordCategory.car);
       expect(r.record!.amount, 86.0);
     });
@@ -39,13 +39,13 @@ void main() {
     test('未知前缀回退为原始内容', () async {
       final raw = 'foo://870667,闫兴,2485235576652567552,86.0';
       final r = await parseQrContent(raw);
-      expect(r.ok, isFalse);
+      expect(r.record, isNull);
       expect(r.raw, raw);
     });
 
     test('缺少金额字段时不解析', () async {
       final r = await parseQrContent('etripHotel://870667,闫兴');
-      expect(r.ok, isFalse);
+      expect(r.record, isNull);
     });
   });
 
@@ -54,14 +54,14 @@ void main() {
       final r = await parseQrContent(
         '{"category":"train","title":"G123 北京南 → 上海虹桥","subtitle":"二等座","amount":553}',
       );
-      expect(r.ok, isTrue);
+      expect(r.record, isNotNull);
       expect(r.record!.category, RecordCategory.train);
       expect(r.record!.amount, 553);
     });
 
     test('竖线分隔仍可解析', () async {
       final r = await parseQrContent('train|G123 北京南→上海虹桥|二等座|553');
-      expect(r.ok, isTrue);
+      expect(r.record, isNotNull);
       expect(r.record!.category, RecordCategory.train);
       expect(r.record!.title, 'G123 北京南→上海虹桥');
       expect(r.record!.amount, 553);
@@ -69,7 +69,7 @@ void main() {
 
     test('无法识别时回退为纯文本', () async {
       final r = await parseQrContent('hello world');
-      expect(r.ok, isFalse);
+      expect(r.record, isNull);
       expect(r.raw, 'hello world');
     });
   });
