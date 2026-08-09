@@ -9,7 +9,7 @@ import 'dart:typed_data';
 const int kBackupFormatVersion = 1;
 
 /// 当前 App 版本号（写入 manifest，供导入时展示/校验来源版本）。
-const String kAppVersion = '1.2.0';
+const String kAppVersion = '1.2.1';
 
 /// .snapbackup 文件头魔数（8 字节 ASCII），用于快速识别文件类型。
 const String kBackupMagic = 'SNAPBACK';
