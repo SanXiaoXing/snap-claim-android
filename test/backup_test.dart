@@ -1,4 +1,4 @@
-// 备份格式单元测试：打包 → 解析往返、manifest 校验、缺失文件报错。
+// 备份格式单元测试：打包 → 解析往返、manifest 校验、损坏文件报错。
 // 纯 Dart 逻辑，不依赖 sqflite / 平台插件。
 import 'dart:convert';
 import 'dart:typed_data';
@@ -28,9 +28,9 @@ void main() {
       createdAt: '2026-08-07',
     );
     final sqlite = List<int>.generate(1024, (i) => i % 256);
-    final zip = buildBackupArchive(manifest: manifest, sqliteBytes: sqlite);
+    final bytes = encodeBackup(manifest: manifest, sqliteBytes: sqlite);
 
-    final parsed = parseBackupArchive(zip);
+    final parsed = decodeBackup(bytes);
 
     expect(parsed.manifest.formatVersion, 1);
     expect(parsed.manifest.appVersion, '1.2.0');
@@ -39,24 +39,29 @@ void main() {
     expect(parsed.sqliteBytes, sqlite);
   });
 
-  test('manifest 缺少数据库文件时报 FormatException', () {
-    // 构造只含 manifest.json 的 zip：直接用手写的最小 zip 难以构造，
-    // 改为先正常打包，再篡改文件名为非法内容来模拟损坏包。
+  test('打包产物是 .snapbackup 二进制：魔数 SNAPBACK + 格式版本字节', () {
     final manifest = _manifest();
-    final zip = buildBackupArchive(manifest: manifest, sqliteBytes: [1, 2, 3]);
-    final bytes = Uint8List.fromList(zip);
-
-    // 破坏 zip 头（改一个字节使其无法解码）应抛异常而非静默返回。
-    bytes[0] = 0;
-    expect(() => parseBackupArchive(bytes), throwsA(anything));
+    final bytes = encodeBackup(manifest: manifest, sqliteBytes: [7, 8, 9]);
+    // 文件头：8 字节 ASCII 魔数 + 1 字节格式版本。
+    expect(ascii.decode(bytes.sublist(0, 8)), 'SNAPBACK');
+    expect(bytes[8], kBackupFormatVersion);
   });
 
-  test('manifest.json 内容非法时抛 FormatException', () {
+  test('损坏文件（魔数被破坏）时抛 FormatException', () {
     final manifest = _manifest();
-    final zip = buildBackupArchive(manifest: manifest, sqliteBytes: [1, 2, 3]);
-    // 将 zip 解包后替换 manifest 内容再重新打包，制造非法 manifest。
-    final decoded = parseBackupArchive(zip);
-    expect(decoded.manifest.appVersion, '1.2.0');
+    final bytes = encodeBackup(manifest: manifest, sqliteBytes: [1, 2, 3]);
+
+    // 破坏魔数（改一个字节使其无法识别）应抛异常而非静默返回。
+    bytes[0] = 0;
+    expect(() => decodeBackup(bytes), throwsA(anything));
+  });
+
+  test('manifest 长度越界时抛 FormatException', () {
+    final manifest = _manifest();
+    final bytes = encodeBackup(manifest: manifest, sqliteBytes: [1, 2, 3]);
+    // 篡改 manifest 长度字段（大端 4 字节）为超大值，使越界。
+    ByteData.sublistView(bytes, 9, 13).setUint32(0, 0x7FFFFFFF);
+    expect(() => decodeBackup(bytes), throwsA(anything));
   });
 
   test('validateManifest：版本兼容时返回 null', () {
@@ -98,20 +103,6 @@ void main() {
     expect(restored.appVersion, m.appVersion);
     expect(restored.databaseVersion, m.databaseVersion);
     expect(restored.createdAt, m.createdAt);
-  });
-
-  test('打包产物确实是 zip 且含约定文件名', () {
-    final manifest = _manifest();
-    final zip = buildBackupArchive(manifest: manifest, sqliteBytes: [7, 8, 9]);
-    // zip 魔数 PK\x03\x04。
-    expect(zip[0], 0x50);
-    expect(zip[1], 0x4B);
-    expect(zip[2], 0x03);
-    expect(zip[3], 0x04);
-    // 文件名在 zip 头部可见（条目内容被 deflate 压缩，不直接可见）。
-    final text = latin1.decode(zip);
-    expect(text, contains(kBackupManifestName));
-    expect(text, contains(kBackupSqliteName));
   });
 
   test('jsonEncode 后内容与约定字段一致', () {

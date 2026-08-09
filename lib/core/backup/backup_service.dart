@@ -1,4 +1,4 @@
-// 备份服务：导出 / 导入 .snapbackup（zip 内含 manifest.json + snapclaim.sqlite）。
+// 备份服务：导出 / 导入 .snapbackup（自定义二进制：魔数 + manifest + sqlite）。
 // 纯数据格式逻辑见 backup.dart，本文件负责数据库快照、文件 IO 与保存/选择。
 import 'dart:io';
 import 'dart:typed_data';
@@ -27,7 +27,7 @@ class BackupService {
   /// SharedPreferences 中「最后备份日期」的键（yyyy-MM-dd）。
   static const String _lastBackupKey = 'lastBackupDate';
 
-  /// 生成 .snapbackup 字节：VACUUM INTO 一致性快照 + manifest + zip。
+  /// 生成 .snapbackup 字节：VACUUM INTO 一致性快照 + 打包为 .snapbackup。
   Future<Uint8List> buildBackupBytes() async {
     final db = await AppDatabase.instance.database;
     final tmpDir = await getTemporaryDirectory();
@@ -51,7 +51,7 @@ class BackupService {
       databaseVersion: AppDatabase.schemaVersion,
       createdAt: fmtDateDashed(DateTime.now()),
     );
-    return buildBackupArchive(manifest: manifest, sqliteBytes: sqliteBytes);
+    return encodeBackup(manifest: manifest, sqliteBytes: sqliteBytes);
   }
 
   /// 导出备份：生成 .snapbackup 字节 → 弹保存对话框。
@@ -72,7 +72,7 @@ class BackupService {
   }
 
   /// 选择 .snapbackup 文件并解析、校验。
-  /// 返回 zip 内解析出的 sqlite 字节（未落盘）。
+  /// 返回文件内解析出的 sqlite 字节（未落盘）。
   Future<({BackupManifest manifest, List<int> sqliteBytes})> pickAndValidate()
       async {
     final result = await FilePicker.platform.pickFiles(
@@ -83,7 +83,7 @@ class BackupService {
     final path = result?.files.single.path;
     if (path == null) throw const BackupException('未选择备份文件');
     final bytes = await File(path).readAsBytes();
-    final parsed = parseBackupArchive(Uint8List.fromList(bytes));
+    final parsed = decodeBackup(Uint8List.fromList(bytes));
     final error =
         validateManifest(parsed.manifest, currentDatabaseVersion: AppDatabase.schemaVersion);
     if (error != null) throw BackupException(error);
