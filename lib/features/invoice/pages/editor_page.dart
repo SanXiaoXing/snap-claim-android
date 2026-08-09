@@ -1,5 +1,6 @@
 // 报销单编辑页：表单 + 汇总 + 明细（左滑删除）+ 追加记录 FAB。
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 
 import '../../../app/theme.dart';
 import '../../../core/utils/allowance.dart';
@@ -200,6 +201,8 @@ class _EditorPageState extends State<EditorPage> {
     );
     if (!mounted || record == null) return;
     setState(() => _records = [..._records, record]);
+    // 添加成功是明确的「提交」时刻：视觉 toast 与触感同帧。
+    HapticFeedback.lightImpact();
     _toast('已添加：${record.category.label} ${fmtMoney(record.amount)}');
   }
 
@@ -235,6 +238,8 @@ class _EditorPageState extends State<EditorPage> {
     );
     if (!mounted || added == null || added.isEmpty) return;
     setState(() => _records = [..._records, ...added]);
+    // 批量追加成功：触感确认（扫码路径的识别反馈已由扫码页在识别成功时给出）。
+    HapticFeedback.lightImpact();
     _toast('已添加 ${added.length} 条明细');
   }
 

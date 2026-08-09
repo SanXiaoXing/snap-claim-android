@@ -1,12 +1,14 @@
 // 二维码扫描页：相机实时扫描 + 相册图片识别。
 // 扫到内容后解析为报销明细并返回给调用方（编辑页追加 / 我的页预览）。
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/utils/qr_parser.dart';
 import '../widgets/app_top_bar.dart';
+import '../widgets/press_scale.dart';
 import '../widgets/scan_line.dart';
 
 class QrScannerPage extends StatefulWidget {
@@ -32,7 +34,21 @@ class _QrScannerPageState extends State<QrScannerPage>
     _lineCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1600),
-    )..repeat(reverse: true);
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 减少动态：扫描线静置于中间，不做往复摆动。
+    // 需在依赖就绪后读取 MediaQuery（initState 内不允许查询）。
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduceMotion) {
+      _lineCtrl.stop();
+      _lineCtrl.value = 0.5;
+    } else if (!_lineCtrl.isAnimating) {
+      _lineCtrl.repeat(reverse: true);
+    }
   }
 
   @override
@@ -66,13 +82,15 @@ class _QrScannerPageState extends State<QrScannerPage>
     _finish(raw);
   }
 
-  /// 解析内容并返回；同时给触感反馈。
+  /// 解析内容并返回；成功识别时给触感反馈（与识别成功同帧触发）。
   Future<void> _finish(String raw) async {
     if (_busy) return;
     setState(() => _busy = true);
     _controller.stop();
     final parsed = await parseQrContent(raw);
     if (!mounted) return;
+    // 视觉结果与触感同帧：确认感来自「识别成功」这个因果事件本身。
+    HapticFeedback.lightImpact();
     Navigator.of(context).pop(parsed);
   }
 
@@ -341,7 +359,7 @@ class _ActionBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return PressScale(
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,

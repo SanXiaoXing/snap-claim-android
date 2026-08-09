@@ -226,6 +226,9 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
       themeMode: _themeMode,
+      // 深浅色切换平滑过渡（避免亮度骤变），AnimatedTheme 驱动。
+      themeAnimationDuration: const Duration(milliseconds: 300),
+      themeAnimationCurve: Curves.easeOutCubic,
       locale: const Locale('zh', 'CN'),
       supportedLocales: const [
         Locale('zh', 'CN'),

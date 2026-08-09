@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../models/record.dart';
 import 'chips.dart';
+import 'press_scale.dart';
 
 /// OCR 识别结果预览对话框；确认后返回用户保留的明细列表
 /// （金额可编辑、可删行），返回 null 表示用户取消。
@@ -226,7 +227,7 @@ class CarTripChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final base = RecordCategory.car.base;
-    return GestureDetector(
+    return PressScale(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

@@ -1,6 +1,7 @@
 // 归档页面：存放已归档（已报销）的报销单。
 // 右滑撤销归档（无需二次确认）；左滑删除数据库数据（需二次确认）。
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 
 import '../../../app/theme.dart';
 import '../models/claim.dart';
@@ -37,12 +38,16 @@ class _ArchivePageState extends State<ArchivePage> {
 
   /// 撤销归档：本地移除 + 上层回调（无需二次确认）。
   void _restore(Claim claim) {
+    // 滑动撤销是明确的「提交」动作：行滑出与触感同帧。
+    HapticFeedback.mediumImpact();
     setState(() => _claims.removeWhere((e) => e.id == claim.id));
     widget.onRestore(claim);
   }
 
   /// 删除：本地移除 + 上层回调（已二次确认）。
   void _delete(Claim claim) {
+    // 删除已弹确认框，触感轻反馈即可，避免过度打扰。
+    HapticFeedback.lightImpact();
     setState(() => _claims.removeWhere((e) => e.id == claim.id));
     widget.onDelete(claim);
   }

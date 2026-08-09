@@ -3,6 +3,7 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 
 import '../../../app/theme.dart';
 import '../../settings/pages/mine_page.dart';
@@ -103,6 +104,7 @@ class _MainShellState extends State<MainShell> {
   /// 带切换动画的页面：当前页淡入原位，其余页淡出并朝切换方向微移。
   Widget _buildPage(int i, Widget page) {
     final selected = i == _index;
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final offset = selected
         ? Offset.zero
         : Offset(_index < i ? 0.06 : -0.06, 0);
@@ -110,11 +112,12 @@ class _MainShellState extends State<MainShell> {
       ignoring: !selected,
       child: AnimatedOpacity(
         opacity: selected ? 1 : 0,
-        duration: const Duration(milliseconds: 320),
+        // 减少动态：仅保留瞬时切换，不做位移动画。
+        duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 320),
         curve: Curves.easeOutCubic,
         child: AnimatedSlide(
-          offset: offset,
-          duration: const Duration(milliseconds: 320),
+          offset: reduceMotion ? Offset.zero : offset,
+          duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 320),
           curve: Curves.easeOutCubic,
           child: page,
         ),
@@ -248,25 +251,103 @@ class _GlassTabBar extends StatelessWidget {
 /// 选中态浮动胶囊：accent 纯色填充 + 软阴影。
 /// 必须作为 Stack 的直接子节点使用（依赖 StackParentData），
 /// left/width 由父级 LayoutBuilder 算好后传入。
-class _SelectedPill extends StatelessWidget {
+///
+/// 位置/宽度用临界阻尼弹簧驱动（Apple 移动/重定位默认：damping 1.0、
+/// response ≈ 0.4s）：每次切换从当前屏幕值（而非目标值）出发，
+/// 途中可被下一次切换随时打断并重定向，不会跳变。
+class _SelectedPill extends StatefulWidget {
   final double left;
   final double width;
 
-  const _SelectedPill({
-    required this.left,
-    required this.width,
-  });
+  const _SelectedPill({required this.left, required this.width});
+
+  @override
+  State<_SelectedPill> createState() => _SelectedPillState();
+}
+
+class _SelectedPillState extends State<_SelectedPill>
+    with SingleTickerProviderStateMixin {
+  // 临界阻尼弹簧：stiffness 246 → response ≈ 2π/√246 ≈ 0.40s，无过冲。
+  // 临界阻尼 damping = 2√(stiffness·mass) ≈ 31.4。
+  static const _spring = SpringDescription(
+    mass: 1,
+    stiffness: 246,
+    damping: 31.4,
+  );
+
+  late final AnimationController _ctrl;
+  double _left = 0;
+  double _width = 0;
+  // 本次弹簧的起点（屏幕当前值）与目标值。
+  double _fromLeft = 0, _toLeft = 0;
+  double _fromWidth = 0, _toWidth = 0;
+  bool _reduceMotion = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _left = widget.left;
+    _width = widget.width;
+    _ctrl = AnimationController.unbounded(vsync: this)
+      ..addListener(_onSpringTick);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 减少动态需在依赖就绪后读取（initState 内不允许查 MediaQuery）。
+    _reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+  }
+
+  @override
+  void didUpdateWidget(_SelectedPill old) {
+    super.didUpdateWidget(old);
+    if (old.left == widget.left && old.width == widget.width) return;
+    if (_reduceMotion) {
+      // 减少动态：不做位移动画，直接落到目标位置。
+      _ctrl.stop();
+      _left = widget.left;
+      _width = widget.width;
+      return;
+    }
+    // 从当前屏幕值（presentation value）出发向新目标弹簧运动。
+    // animateWith 会先停掉旧模拟再启动新模拟，快速连续切换也能
+    // 安全打断重定向，不会触发「Ticker 已激活」断言。
+    _fromLeft = _left;
+    _fromWidth = _width;
+    _toLeft = widget.left;
+    _toWidth = widget.width;
+    _ctrl.animateWith(SpringSimulation(_spring, 0, 1, 0));
+  }
+
+  void _onSpringTick() {
+    setState(() {
+      if (!_ctrl.isAnimating) {
+        // 弹簧收敛后精确落到目标，避免浮点残留。
+        _left = _toLeft;
+        _width = _toWidth;
+        return;
+      }
+      final t = _ctrl.value; // 0→1 弹簧进度（临界阻尼单调无过冲）。
+      _left = _fromLeft + (_toLeft - _fromLeft) * t;
+      _width = _fromWidth + (_toWidth - _fromWidth) * t;
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 420),
-      curve: Curves.easeOutCubic,
-      left: left,
+    return Positioned(
+      left: _left,
       top: 8,
       bottom: 8,
-      width: width,
+      width: _width,
       child: DecoratedBox(
         decoration: BoxDecoration(
           // 单色 accent，去掉之前的三段渐变（白高光 → accentLight → accent）。

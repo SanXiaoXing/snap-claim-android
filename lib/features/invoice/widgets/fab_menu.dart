@@ -53,16 +53,36 @@ class _FabMenuState extends State<FabMenu> with SingleTickerProviderStateMixin {
   void _toggle() {
     setState(() => _open = !_open);
     if (_open) {
-      _ctrl.forward(from: 0);
+      _expand();
     } else {
-      _ctrl.reverse();
+      _collapse();
     }
   }
 
   void _close() {
     if (!_open) return;
     setState(() => _open = false);
-    _ctrl.reverse();
+    _collapse();
+  }
+
+  /// 减少动态：直接跳转到位，不做弹性级联动画。
+  bool get _reduceMotion =>
+      MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
+  void _expand() {
+    if (_reduceMotion) {
+      _ctrl.value = 1;
+    } else {
+      _ctrl.forward(from: 0);
+    }
+  }
+
+  void _collapse() {
+    if (_reduceMotion) {
+      _ctrl.value = 0;
+    } else {
+      _ctrl.reverse();
+    }
   }
 
   void _select(String label) {

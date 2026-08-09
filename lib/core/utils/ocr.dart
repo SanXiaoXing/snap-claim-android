@@ -206,8 +206,26 @@ class _OcrLoadingDialogState extends State<_OcrLoadingDialog>
     with SingleTickerProviderStateMixin {
   /// 扫描线循环动画。
   late final AnimationController _scan =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))
-        ..repeat();
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 减少动态：扫描线静置，不做循环扫描动画。
+    // 需在依赖就绪后读取 MediaQuery（initState 内不允许查询）。
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduceMotion) {
+      _scan.stop();
+      _scan.value = 0.5;
+    } else if (!_scan.isAnimating) {
+      _scan.repeat();
+    }
+  }
 
   @override
   void dispose() {

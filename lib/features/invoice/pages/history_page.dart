@@ -1,5 +1,6 @@
 // 历史记录：按月分组的报销单列表（未归档）；右上角进入归档页面。
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 
 import '../../../app/theme.dart';
 import '../../../core/utils/format.dart';
@@ -93,7 +94,11 @@ class HistoryPage extends StatelessWidget {
                             dismissThresholds: const {
                               DismissDirection.endToStart: 0.35,
                             },
-                            onDismissed: (_) => onArchiveClaim(claim),
+                            onDismissed: (_) {
+                              // 滑动归档是明确的「提交」动作：行滑出与触感同帧。
+                              HapticFeedback.mediumImpact();
+                              onArchiveClaim(claim);
+                            },
                             background: SwipeBackground(
                               icon: Icons.archive_outlined,
                               label: '归档',

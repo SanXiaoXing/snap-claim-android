@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/utils/format.dart';
+import 'press_scale.dart';
 
 /// 表单字段小标题。
 class FieldLabel extends StatelessWidget {
@@ -66,6 +67,6 @@ class DatePill extends StatelessWidget {
       ),
     );
     final onTap = this.onTap;
-    return onTap == null ? pill : GestureDetector(onTap: onTap, child: pill);
+    return onTap == null ? pill : PressScale(onTap: onTap, child: pill);
   }
 }
