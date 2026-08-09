@@ -97,6 +97,24 @@ class BackupService {
     await target.writeAsBytes(sqliteBytes, flush: true);
   }
 
+  /// 合并导入：将备份中的报销单合并进当前数据库（按 id 去重，
+  /// 不覆盖现有数据）。备份 sqlite 先落临时文件再让数据库层读取。
+  /// 返回实际合并的张数。
+  Future<int> merge(List<int> sqliteBytes) async {
+    final tmpDir = await getTemporaryDirectory();
+    final tmpFile = File(
+      '${tmpDir.path}/snapclaim_merge_${DateTime.now().millisecondsSinceEpoch}.sqlite',
+    );
+    await tmpFile.writeAsBytes(sqliteBytes, flush: true);
+    try {
+      return await AppDatabase.instance.mergeClaimsFromBackup(tmpFile.path);
+    } finally {
+      try {
+        await tmpFile.delete();
+      } catch (_) {} // 临时文件删除失败不影响合并结果。
+    }
+  }
+
   /// 最近一次备份日期（yyyy-MM-dd），从未备份返回 null。
   Future<String?> lastBackupDate() async {
     final prefs = await SharedPreferences.getInstance();

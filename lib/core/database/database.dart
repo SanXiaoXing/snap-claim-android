@@ -119,6 +119,43 @@ class AppDatabase {
     });
   }
 
+  /// 从备份数据库文件合并导入：仅导入当前库中不存在的报销单（按 id 去重），
+  /// 已存在的报销单保持当前版本不变；返回实际导入的张数。
+  Future<int> mergeClaimsFromBackup(String backupPath) async {
+    final db = await _database();
+    final backup = await openDatabase(backupPath);
+    try {
+      final claimRows = await backup.query('claims');
+      var imported = 0;
+      await db.transaction((txn) async {
+        for (final row in claimRows) {
+          final id = row['id'] as String;
+          final exists = await txn.query(
+            'claims',
+            columns: ['id'],
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+          if (exists.isNotEmpty) continue;
+          final recordRows = await backup.query(
+            'records',
+            where: 'claim_id = ?',
+            whereArgs: [id],
+            orderBy: 'sort_order ASC',
+          );
+          await txn.insert('claims', row, conflictAlgorithm: ConflictAlgorithm.ignore);
+          for (final record in recordRows) {
+            await txn.insert('records', record);
+          }
+          imported++;
+        }
+      });
+      return imported;
+    } finally {
+      await backup.close();
+    }
+  }
+
   /// 删除一张报销单及其全部明细。
   Future<void> deleteClaim(String id) async {
     final db = await _database();

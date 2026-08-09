@@ -463,19 +463,19 @@ class _MinePageState extends State<MinePage> {
     }
   }
 
-  /// 导入备份：选择文件 → 校验 → 确认覆盖 → 替换数据库并重载。
+  /// 导入备份：选择文件 → 校验 → 选择「合并 / 覆盖」→ 执行并重载。
   Future<void> _importData() async {
     try {
       final parsed = await BackupService.instance.pickAndValidate();
       if (!mounted) return;
       final c = context.colors;
-      final confirmed = await showDialog<bool>(
+      final mode = await showDialog<_ImportMode>(
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: c.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
-            '导入备份',
+            '导入数据',
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
@@ -483,27 +483,43 @@ class _MinePageState extends State<MinePage> {
             ),
           ),
           content: Text(
-            '将用备份文件（备份于 ${parsed.manifest.createdAt}）'
-            '覆盖当前全部报销数据，确定继续吗？',
+            '备份文件（备份于 ${parsed.manifest.createdAt}）将如何导入？\n'
+            '合并：保留现有数据，只加入备份中不存在的报销单。\n'
+            '覆盖：清空当前数据，替换为备份内容。',
             style: TextStyle(fontSize: 14, color: c.fgMuted, height: 1.5),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
+              onPressed: () => Navigator.of(ctx).pop(),
               child: Text('取消', style: TextStyle(fontSize: 14, color: c.fgMuted)),
             ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(_ImportMode.merge),
+              child: Text('合并导入', style: TextStyle(fontSize: 14, color: c.fg)),
+            ),
+            // 覆盖是破坏性操作：危险色按钮 + 明确文案，避免误触。
             FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('导入'),
+              onPressed: () => Navigator.of(ctx).pop(_ImportMode.overwrite),
+              style: FilledButton.styleFrom(backgroundColor: c.danger),
+              child: const Text('覆盖导入'),
             ),
           ],
         ),
       );
-      if (confirmed != true) return;
-      await BackupService.instance.restore(parsed.sqliteBytes);
-      await widget.onDataRestored();
-      if (!mounted) return;
-      _snack('导入成功');
+      if (mode == null || !mounted) return;
+      if (mode == _ImportMode.merge) {
+        // 合并：按 id 去重，只加入备份中当前库不存在的报销单。
+        final count = await BackupService.instance.merge(parsed.sqliteBytes);
+        await widget.onDataRestored();
+        if (!mounted) return;
+        _snack('已合并导入 $count 张报销单');
+      } else {
+        // 覆盖：替换整个数据库文件（原行为）。
+        await BackupService.instance.restore(parsed.sqliteBytes);
+        await widget.onDataRestored();
+        if (!mounted) return;
+        _snack('导入成功');
+      }
       _refreshBackupInfo();
     } on BackupException catch (e) {
       _snack(e.message);
@@ -596,6 +612,9 @@ class _MinePageState extends State<MinePage> {
     );
   }
 }
+
+/// 导入方式：合并（保留现有，按 id 去重）或覆盖（清空替换）。
+enum _ImportMode { merge, overwrite }
 
 /// 外观模式选择对话框里的单行选项：左侧名称，右侧选中态圆点。
 class _ThemeOptionRow extends StatelessWidget {
