@@ -23,7 +23,7 @@ class StatsPage extends StatelessWidget {
         .toList();
     final allRecords = yearClaims.expand((cl) => cl.records).toList();
     final allTotal = yearClaims.fold(0.0, (s, cl) => s + cl.total);
-    // 累计退补金额 = 今年报销单的退补金额之和（退补金额 = 火车 + 差补）。
+    // 累计退补金额 = 今年报销单的退补金额之和（退补金额 = 火车 + 高速费 + 地铁费 + 差补）。
     final totalBalance =
         yearClaims.fold(0.0, (s, cl) => s + cl.balanceAmount);
     final allDays = yearClaims.fold(0, (s, cl) {

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/utils/app_tutorial.dart';
 import '../models/claim.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/chips.dart';
@@ -11,20 +12,40 @@ import '../widgets/summary_card.dart';
 import 'claim_share_page.dart';
 import 'editor_page.dart';
 
-class DetailPage extends StatelessWidget {
+class DetailPage extends StatefulWidget {
   final Claim claim;
   final ValueChanged<Claim>? onSave;
 
   const DetailPage({super.key, required this.claim, this.onSave});
 
+  @override
+  State<DetailPage> createState() => _DetailPageState();
+}
+
+class _DetailPageState extends State<DetailPage> {
+  /// 编辑按钮的定位键，供首次引导聚焦。
+  final GlobalKey _editKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    // 首帧渲染完成后弹首次引导（需要目标控件已挂载并完成布局）；
+    // 仅存在编辑入口（onSave 非空）时才引导「修改」。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.onSave != null) {
+        AppTutorial.maybeShowDetail(context, _editKey);
+      }
+    });
+  }
+
   /// 进入编辑页；仅当编辑页确实保存了修改时才关闭详情页回到列表
   /// （避免展示过期数据），未修改直接返回则留在详情页。
   Future<void> _edit(BuildContext context) async {
-    final save = onSave;
+    final save = widget.onSave;
     if (save == null) return;
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (_) => EditorPage(claim: claim, onSave: save),
+        builder: (_) => EditorPage(claim: widget.claim, onSave: save),
       ),
     );
     if (context.mounted && saved == true) Navigator.of(context).pop();
@@ -33,13 +54,14 @@ class DetailPage extends StatelessWidget {
   /// 进入分享页：渲染分享卡片 → 抓图 → 调起系统分享面板。
   Future<void> _share(BuildContext context) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ClaimSharePage(claim: claim)),
+      MaterialPageRoute(builder: (_) => ClaimSharePage(claim: widget.claim)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final claim = widget.claim;
     return Scaffold(
       backgroundColor: c.bg,
       body: Column(
@@ -56,8 +78,9 @@ class DetailPage extends StatelessWidget {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (onSave != null) ...[
+                if (widget.onSave != null) ...[
                   AppIconButton(
+                    key: _editKey,
                     icon: Icons.edit_outlined,
                     size: 18,
                     onTap: () => _edit(context),

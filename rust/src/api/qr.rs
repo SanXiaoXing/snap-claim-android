@@ -150,7 +150,7 @@ fn try_parse_etrip(text: &str) -> Option<QrParseResult> {
 }
 
 fn is_valid_category(s: &str) -> bool {
-    matches!(s, "train" | "flight" | "hotel" | "car")
+    matches!(s, "train" | "flight" | "hotel" | "car" | "highway" | "subway")
 }
 
 fn parse_amount(s: &str) -> f64 {

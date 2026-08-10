@@ -56,21 +56,27 @@ class Claim {
   double get roundTripTotal =>
       records.where((r) => r.isRoundTripCar).fold(0.0, (s, r) => s + r.amount);
 
-  /// 退补金额 = 火车总额 + 差补。
+  /// 退补金额 = 火车总额 + 高速费 + 地铁费 + 差补。
   double get balanceAmount =>
-      (categoryTotals[RecordCategory.train] ?? 0) + allowance;
+      (categoryTotals[RecordCategory.train] ?? 0) +
+      (categoryTotals[RecordCategory.highway] ?? 0) +
+      (categoryTotals[RecordCategory.subway] ?? 0) +
+      allowance;
 
-  /// 报销汇总的八行明细（火车 / 飞机 / 酒店 / 市内交通 / 往返交通 / 差补 / 预借金额 / 退补金额）。
+  /// 报销汇总明细（火车 / 飞机 / 酒店 / 市内交通 / 往返交通 / 高速费 / 地铁费 /
+  /// 差补 / 预借金额 / 退补金额）；金额为 0 的行不展示（没有对应内容就不显示标签）。
   List<({String label, double amount})> get summaryRows {
     final totals = categoryTotals;
     final roundTrip = roundTripTotal;
-    return [
+    final rows = <({String label, double amount})>[
       (label: '火车', amount: totals[RecordCategory.train] ?? 0),
       (label: '飞机', amount: totals[RecordCategory.flight] ?? 0),
       (label: '酒店', amount: totals[RecordCategory.hotel] ?? 0),
       // 市内交通 = 用车总额 - 往返交通。
       (label: '市内交通', amount: (totals[RecordCategory.car] ?? 0) - roundTrip),
       (label: '往返交通', amount: roundTrip),
+      (label: '高速费', amount: totals[RecordCategory.highway] ?? 0),
+      (label: '地铁费', amount: totals[RecordCategory.subway] ?? 0),
       (label: '差补', amount: allowance),
       // 预借金额 = 飞机 + 酒店 + 用车。
       (
@@ -79,9 +85,11 @@ class Claim {
             (totals[RecordCategory.hotel] ?? 0) +
             (totals[RecordCategory.car] ?? 0),
       ),
-      // 退补金额 = 火车 + 差补。
+      // 退补金额 = 火车 + 高速费 + 地铁费 + 差补。
       (label: '退补金额', amount: balanceAmount),
     ];
+    // 没有对应内容（金额为 0）的行不显示标签。
+    return [for (final row in rows) if (row.amount != 0) row];
   }
 
   Claim copyWith({

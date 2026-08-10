@@ -212,11 +212,13 @@ fn category_label(category: &str) -> &'static str {
         "flight" => "机票",
         "hotel" => "酒店住宿",
         "car" => "出租车",
+        "highway" => "高速通行费",
+        "subway" => "地铁票",
         _ => "票据",
     }
 }
 
-/// 按关键词识别票据类别，返回分类名（train/flight/hotel/car）。
+/// 按关键词识别票据类别，返回分类名（train/flight/hotel/car/highway/subway）。
 fn detect_category(text: &str) -> Option<String> {
     // 注意顺序：更具体的词优先，避免 "出租车" 中的 "车" 之类误命中。
     const KEYWORDS: &[(&str, &[&str])] = &[
@@ -224,6 +226,8 @@ fn detect_category(text: &str) -> Option<String> {
         ("flight", &["机票", "航空", "客票", "航班", "登机", "航段"]),
         ("hotel", &["酒店", "住宿", "房费", "入住", "旅馆"]),
         ("car", &["出租车", "网约车", "滴滴", "打车", "起步价", "用车"]),
+        ("highway", &["高速", "通行费", "过路费", "收费站"]),
+        ("subway", &["地铁", "轨道交通"]),
     ];
     KEYWORDS
         .iter()
@@ -418,6 +422,22 @@ mod tests {
         assert!(r.ok);
         assert_eq!(r.category.as_deref(), Some("car"));
         assert_eq!(r.amount, Some(86.0));
+    }
+
+    #[test]
+    fn highway_toll() {
+        let r = parse("高速通行费电子发票\n通行费\n2026年8月3日\n合计 ¥35.00");
+        assert!(r.ok);
+        assert_eq!(r.category.as_deref(), Some("highway"));
+        assert_eq!(r.amount, Some(35.0));
+    }
+
+    #[test]
+    fn subway_ticket() {
+        let r = parse("地铁乘车发票\n2026-8-3\n票价 4.00 元");
+        assert!(r.ok);
+        assert_eq!(r.category.as_deref(), Some("subway"));
+        assert_eq!(r.amount, Some(4.0));
     }
 
     #[test]

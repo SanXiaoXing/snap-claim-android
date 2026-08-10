@@ -16,7 +16,15 @@ class FabMenu extends StatefulWidget {
   final List<FabMenuItem> items;
   final ValueChanged<String> onAction;
 
-  const FabMenu({super.key, required this.items, required this.onAction});
+  /// 主按钮（+）的定位键，供首次引导（tutorial_coach_mark）聚焦用。
+  final Key? mainButtonKey;
+
+  const FabMenu({
+    super.key,
+    required this.items,
+    required this.onAction,
+    this.mainButtonKey,
+  });
 
   @override
   State<FabMenu> createState() => _FabMenuState();
@@ -102,12 +110,12 @@ class _FabMenuState extends State<FabMenu> with SingleTickerProviderStateMixin {
   // 根据角度,把"子按钮圆心应处于的右/下偏移"换算成 Positioned 的 right / bottom。
   // Positioned.right 是 widget 右边到屏幕右边的距离,越小越靠右。
   // 主按钮圆心 right = fabRight + fabSize/2,bottom = fabBottom + fabSize/2。
-  ({double right, double bottom}) _positionFor(double angleDeg) {
+  ({double right, double bottom}) _positionFor(double angleDeg, double fabBottom) {
     final rad = angleDeg * math.pi / 180;
     final dx = _arcRadius * math.cos(rad); // 屏幕坐标:正=右
     final dy = -_arcRadius * math.sin(rad); // 屏幕坐标:负=上(Flutter Y 轴朝下)
     final fabCenterRight = _fabRight + _fabSize / 2;
-    final fabCenterBottom = _fabBottom + _fabSize / 2;
+    final fabCenterBottom = fabBottom + _fabSize / 2;
     return (
       right: fabCenterRight - dx - _itemSize / 2,
       bottom: fabCenterBottom - dy - _itemSize / 2,
@@ -119,6 +127,9 @@ class _FabMenuState extends State<FabMenu> with SingleTickerProviderStateMixin {
     final c = context.colors;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final n = widget.items.length;
+    // 适配底部安全区域（手势导航条 / 三按键导航栏），
+    // 使 FAB 在不同设备上始终浮于系统导航区域之上。
+    final fabBottom = _fabBottom + MediaQuery.paddingOf(context).bottom;
     return Stack(
       children: [
         // Glassmorphism 背景遮罩:强模糊 + 低浓度色调,
@@ -157,12 +168,14 @@ class _FabMenuState extends State<FabMenu> with SingleTickerProviderStateMixin {
             total: n,
             color: c,
             isDark: isDark,
+            fabBottom: fabBottom,
           ),
         // 主按钮:弹性旋转 45° + 放大 + 光晕增强。
         Positioned(
           right: _fabRight,
-          bottom: _fabBottom,
+          bottom: fabBottom,
           child: GestureDetector(
+            key: widget.mainButtonKey,
             onTap: _toggle,
             child: AnimatedBuilder(
               animation: _ctrl,
@@ -215,9 +228,10 @@ class _FabMenuState extends State<FabMenu> with SingleTickerProviderStateMixin {
     required int total,
     required AppColorScheme color,
     required bool isDark,
+    required double fabBottom,
   }) {
     final angleDeg = _angleFor(index, total);
-    final pos = _positionFor(angleDeg);
+    final pos = _positionFor(angleDeg, fabBottom);
     return Positioned(
       right: pos.right,
       bottom: pos.bottom,

@@ -83,7 +83,7 @@ class _MinePageState extends State<MinePage> {
         .where((cl) =>
             cl.startDate.year == now.year && cl.startDate.month == now.month)
         .toList();
-    // 本月报销 = 本月报销单的退补金额之和（退补金额 = 火车 + 差补）。
+    // 本月报销 = 本月报销单的退补金额之和（退补金额 = 火车 + 高速费 + 地铁费 + 差补）。
     final monthBalance =
         monthClaims.fold(0.0, (s, cl) => s + cl.balanceAmount);
     final monthRecords =
@@ -94,7 +94,7 @@ class _MinePageState extends State<MinePage> {
     final allRecords =
         widget.claims.fold(0, (s, cl) => s + cl.records.length);
 
-    // 公司欠款 = 未报销（未归档）报销单的退补金额之和（退补金额 = 火车 + 差补）。
+    // 公司欠款 = 未报销（未归档）报销单的退补金额之和（退补金额 = 火车 + 高速费 + 地铁费 + 差补）。
     final owedTotal = widget.claims
         .where((cl) => !cl.archived)
         .fold(0.0, (s, cl) => s + cl.balanceAmount);

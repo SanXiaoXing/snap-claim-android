@@ -30,6 +30,20 @@ enum RecordCategory {
     base: Color(0xFF10B981),
     lightFg: Color(0xFF059669),
     darkFg: Color(0xFF34D399),
+  ),
+  highway(
+    label: '高速费',
+    icon: Icons.route,
+    base: Color(0xFF0EA5E9),
+    lightFg: Color(0xFF0284C7),
+    darkFg: Color(0xFF38BDF8),
+  ),
+  subway(
+    label: '地铁费',
+    icon: Icons.subway_outlined,
+    base: Color(0xFFEC4899),
+    lightFg: Color(0xFFDB2777),
+    darkFg: Color(0xFFF472B6),
   );
 
   final String label;

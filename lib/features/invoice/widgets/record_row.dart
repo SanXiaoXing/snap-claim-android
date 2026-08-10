@@ -1,5 +1,6 @@
 // 明细记录行；编辑页用 Dismissible 包裹以支持左滑删除（滑出后弹确认框）。
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 
 import '../../../app/theme.dart';
 import '../../../core/utils/format.dart';
@@ -187,6 +188,8 @@ class _DismissibleRecordRowState extends State<DismissibleRecordRow> {
       confirmDismiss: (direction) async {
         // 右滑：切换市内/往返，行保留回弹；左滑：走删除确认。
         if (direction == DismissDirection.startToEnd) {
+          // 切换行程类型时给轻微震动反馈，让用户感知切换已生效。
+          HapticFeedback.lightImpact();
           widget.onTripTypeChanged?.call(swapTarget);
           return false;
         }

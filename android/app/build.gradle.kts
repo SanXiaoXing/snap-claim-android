@@ -38,6 +38,15 @@ android {
             )
         }
     }
+
+    // APK 输出命名：SnapClaim_<versionName>[_<abi>].apk（--split-per-abi 时带 ABI 后缀）。
+    applicationVariants.all {
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            val abi = output.getFilter(com.android.build.OutputFile.ABI)
+            output.outputFileName = "SnapClaim_${versionName}${abi?.let { "_$it" } ?: ""}.apk"
+        }
+    }
 }
 
 kotlin {

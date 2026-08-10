@@ -5,8 +5,8 @@ import '../../../app/theme.dart';
 import '../../../core/utils/format.dart';
 import '../models/record.dart';
 
-/// 汇总行的图标与品牌色（对应 Claim.summaryRows 的八行：
-/// 火车 / 飞机 / 酒店 / 市内交通 / 往返交通 / 差补 / 预借金额 / 退补金额）。
+/// 汇总行的图标与品牌色（对应 Claim.summaryRows 的行：
+/// 火车 / 飞机 / 酒店 / 市内交通 / 往返交通 / 高速费 / 地铁费 / 差补 / 预借金额 / 退补金额）。
 ({IconData icon, Color color}) summaryRowStyle(String label) {
   return switch (label) {
     '火车' => (icon: RecordCategory.train.icon, color: RecordCategory.train.base),
@@ -17,6 +17,10 @@ import '../models/record.dart';
     '市内交通' =>
       (icon: RecordCategory.car.icon, color: RecordCategory.car.base),
     '往返交通' => (icon: Icons.sync_alt, color: Color(0xFF14B8A6)),
+    '高速费' =>
+      (icon: RecordCategory.highway.icon, color: RecordCategory.highway.base),
+    '地铁费' =>
+      (icon: RecordCategory.subway.icon, color: RecordCategory.subway.base),
     '差补' => (icon: Icons.payments_outlined, color: Color(0xFFF43F5E)),
     '预借金额' =>
       (icon: Icons.account_balance_wallet_outlined, color: Color(0xFF06B6D4)),

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/utils/app_tutorial.dart';
 import '../models/claim.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/claim_card.dart';
@@ -10,7 +11,7 @@ import '../widgets/empty_hint.dart';
 import 'detail_page.dart';
 import 'editor_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   final List<Claim> claims;
   final ValueChanged<Claim> onSaveClaim;
   final VoidCallback onSeeAll;
@@ -21,6 +22,23 @@ class HomePage extends StatelessWidget {
     required this.onSaveClaim,
     required this.onSeeAll,
   });
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  /// 创建报销单入口的定位键，供首次引导聚焦。
+  final GlobalKey _createKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    // 首帧渲染完成后弹首次引导（需要目标控件已挂载并完成布局）。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppTutorial.maybeShowHome(context, _createKey);
+    });
+  }
 
   String _greeting() {
     final h = DateTime.now().hour;
@@ -35,7 +53,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final recent = claims.take(3).toList();
+    final recent = widget.claims.take(3).toList();
     return Column(
       children: [
         AppTopBar(title: 'SnapClaim', displayFont: true),
@@ -61,7 +79,10 @@ class HomePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 Center(
-                  child: CreateCta(onTap: () => _openEditor(context)),
+                  child: CreateCta(
+                    key: _createKey,
+                    onTap: () => _openEditor(context),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -76,7 +97,7 @@ class HomePage extends StatelessWidget {
                     ),
                     const Spacer(),
                     GestureDetector(
-                      onTap: onSeeAll,
+                      onTap: widget.onSeeAll,
                       child: Text(
                         '查看全部',
                         style: TextStyle(fontSize: 12, color: c.fgSoft),
@@ -125,7 +146,7 @@ class HomePage extends StatelessWidget {
             records: const [],
             savedAt: now,
           ),
-          onSave: onSaveClaim,
+          onSave: widget.onSaveClaim,
         ),
       ),
     );
@@ -134,7 +155,7 @@ class HomePage extends StatelessWidget {
   void _openDetail(BuildContext context, Claim claim) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => DetailPage(claim: claim, onSave: onSaveClaim),
+        builder: (_) => DetailPage(claim: claim, onSave: widget.onSaveClaim),
       ),
     );
   }
