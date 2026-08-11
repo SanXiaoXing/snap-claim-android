@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/utils/format.dart';
 import '../../../core/utils/qr_parser.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/press_scale.dart';
@@ -26,6 +27,8 @@ class _QrScannerPageState extends State<QrScannerPage>
   late final AnimationController _lineCtrl;
   bool _torchOn = false;
   bool _busy = false; // 防止重复处理。
+  final List<QrParseResult> _results = []; // 本次扫码会话已识别的全部结果。
+  QrParseResult? _pending; // 刚扫到、等待用户决定是否继续的结果。
 
   @override
   void initState() {
@@ -82,7 +85,7 @@ class _QrScannerPageState extends State<QrScannerPage>
     _finish(raw);
   }
 
-  /// 解析内容并返回；成功识别时给触感反馈（与识别成功同帧触发）。
+  /// 解析内容并展示识别结果卡片；用户可继续扫描或完成后统一返回。
   Future<void> _finish(String raw) async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -91,8 +94,26 @@ class _QrScannerPageState extends State<QrScannerPage>
     if (!mounted) return;
     // 视觉结果与触感同帧：确认感来自「识别成功」这个因果事件本身。
     HapticFeedback.lightImpact();
-    Navigator.of(context).pop(parsed);
+    setState(() {
+      _results.add(parsed);
+      _pending = parsed;
+    });
   }
+
+  /// 关闭结果卡片，恢复相机继续扫描下一张。
+  void _resumeScan() {
+    setState(() {
+      _pending = null;
+      _busy = false;
+    });
+    _controller.start();
+  }
+
+  /// 完成扫码，携带全部结果返回。
+  void _done() => Navigator.of(context).pop(_results);
+
+  /// 关闭页面：已有识别结果则带回，否则视为取消。
+  void _close() => Navigator.of(context).pop(_results.isEmpty ? null : _results);
 
   Future<void> _pickFromGallery() async {
     if (_busy) return;
@@ -130,72 +151,94 @@ class _QrScannerPageState extends State<QrScannerPage>
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // 相机预览。
-          MobileScanner(
-            controller: _controller,
-            onDetect: _onDetect,
-          ),
-          // 扫描取景框 + 暗化遮罩 + 扫描线。
-          _ScanOverlay(lineCtrl: _lineCtrl),
-          // 顶部栏。
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: AppTopBar(
-              title: '扫一扫',
-              leading: AppIconButton(
-                icon: Icons.close,
-                onTap: () => Navigator.of(context).pop(),
-              ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        // 系统返回：有结果则带回，否则取消。
+        _close();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            // 相机预览。
+            MobileScanner(
+              controller: _controller,
+              onDetect: _onDetect,
             ),
-          ),
-          // 底部操作栏：相册 + 手电筒。
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _ActionBtn(
-                      icon: Icons.photo_outlined,
-                      label: '相册',
-                      onTap: _pickFromGallery,
-                    ),
-                    _ActionBtn(
-                      icon: _torchOn
-                          ? Icons.flash_on
-                          : Icons.flash_off_outlined,
-                      label: '手电筒',
-                      active: _torchOn,
-                      onTap: _toggleTorch,
-                    ),
-                  ],
+            // 扫描取景框 + 暗化遮罩 + 扫描线。
+            _ScanOverlay(lineCtrl: _lineCtrl),
+            // 顶部栏。
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AppTopBar(
+                title: '扫一扫',
+                leading: AppIconButton(
+                  icon: Icons.close,
+                  onTap: _close,
                 ),
               ),
             ),
-          ),
-          if (_busy)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.4),
-                alignment: Alignment.center,
-                child: CircularProgressIndicator(
-                  color: c.accent,
-                  strokeWidth: 2.5,
+            // 底部操作栏：相册 + 手电筒。
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _ActionBtn(
+                        icon: Icons.photo_outlined,
+                        label: '相册',
+                        onTap: _pickFromGallery,
+                      ),
+                      _ActionBtn(
+                        icon: _torchOn
+                            ? Icons.flash_on
+                            : Icons.flash_off_outlined,
+                        label: '手电筒',
+                        active: _torchOn,
+                        onTap: _toggleTorch,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-        ],
+            // 解析中的加载遮罩。
+            if (_busy && _pending == null)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  alignment: Alignment.center,
+                  child: CircularProgressIndicator(
+                    color: c.accent,
+                    strokeWidth: 2.5,
+                  ),
+                ),
+              ),
+            // 识别结果卡片：可继续扫描下一张，或完成并统一返回。
+            if (_pending != null)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 104,
+                child: _ResultCard(
+                  result: _pending!,
+                  count: _results.length,
+                  onContinue: _resumeScan,
+                  onDone: _done,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -338,6 +381,199 @@ class _Corners extends StatelessWidget {
                 : Radius.zero,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 识别结果卡片：展示刚扫到的明细/原文，可继续扫描或完成返回。
+class _ResultCard extends StatelessWidget {
+  final QrParseResult result;
+  final int count;
+  final VoidCallback onContinue;
+  final VoidCallback onDone;
+
+  const _ResultCard({
+    required this.result,
+    required this.count,
+    required this.onContinue,
+    required this.onDone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final rec = result.record;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF18181B),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.check_circle, color: Color(0xFF34D399), size: 18),
+              const SizedBox(width: 6),
+              const Text(
+                '识别成功',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '已识别 $count 张',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (rec != null) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: rec.category.badgeBg(Brightness.dark),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: rec.category.badgeBorder(Brightness.dark),
+                    ),
+                  ),
+                  child: Text(
+                    rec.category.label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: rec.category.badgeFg(Brightness.dark),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    rec.title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (rec.subtitle.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                rec.subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withValues(alpha: 0.55),
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              fmtMoney(rec.amount),
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF34D399),
+              ),
+            ),
+          ] else ...[
+            Text(
+              '未识别到票据明细，将展示原始内容',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withValues(alpha: 0.55),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 110),
+              child: SingleChildScrollView(
+                child: Text(
+                  result.raw,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.5,
+                    color: Colors.white.withValues(alpha: 0.75),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: PressScale(
+                  onTap: onContinue,
+                  child: Container(
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: const Text(
+                      '继续扫描',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: PressScale(
+                  onTap: onDone,
+                  child: Container(
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF34D399),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: const Text(
+                      '完成并返回',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF06251C),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
