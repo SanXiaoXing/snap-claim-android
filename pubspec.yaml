@@ -1,8 +1,16 @@
 name: snap_claim_android
 description: "A new Flutter project."
-# The following line prevents the package from being accidentally published to
-# pub.dev using `flutter pub publish`. This is preferred for private packages.
+# 以下代码行防止该包被意外发布到 pub.dev。
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# sqlite3 原生库钩子配置：改用操作系统自带的 SQLite，
+# 避免构建时从 GitHub 下载预编译库（网络不可达时会导致构建失败）。
+hooks:
+  user_defines:
+    sqlite3:
+      source: system
+      # Windows 10+ 自带的 SQLite 动态库名为 winsqlite3.dll。
+      name_windows: winsqlite3
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -62,6 +70,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  sqflite_common_ffi: ^2.4.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

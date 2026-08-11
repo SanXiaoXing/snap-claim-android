@@ -10,7 +10,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   /// 当前数据库 schema 版本，备份校验与 openDatabase 共用同一来源。
-  static const int schemaVersion = 2;
+  static const int schemaVersion = 3;
 
   Database? _db;
 
@@ -29,42 +29,68 @@ class AppDatabase {
     _db = await openDatabase(
       '$dbPath/snap_claim.db',
       version: schemaVersion,
-      onCreate: (db, _) async {
-        await db.execute('''
-          CREATE TABLE claims (
-            id          TEXT PRIMARY KEY,
-            name        TEXT NOT NULL DEFAULT '',
-            start_date  INTEGER NOT NULL,
-            end_date    INTEGER NOT NULL,
-            saved_at    INTEGER NOT NULL,
-            allowance   REAL NOT NULL DEFAULT 0,
-            archived    INTEGER NOT NULL DEFAULT 0
-          )
-        ''');
-        await db.execute('''
-          CREATE TABLE records (
-            id            TEXT PRIMARY KEY,
-            claim_id      TEXT NOT NULL,
-            category      TEXT NOT NULL,
-            title         TEXT NOT NULL DEFAULT '',
-            subtitle      TEXT NOT NULL DEFAULT '',
-            amount        REAL NOT NULL DEFAULT 0,
-            car_trip_type TEXT,
-            sort_order    INTEGER NOT NULL DEFAULT 0,
-            FOREIGN KEY (claim_id) REFERENCES claims(id) ON DELETE CASCADE
-          )
-        ''');
-      },
-      onUpgrade: (db, oldVersion, newVersion) async {
-        // v2：新增 archived 列（归档 = 已报销）。
-        if (oldVersion < 2) {
-          await db.execute(
-            'ALTER TABLE claims ADD COLUMN archived INTEGER NOT NULL DEFAULT 0',
-          );
-        }
-      },
+      onCreate: (db, _) => createSchema(db),
+      onUpgrade: (db, oldVersion, _) => upgradeSchema(db, oldVersion),
     );
     return _db!;
+  }
+
+  /// 创建最新 schema 的全部表（新装 App 时调用）。
+  /// 独立为静态方法，供迁移测试复用，保证测试与生产使用同一份建表 SQL。
+  static Future<void> createSchema(Database db) async {
+    await db.execute('''
+      CREATE TABLE claims (
+        id            TEXT PRIMARY KEY,
+        name          TEXT NOT NULL DEFAULT '',
+        start_date    INTEGER NOT NULL,
+        end_date      INTEGER NOT NULL,
+        saved_at      INTEGER NOT NULL,
+        allowance     REAL NOT NULL DEFAULT 0,
+        excess_amount REAL NOT NULL DEFAULT 0,
+        archived      INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE records (
+        id            TEXT PRIMARY KEY,
+        claim_id      TEXT NOT NULL,
+        category      TEXT NOT NULL,
+        title         TEXT NOT NULL DEFAULT '',
+        subtitle      TEXT NOT NULL DEFAULT '',
+        amount        REAL NOT NULL DEFAULT 0,
+        car_trip_type TEXT,
+        sort_order    INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (claim_id) REFERENCES claims(id) ON DELETE CASCADE
+      )
+    ''');
+  }
+
+  /// 将老版本库迁移到当前 schema，保证旧数据不丢失：
+  /// 只增列不改表，且每步先检查列是否已存在（幂等），
+  /// 避免升级中断 / 重复迁移等异常状态导致 ALTER TABLE 崩溃。
+  static Future<void> upgradeSchema(Database db, int oldVersion) async {
+    // v2：新增 archived 列（归档 = 已报销）。
+    if (oldVersion < 2 && !await _hasColumn(db, 'claims', 'archived')) {
+      await db.execute(
+        'ALTER TABLE claims ADD COLUMN archived INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+    // v3：新增 excess_amount 列（超标金额，人工填写）。
+    if (oldVersion < 3 && !await _hasColumn(db, 'claims', 'excess_amount')) {
+      await db.execute(
+        'ALTER TABLE claims ADD COLUMN excess_amount REAL NOT NULL DEFAULT 0',
+      );
+    }
+  }
+
+  /// 查询表是否已存在某列（PRAGMA table_info 为空表示表不存在，同样返回 false）。
+  static Future<bool> _hasColumn(
+    Database db,
+    String table,
+    String column,
+  ) async {
+    final rows = await db.rawQuery('PRAGMA table_info($table)');
+    return rows.any((r) => r['name'] == column);
   }
 
   /// 加载全部报销单（含明细），按 savedAt 倒序返回。
@@ -99,6 +125,7 @@ class AppDatabase {
           'end_date': claim.endDate.millisecondsSinceEpoch,
           'saved_at': claim.savedAt.millisecondsSinceEpoch,
           'allowance': claim.allowance,
+          'excess_amount': claim.excessAmount,
           'archived': claim.archived ? 1 : 0,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
@@ -121,6 +148,10 @@ class AppDatabase {
 
   /// 从备份数据库文件合并导入：仅导入当前库中不存在的报销单（按 id 去重），
   /// 已存在的报销单保持当前版本不变；返回实际导入的张数。
+  ///
+  /// 兼容老版本备份：备份库可能缺少当前 schema 新增的列（如 archived、
+  /// excess_amount），此处用显式列映射逐列取值，缺失列自动补默认值，
+  /// 保证老数据（明细、差补等）完整导入而不丢失。
   Future<int> mergeClaimsFromBackup(String backupPath) async {
     final db = await _database();
     final backup = await openDatabase(backupPath);
@@ -143,9 +174,31 @@ class AppDatabase {
             whereArgs: [id],
             orderBy: 'sort_order ASC',
           );
-          await txn.insert('claims', row, conflictAlgorithm: ConflictAlgorithm.ignore);
+          await txn.insert(
+            'claims',
+            {
+              'id': id,
+              'name': row['name'] as String? ?? '',
+              'start_date': row['start_date'] as int? ?? 0,
+              'end_date': row['end_date'] as int? ?? 0,
+              'saved_at': row['saved_at'] as int? ?? 0,
+              'allowance': (row['allowance'] as num?)?.toDouble() ?? 0,
+              'excess_amount': (row['excess_amount'] as num?)?.toDouble() ?? 0,
+              'archived': (row['archived'] as int?) ?? 0,
+            },
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
           for (final record in recordRows) {
-            await txn.insert('records', record);
+            await txn.insert('records', {
+              'id': record['id'] as String,
+              'claim_id': record['claim_id'] as String,
+              'category': record['category'] as String? ?? '',
+              'title': record['title'] as String? ?? '',
+              'subtitle': record['subtitle'] as String? ?? '',
+              'amount': (record['amount'] as num?)?.toDouble() ?? 0,
+              'car_trip_type': record['car_trip_type'] as String?,
+              'sort_order': record['sort_order'] as int? ?? 0,
+            });
           }
           imported++;
         }
@@ -178,6 +231,7 @@ class AppDatabase {
       endDate: DateTime.fromMillisecondsSinceEpoch(row['end_date'] as int),
       savedAt: DateTime.fromMillisecondsSinceEpoch(row['saved_at'] as int),
       allowance: (row['allowance'] as num?)?.toDouble() ?? 0,
+      excessAmount: (row['excess_amount'] as num?)?.toDouble() ?? 0,
       archived: (row['archived'] as int? ?? 0) != 0,
       records: recordRows.map(_recordFromRow).toList(),
     );
