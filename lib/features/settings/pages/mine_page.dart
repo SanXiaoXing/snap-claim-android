@@ -16,6 +16,7 @@ import '../widgets/mine_owed_card.dart';
 import '../widgets/mine_result_line.dart';
 import '../widgets/mine_row.dart';
 import '../widgets/mine_stat_cell.dart';
+import 'about_page.dart';
 import 'stats_page.dart';
 
 class MinePage extends StatefulWidget {
@@ -278,36 +279,46 @@ class _MinePageState extends State<MinePage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // 版本信息。
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: cardDecoration(c),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                // 版本信息（点击进入详情页）。
+                Material(
+                  color: c.card,
+                  borderRadius: BorderRadius.circular(16),
+                  child: InkWell(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AboutPage()),
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: cardDecoration(c),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '版本信息',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: c.fg,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            'v1.3.0',
-                            style: TextStyle(fontSize: 12, color: c.fgMuted),
+                          Row(
+                            children: [
+                              Text(
+                                '版本信息',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: c.fg,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                'v1.4.0',
+                                style: TextStyle(
+                                    fontSize: 12, color: c.fgMuted),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(Icons.chevron_right,
+                                  size: 18, color: c.fgSoft),
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      ResultLine(label: '作者', value: 'SanXiaoXing'),
-                      const SizedBox(height: 6),
-                      ResultLine(label: '版权', value: '© 2026 SanXiaoXing 保留所有权利'),
-                    ],
+                    ),
                   ),
                 ),
               ],
