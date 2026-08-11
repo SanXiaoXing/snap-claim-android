@@ -48,6 +48,8 @@ class _EditorPageState extends State<EditorPage> {
   late List<Record> _records;
   // 差补金额由 Rust 核心库异步计算，算好后缓存到此供 _buildCurrent 同步取用。
   late double _allowance;
+  // 超标金额（人工填写），由 FAB「超标金额」弹窗设置，默认 0。
+  late double _excess;
   // 名称是否自动跟随日期（新建时默认为日期范围，未被手动修改）。
   bool _nameAuto = false;
   // 初始名称（用于脏值判断：与 _nameCtrl 文本比对）。
@@ -75,6 +77,8 @@ class _EditorPageState extends State<EditorPage> {
       _initialName = widget.claim.name;
     }
     _nameCtrl = TextEditingController(text: _initialName);
+    // 超标金额初值：既有报销单已填则沿用，否则为 0。
+    _excess = widget.claim.excessAmount;
     // 先用既有报销单存的差补作为初值，避免首帧闪烁；再异步重算。
     _allowance = widget.claim.allowance;
     _refreshAllowance();
@@ -101,6 +105,7 @@ class _EditorPageState extends State<EditorPage> {
         endDate: _end,
         records: _records,
         allowance: _allowance,
+        excessAmount: _excess,
         savedAt: DateTime.now(),
       );
 
@@ -144,11 +149,12 @@ class _EditorPageState extends State<EditorPage> {
   }
 
   /// 当前表单相对原始报销单是否被修改：
-  /// 比较名称、起止日期、明细数量与每条明细的关键字段。
+  /// 比较名称、起止日期、超标金额、明细数量与每条明细的关键字段。
   bool get _isDirty {
     if (_nameCtrl.text != _initialName) return true;
     if (_start != widget.claim.startDate) return true;
     if (_end != widget.claim.endDate) return true;
+    if (_excess != widget.claim.excessAmount) return true;
     final orig = widget.claim.records;
     if (_records.length != orig.length) return true;
     for (var i = 0; i < _records.length; i++) {
@@ -203,30 +209,51 @@ class _EditorPageState extends State<EditorPage> {
     }
   }
 
-  /// 手动添加明细：选择类型 → 输入金额 → 追加到当前报销单。
+  /// 手动添加：选择类型 → 输入金额 → 追加明细或设置超标金额。
   Future<void> _manualAdd() async {
-    final record = await showDialog<Record>(
+    final result = await showDialog<({Record? record, double? excessAmount})>(
       context: context,
       builder: (_) => const _ManualAddDialog(),
     );
-    if (!mounted || record == null) return;
-    setState(() => _records = [..._records, record]);
-    // 添加成功是明确的「提交」时刻：视觉 toast 与触感同帧。
+    if (!mounted || result == null) return;
+    final record = result.record;
+    if (record != null) {
+      setState(() => _records = [..._records, record]);
+      // 添加成功是明确的「提交」时刻：视觉 toast 与触感同帧。
+      HapticFeedback.lightImpact();
+      _toast('已添加：${record.category.label} ${fmtMoney(record.amount)}');
+      return;
+    }
+    final excess = result.excessAmount;
+    if (excess == null) return;
+    setState(() => _excess = excess);
     HapticFeedback.lightImpact();
-    _toast('已添加：${record.category.label} ${fmtMoney(record.amount)}');
+    _toast(excess > 0 ? '已填写超标金额 ${fmtMoney(excess)}' : '已清除超标金额');
   }
 
-  /// 打开扫码页，扫到可识别的票据明细则追加到当前报销单。
+  /// 打开扫码页；本次扫到的所有可识别明细统一追加到当前报销单，
+  /// 未识别的内容按原文展示。
   Future<void> _scanToAdd() async {
-    final result = await Navigator.of(context).push<QrParseResult>(
+    final results = await Navigator.of(context).push<List<QrParseResult>>(
       MaterialPageRoute(builder: (_) => const QrScannerPage()),
     );
-    if (!mounted || result == null) return;
-    if (result.record != null) {
-      setState(() => _records = [..._records, result.record!]);
-      _toast('已添加：${result.record!.title}');
-    } else {
-      _showRawContent(result.raw);
+    if (!mounted || results == null || results.isEmpty) return;
+    final records = [
+      for (final r in results)
+        if (r.record != null) r.record!,
+    ];
+    final raws = [
+      for (final r in results)
+        if (r.record == null) r.raw,
+    ];
+    if (records.isNotEmpty) {
+      setState(() => _records = [..._records, ...records]);
+      _toast(records.length == 1
+          ? '已添加：${records.first.title}'
+          : '已添加 ${records.length} 条明细');
+    }
+    if (raws.isNotEmpty) {
+      _showRawContent(raws.join('\n\n——\n\n'));
     }
   }
 
@@ -484,7 +511,8 @@ class _ManualAddDialog extends StatefulWidget {
 }
 
 class _ManualAddDialogState extends State<_ManualAddDialog> {
-  RecordCategory _category = RecordCategory.train;
+  // null 表示选中「超标金额」选项（不属于明细分类）。
+  RecordCategory? _category = RecordCategory.train;
   CarTripType _carTripType = CarTripType.city;
   final _amountCtrl = TextEditingController();
 
@@ -496,14 +524,26 @@ class _ManualAddDialogState extends State<_ManualAddDialog> {
 
   void _confirm() {
     final amount = double.tryParse(_amountCtrl.text.trim()) ?? 0;
+    final category = _category;
+    if (category == null) {
+      // 超标金额：0 表示清除，负数按 0 处理。
+      Navigator.of(context).pop((
+        record: null,
+        excessAmount: amount < 0 ? 0 : amount,
+      ));
+      return;
+    }
     if (amount <= 0) return;
-    Navigator.of(context).pop(Record(
-      id: nextRecordId(),
-      category: _category,
-      title: _category.label,
-      subtitle: '',
-      amount: amount,
-      carTripType: _category == RecordCategory.car ? _carTripType : null,
+    Navigator.of(context).pop((
+      record: Record(
+        id: nextRecordId(),
+        category: category,
+        title: category.label,
+        subtitle: '',
+        amount: amount,
+        carTripType: category == RecordCategory.car ? _carTripType : null,
+      ),
+      excessAmount: null,
     ));
   }
 
@@ -559,6 +599,40 @@ class _ManualAddDialogState extends State<_ManualAddDialog> {
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: _category == cat ? Colors.white : c.fg,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // 超标金额：不属于明细分类，选中后填写超标金额。
+                GestureDetector(
+                  onTap: () => setState(() => _category = null),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: _category == null
+                          ? const Color(0xFFEF4444)
+                          : c.bgSecondary,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _category == null
+                            ? const Color(0xFFEF4444)
+                            : c.border,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.warning_amber_outlined, size: 16,
+                            color: _category == null ? Colors.white : c.fgMuted),
+                        const SizedBox(width: 4),
+                        Text(
+                          '超标金额',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _category == null ? Colors.white : c.fg,
                           ),
                         ),
                       ],

@@ -318,13 +318,13 @@ class _MinePageState extends State<MinePage> {
     );
   }
 
-  /// 打开扫码页；扫到可识别的票据明细则展示预览，否则展示原始内容。
+  /// 打开扫码页；扫到的多张结果一起展示预览，否则展示原文。
   Future<void> _scanQr() async {
-    final result = await Navigator.of(context).push<QrParseResult>(
+    final results = await Navigator.of(context).push<List<QrParseResult>>(
       MaterialPageRoute(builder: (_) => const QrScannerPage()),
     );
-    if (!mounted || result == null) return;
-    _showScanResult(result);
+    if (!mounted || results == null || results.isEmpty) return;
+    _showScanResult(results);
   }
 
   /// 拍照 / 相册识别票据；结构化解析成功则展示字段预览，否则展示原文。
@@ -594,21 +594,29 @@ class _MinePageState extends State<MinePage> {
     );
   }
 
-  void _showScanResult(QrParseResult result) {
-    final rec = result.record;
+  void _showScanResult(List<QrParseResult> results) {
+    final records = [
+      for (final r in results)
+        if (r.record != null) r.record!,
+    ];
+    final raws = [
+      for (final r in results)
+        if (r.record == null) r.raw,
+    ];
     _showRecordResultDialog(
-      '扫码结果',
-      rec == null
-          ? const <List<(String, String)>>[]
-          : [
-              [
-                ('类别', rec.category.label),
-                ('名称', rec.title),
-                ('备注', rec.subtitle),
-                ('金额', fmtMoney(rec.amount)),
-              ],
-            ],
-      raw: result.raw,
+      results.length == 1 ? '扫码结果' : '扫码结果（${results.length} 张）',
+      [
+        for (final rec in records) ...[
+          [
+            ('类别', rec.category.label),
+            ('名称', rec.title),
+            ('备注', rec.subtitle),
+            ('金额', fmtMoney(rec.amount)),
+          ],
+        ],
+        for (final raw in raws) [('原文', raw)],
+      ],
+      raw: raws.isEmpty ? null : raws.join('\n\n——\n\n'),
     );
   }
 }

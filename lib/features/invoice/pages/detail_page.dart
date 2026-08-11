@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/utils/app_tutorial.dart';
+import '../../../core/utils/format.dart';
 import '../models/claim.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/chips.dart';
@@ -138,6 +139,22 @@ class _DetailPageState extends State<DetailPage> {
                                 date: claim.endDate, label: '结束'),
                           ],
                         ),
+                        // 超标金额（人工填写）只读展示；未填写则不显示。
+                        if (claim.excessAmount > 0) ...[
+                          const SizedBox(height: 16),
+                          FieldLabel('超标金额'),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Text(
+                              fmtMoney(claim.excessAmount),
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: c.fg,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

@@ -7,6 +7,7 @@ import '../../../core/utils/format.dart';
 import '../models/claim.dart';
 import '../models/record.dart';
 import 'chips.dart';
+import 'summary_pill.dart';
 
 class ClaimCard extends StatelessWidget {
   final Claim claim;
@@ -77,6 +78,11 @@ class ClaimCard extends StatelessWidget {
                       color: c.accent,
                     ),
                   ),
+                  // 超标金额（人工填写）以胶囊形式展示在金额下方，超标部分不予以报销。
+                  if (claim.excessAmount > 0) ...[
+                    const SizedBox(height: 4),
+                    _ExcessAmountPill(claim: claim, c: c),
+                  ],
                   if (claim.archived) ...[
                     const SizedBox(height: 4),
                     const _ReimbursedBadge(),
@@ -86,6 +92,46 @@ class ClaimCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 超标金额胶囊：警示色图标 + 金额，与汇总胶囊（SummaryPill）同款样式，
+/// 用于在卡片金额下方展示人工填写的超标金额。
+class _ExcessAmountPill extends StatelessWidget {
+  final Claim claim;
+  final AppColorScheme c;
+
+  const _ExcessAmountPill({required this.claim, required this.c});
+
+  @override
+  Widget build(BuildContext context) {
+    final style = summaryRowStyle('超标金额');
+    final isDark = c == AppColorScheme.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: style.color.withValues(alpha: isDark ? 0.16 : 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: style.color.withValues(alpha: isDark ? 0.30 : 0.18),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(style.icon, size: 12, color: style.color),
+          const SizedBox(width: 4),
+          Text(
+            '超标 ${fmtMoneyShort(claim.excessAmount)}',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: style.color,
+            ),
+          ),
+        ],
       ),
     );
   }

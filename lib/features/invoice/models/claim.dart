@@ -14,6 +14,9 @@ class Claim {
   final DateTime savedAt;
   final double allowance; // 差补
 
+  /// 超标金额：超出报销标准的部分，人工手动填写，不计入退补金额。
+  final double excessAmount;
+
   /// 是否已归档（归档 = 已报销）。
   final bool archived;
 
@@ -25,6 +28,7 @@ class Claim {
     required this.records,
     required this.savedAt,
     this.allowance = 0,
+    this.excessAmount = 0,
     this.archived = false,
   });
 
@@ -34,7 +38,8 @@ class Claim {
   /// 出差天数与差补金额现由 Rust 核心库计算（见 core/utils/allowance.dart），
   /// 报销单只持有编辑页算好并存入的 [allowance] 字段。
 
-  double get total => recordsTotal + allowance;
+  /// 总金额 = 明细总额 + 差补 + 超标金额。
+  double get total => recordsTotal + allowance + excessAmount;
 
   Map<RecordCategory, int> get tagCounts {
     final m = <RecordCategory, int>{};
@@ -56,15 +61,17 @@ class Claim {
   double get roundTripTotal =>
       records.where((r) => r.isRoundTripCar).fold(0.0, (s, r) => s + r.amount);
 
-  /// 退补金额 = 火车总额 + 高速费 + 地铁费 + 差补。
+  /// 退补金额 = 火车总额 + 高速费 + 地铁费 + 差补 - 超标金额
+  /// （超标部分不予以报销）。
   double get balanceAmount =>
       (categoryTotals[RecordCategory.train] ?? 0) +
       (categoryTotals[RecordCategory.highway] ?? 0) +
       (categoryTotals[RecordCategory.subway] ?? 0) +
-      allowance;
+      allowance -
+      excessAmount;
 
   /// 报销汇总明细（火车 / 飞机 / 酒店 / 市内交通 / 往返交通 / 高速费 / 地铁费 /
-  /// 差补 / 预借金额 / 退补金额）；金额为 0 的行不展示（没有对应内容就不显示标签）。
+  /// 差补 / 超标金额 / 预借金额 / 退补金额）；金额为 0 的行不展示（没有对应内容就不显示标签）。
   List<({String label, double amount})> get summaryRows {
     final totals = categoryTotals;
     final roundTrip = roundTripTotal;
@@ -78,6 +85,7 @@ class Claim {
       (label: '高速费', amount: totals[RecordCategory.highway] ?? 0),
       (label: '地铁费', amount: totals[RecordCategory.subway] ?? 0),
       (label: '差补', amount: allowance),
+      (label: '超标金额', amount: excessAmount),
       // 预借金额 = 飞机 + 酒店 + 用车。
       (
         label: '预借金额',
@@ -99,6 +107,7 @@ class Claim {
     List<Record>? records,
     DateTime? savedAt,
     double? allowance,
+    double? excessAmount,
     bool? archived,
   }) {
     return Claim(
@@ -109,6 +118,7 @@ class Claim {
       records: records ?? this.records,
       savedAt: savedAt ?? this.savedAt,
       allowance: allowance ?? this.allowance,
+      excessAmount: excessAmount ?? this.excessAmount,
       archived: archived ?? this.archived,
     );
   }
