@@ -164,7 +164,7 @@ class AppTutorial {
         fontSize: 13,
         fontWeight: FontWeight.w600,
       ),
-      alignSkip: Alignment.bottomRight,
+      alignSkip: Alignment.topLeft,
       showSkipInLastTarget: true,
       useSafeArea: true,
       // 引导真正结束 / 被跳过时才标记「已展示」：
