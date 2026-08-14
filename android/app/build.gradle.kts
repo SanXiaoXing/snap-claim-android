@@ -40,7 +40,30 @@ android {
     }
 
     // APK 输出命名：SnapClaim_<versionName>[_<abi>].apk（--split-per-abi 时带 ABI 后缀）。
+    // 注：Flutter 插件会把产物复制到 flutter-apk 目录并命名为 app-<abi>-release.apk，
+    // 同时 flutter 工具构建结束后按该名字检查产物；因此这里在插件复制完成后
+    // 额外生成 SnapClaim_ 命名的交付副本，保留原 app-* 文件以满足 flutter 检查。
     applicationVariants.all {
+        val assembleTask = assembleProvider.get()
+        assembleTask.doLast {
+            val apkDir = layout.buildDirectory.dir("outputs/flutter-apk").get().asFile
+            if (!apkDir.isDirectory) return@doLast
+            // 仅处理 release 产物（app-<abi>-release.apk），忽略 debug / profile 与 sha1。
+            apkDir.listFiles { f ->
+                f.isFile &&
+                    f.name.startsWith("app-") &&
+                    f.name.endsWith("-release.apk")
+            }?.forEach { f ->
+                val abi = f.name
+                    .removePrefix("app-")
+                    .removeSuffix("-release.apk")
+                val targetName =
+                    "SnapClaim_${versionName}${abi.takeIf { it.isNotEmpty() }?.let { "_$it" } ?: ""}.apk"
+                if (f.name != targetName) {
+                    f.copyTo(File(apkDir, targetName), overwrite = true)
+                }
+            }
+        }
         outputs.all {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             val abi = output.getFilter(com.android.build.OutputFile.ABI)
