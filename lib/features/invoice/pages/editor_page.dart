@@ -116,22 +116,17 @@ class _EditorPageState extends State<EditorPage> {
     setState(() => _allowance = a);
   }
 
-  Future<void> _pickDate(bool isStart) async {
-    final picked = await showDatePicker(
+  Future<void> _pickDateRange() async {
+    final picked = await showDateRangePicker(
       context: context,
-      initialDate: isStart ? _start : _end,
+      initialDateRange: DateTimeRange(start: _start, end: _end),
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
     if (picked == null) return;
     setState(() {
-      if (isStart) {
-        _start = picked;
-        if (_end.isBefore(picked)) _end = picked;
-      } else {
-        _end = picked;
-        if (_start.isAfter(picked)) _start = picked;
-      }
+      _start = picked.start;
+      _end = picked.end;
       // 名称未被手动修改时，跟随新的日期范围。
       if (_nameAuto) {
         _nameCtrl.text = _fmtDateRange();
@@ -399,25 +394,10 @@ class _EditorPageState extends State<EditorPage> {
                             const SizedBox(height: 20),
                             FieldLabel('出差日期'),
                             const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                DatePill(
-                                  date: _start,
-                                  label: '开始',
-                                  onTap: () => _pickDate(true),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8),
-                                  child: Icon(Icons.arrow_forward,
-                                      size: 14, color: c.fgSoft),
-                                ),
-                                DatePill(
-                                  date: _end,
-                                  label: '结束',
-                                  onTap: () => _pickDate(false),
-                                ),
-                              ],
+                            DateRangePill(
+                              start: _start,
+                              end: _end,
+                              onTap: _pickDateRange,
                             ),
                           ],
                         ),
