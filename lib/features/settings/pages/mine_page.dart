@@ -307,7 +307,7 @@ class _MinePageState extends State<MinePage> {
                               ),
                               const Spacer(),
                               Text(
-                                'v1.4.1',
+                                'v1.4.2',
                                 style: TextStyle(
                                     fontSize: 12, color: c.fgMuted),
                               ),
