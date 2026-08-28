@@ -84,11 +84,13 @@ class StatsPage extends StatelessWidget {
     // 火车出行次数（环保指标）。
     final trainCount = catCounts[RecordCategory.train] ?? 0;
 
-    // 月份分布柱状图数据。
+    // 月份分布柱状图数据：按退补金额统计（与上方「累计退补金额」同口径，
+    // 退补金额 = 火车 + 高速费 + 地铁费 + 差补 - 超标金额，
+    // 预借金额（飞机/酒店/用车）与超标金额不属于报销金额，不计入）。
     final monthlyTotals = List.filled(12, 0.0);
     for (final cl in yearClaims) {
       final m = cl.startDate.month - 1;
-      monthlyTotals[m] += cl.total;
+      monthlyTotals[m] += cl.balanceAmount;
     }
     final maxMonthly = monthlyTotals.reduce((a, b) => a > b ? a : b);
 

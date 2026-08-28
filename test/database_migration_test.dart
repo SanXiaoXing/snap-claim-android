@@ -200,4 +200,46 @@ void main() {
     expect(claims.first.records.first.title, '火车票');
     expect(claims.first.records.last.amount, 35.0);
   });
+
+  test('旧库升级后删除归档报销单：统计数据随当前数据库实际数据重算', () async {
+    await databaseFactory.setDatabasesPath(tmpDir.path);
+    // v2 老库：两张已归档报销单（归档 = 已报销）。
+    final path = await createOldDb(version: 2, withArchived: true);
+    final db = await databaseFactory.openDatabase(path);
+    await db.insert('claims', {
+      'id': 'c_old_2',
+      'name': '第二张报销单',
+      'start_date': DateTime(2026, 8, 1).millisecondsSinceEpoch,
+      'end_date': DateTime(2026, 8, 2).millisecondsSinceEpoch,
+      'saved_at': DateTime(2026, 8, 2).millisecondsSinceEpoch,
+      'allowance': 100.0,
+      'archived': 1,
+    });
+    await db.insert('records', {
+      'id': 'r_old_3',
+      'claim_id': 'c_old_2',
+      'category': 'train',
+      'title': '火车票2',
+      'subtitle': '',
+      'amount': 300.0,
+      'car_trip_type': null,
+      'sort_order': 0,
+    });
+    await db.close();
+
+    // 复制老库为 AppDatabase 使用的数据库文件，模拟「旧库直接运行当前版本程序」。
+    await File(path).copy('${tmpDir.path}/snap_claim.db');
+
+    // AppDatabase 首次打开触发 v2 → v3 迁移，随后删除一张归档报销单。
+    final before = await AppDatabase.instance.getAllClaims();
+    expect(before.length, 2);
+    await AppDatabase.instance.deleteClaim('c_old_1');
+
+    // 删除后重新读取：月度统计所依赖的数据源实时反映数据库实际数据。
+    final after = await AppDatabase.instance.getAllClaims();
+    expect(after.length, 1);
+    expect(after.first.id, 'c_old_2');
+    // 剩余报销单的退补金额（月度分布统计口径）随实际数据变化。
+    expect(after.first.balanceAmount, 400.0); // 火车 300 + 差补 100
+  });
 }
