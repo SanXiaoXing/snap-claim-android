@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 
 import '../../../app/theme.dart';
+import '../../../core/utils/format.dart';
 import '../models/claim.dart';
 import '../models/record.dart';
 import '../widgets/app_top_bar.dart';
@@ -99,6 +100,13 @@ class _ArchivePageState extends State<ArchivePage> {
     final c = context.colors;
     final sorted = [..._claims]
       ..sort((a, b) => b.startDate.compareTo(a.startDate));
+
+    // 按年月分组（保持倒序），排布方式与历史记录页一致。
+    final groups = <String, List<Claim>>{};
+    for (final claim in sorted) {
+      groups.putIfAbsent(fmtYm(claim.startDate), () => []).add(claim);
+    }
+
     return Scaffold(
       backgroundColor: c.bg,
       body: Column(
@@ -116,50 +124,68 @@ class _ArchivePageState extends State<ArchivePage> {
                     icon: Icons.inventory_2_outlined,
                     text: '暂无归档记录',
                   )
-                : ListView.separated(
+                : SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                    itemCount: sorted.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, i) {
-                      final claim = sorted[i];
-                      return Dismissible(
-                        key: ValueKey('restore-${claim.id}'),
-                        direction: DismissDirection.horizontal,
-                        dismissThresholds: const {
-                          DismissDirection.startToEnd: 0.3,
-                          DismissDirection.endToStart: 0.35,
-                        },
-                        confirmDismiss: (direction) async {
-                          // 右滑撤销归档：无需确认；左滑删除：二次确认。
-                          if (direction == DismissDirection.startToEnd) {
-                            return true;
-                          }
-                          return _confirmDelete(context, claim);
-                        },
-                        onDismissed: (direction) {
-                          if (direction == DismissDirection.startToEnd) {
-                            _restore(claim);
-                          } else {
-                            _delete(claim);
-                          }
-                        },
-                        background: SwipeBackground(
-                          icon: Icons.undo,
-                          label: '撤销归档',
-                          from: RecordCategory.car.base,
-                          to: Color.lerp(RecordCategory.car.base, c.card, 0.35)!,
-                          alignment: Alignment.centerLeft,
-                        ),
-                        secondaryBackground: SwipeBackground(
-                          icon: Icons.delete_outline,
-                          label: '删除',
-                          from: c.danger,
-                          to: Color.lerp(c.danger, c.dangerBg, 0.3)!,
-                          alignment: Alignment.centerRight,
-                        ),
-                        child: ClaimCard(claim: claim),
-                      );
-                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final entry in groups.entries) ...[
+                          // 月份分组标题，样式与历史记录页统一。
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8, bottom: 10),
+                            child: Text(
+                              entry.key,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: c.fgMuted,
+                              ),
+                            ),
+                          ),
+                          for (final claim in entry.value) ...[
+                            Dismissible(
+                              key: ValueKey('restore-${claim.id}'),
+                              direction: DismissDirection.horizontal,
+                              dismissThresholds: const {
+                                DismissDirection.startToEnd: 0.3,
+                                DismissDirection.endToStart: 0.35,
+                              },
+                              confirmDismiss: (direction) async {
+                                // 右滑撤销归档：无需确认；左滑删除：二次确认。
+                                if (direction == DismissDirection.startToEnd) {
+                                  return true;
+                                }
+                                return _confirmDelete(context, claim);
+                              },
+                              onDismissed: (direction) {
+                                if (direction == DismissDirection.startToEnd) {
+                                  _restore(claim);
+                                } else {
+                                  _delete(claim);
+                                }
+                              },
+                              background: SwipeBackground(
+                                icon: Icons.undo,
+                                label: '撤销归档',
+                                from: RecordCategory.car.base,
+                                to: Color.lerp(
+                                    RecordCategory.car.base, c.card, 0.35)!,
+                                alignment: Alignment.centerLeft,
+                              ),
+                              secondaryBackground: SwipeBackground(
+                                icon: Icons.delete_outline,
+                                label: '删除',
+                                from: c.danger,
+                                to: Color.lerp(c.danger, c.dangerBg, 0.3)!,
+                                alignment: Alignment.centerRight,
+                              ),
+                              child: ClaimCard(claim: claim),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                        ],
+                      ],
+                    ),
                   ),
           ),
         ],
