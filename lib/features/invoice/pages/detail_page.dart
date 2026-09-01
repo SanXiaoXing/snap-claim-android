@@ -73,9 +73,9 @@ class _DetailPageState extends State<DetailPage> {
               onTap: () => Navigator.of(context).pop(),
             ),
             title: '报销详情',
-            // 右侧有两个操作按钮，加宽左右槽位（保持等宽）并给按钮留间距。
-            leadingWidth: 88,
-            trailingWidth: 88,
+            // 右侧有两个操作按钮（44×2 + 8 间距），加宽左右槽位（保持等宽）。
+            leadingWidth: 104,
+            trailingWidth: 104,
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

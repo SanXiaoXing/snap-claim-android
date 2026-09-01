@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
 
-/// 圆角图标按钮（36×36，bgSecondary 底，border）。
+/// 圆角图标按钮（44×44，bgSecondary 底，border；44pt 为最小舒适触控目标）。
 class AppIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
@@ -13,7 +13,7 @@ class AppIconButton extends StatelessWidget {
     super.key,
     required this.icon,
     this.onTap,
-    this.size = 20,
+    this.size = 22,
   });
 
   @override
@@ -21,16 +21,16 @@ class AppIconButton extends StatelessWidget {
     final c = context.colors;
     return Material(
       color: c.bgSecondary,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
-          width: 36,
-          height: 36,
+          width: 44,
+          height: 44,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: c.border),
           ),
           child: Icon(icon, size: size, color: c.fg),
@@ -72,7 +72,7 @@ class AppTopBar extends StatelessWidget {
           children: [
             SizedBox(
               width: leadingWidth,
-              height: 36,
+              height: 44,
               child: Align(alignment: Alignment.centerLeft, child: leading ?? const SizedBox()),
             ),
             Expanded(
@@ -90,7 +90,7 @@ class AppTopBar extends StatelessWidget {
             ),
             SizedBox(
               width: trailingWidth,
-              height: 36,
+              height: 44,
               child: Align(alignment: Alignment.centerRight, child: trailing ?? const SizedBox()),
             ),
           ],
