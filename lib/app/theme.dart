@@ -216,3 +216,52 @@ void showAppSnack(
     ),
   );
 }
+
+/// 统一对话框骨架：卡片底色 + 圆角 + 标题样式，供各页弹窗复用。
+class AppDialog extends StatelessWidget {
+  final String title;
+  final Widget content;
+  final List<Widget> actions;
+  final MainAxisAlignment? actionsAlignment;
+
+  const AppDialog({
+    super.key,
+    required this.title,
+    required this.content,
+    this.actions = const [],
+    this.actionsAlignment,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return AlertDialog(
+      backgroundColor: c.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
+          color: c.fg,
+        ),
+      ),
+      content: content,
+      actions: actions,
+      actionsAlignment: actionsAlignment,
+    );
+  }
+}
+
+/// 对话框中的文本按钮（取消 / 关闭等），统一样式。
+Widget appDialogButton(
+  BuildContext context, {
+  String label = '取消',
+  VoidCallback? onPressed,
+}) {
+  final c = context.colors;
+  return TextButton(
+    onPressed: onPressed ?? () => Navigator.of(context).pop(),
+    child: Text(label, style: TextStyle(fontSize: 14, color: c.fgMuted)),
+  );
+}

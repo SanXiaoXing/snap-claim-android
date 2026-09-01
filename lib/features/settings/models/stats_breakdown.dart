@@ -16,7 +16,7 @@ import '../../invoice/models/record.dart';
 /// 构成分析中的一行（如「火车」「差补」「市内交通」）。
 ///
 /// [label] 与 Claim.summaryRows 的行名保持一致，渲染层直接复用
-/// summaryRowStyle(label) 取图标与品牌色，保证与报销汇总卡片配色统一。
+/// summaryRowStyles[label] 取图标与品牌色，保证与报销汇总卡片配色统一。
 @immutable
 class StatsSlice {
   final String label;
@@ -91,10 +91,11 @@ class StatsBreakdown {
   const StatsBreakdown({required this.balance, required this.advance});
 
   /// 按 [claims] 实时计算（传入的一般是当年报销单）。
+  /// 各类别金额/笔数直接聚合 Claim 已有的 categoryTotals / tagCounts，
+  /// 不再重走一遍明细（口径与报销汇总保持一致）。
   factory StatsBreakdown.compute(List<Claim> claims) {
     final totals = <RecordCategory, double>{};
     final counts = <RecordCategory, int>{};
-    var cityCarCount = 0;
     var roundTripCount = 0;
     var roundTrip = 0.0;
     var allowance = 0.0;
@@ -104,20 +105,16 @@ class StatsBreakdown {
       allowance += cl.allowance;
       excess += cl.excessAmount;
       roundTrip += cl.roundTripTotal;
+      cl.categoryTotals.forEach((k, v) => totals[k] = (totals[k] ?? 0) + v);
+      cl.tagCounts.forEach((k, v) => counts[k] = (counts[k] ?? 0) + v);
+      // 往返用车笔数 Claim 未拆分，需遍历明细统计。
       for (final r in cl.records) {
-        totals[r.category] = (totals[r.category] ?? 0) + r.amount;
-        counts[r.category] = (counts[r.category] ?? 0) + 1;
-        if (r.category == RecordCategory.car) {
-          if (r.isRoundTripCar) {
-            roundTripCount++;
-          } else {
-            cityCarCount++;
-          }
-        }
+        if (r.isRoundTripCar) roundTripCount++;
       }
     }
 
     final carTotal = totals[RecordCategory.car] ?? 0;
+    final cityCarCount = (counts[RecordCategory.car] ?? 0) - roundTripCount;
 
     // 退补构成：只有火车 / 高速费 / 地铁费 / 差补计入报销，
     // 超标金额是不予报销的部分，作为扣减项单独展示。

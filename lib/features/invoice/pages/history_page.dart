@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 
 import '../../../app/theme.dart';
-import '../../../core/utils/format.dart';
 import '../models/claim.dart';
 import '../models/record.dart';
 import '../widgets/app_top_bar.dart';
@@ -39,11 +38,7 @@ class HistoryPage extends StatelessWidget {
       ..sort((a, b) => b.startDate.compareTo(a.startDate));
 
     // 按年月分组，保持倒序。
-    final groups = <String, List<Claim>>{};
-    for (final claim in visible) {
-      final key = fmtYm(claim.startDate);
-      groups.putIfAbsent(key, () => []).add(claim);
-    }
+    final groups = groupClaimsByMonth(visible);
 
     return Column(
       children: [

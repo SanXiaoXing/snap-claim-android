@@ -7,7 +7,6 @@ import '../../../core/utils/format.dart';
 import '../models/claim.dart';
 import '../models/record.dart';
 import 'chips.dart';
-import 'summary_pill.dart';
 
 class ClaimCard extends StatelessWidget {
   final Claim claim;
@@ -107,7 +106,7 @@ class _ExcessAmountPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = summaryRowStyle('超标金额');
+    final style = summaryRowStyles['超标金额']!;
     final isDark = c == AppColorScheme.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

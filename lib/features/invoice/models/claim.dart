@@ -1,7 +1,33 @@
 // 报销单模型。
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
+import '../../../core/utils/format.dart';
 import 'record.dart';
+
+/// 汇总行的图标与品牌色（label 与 [Claim.summaryRows] 的行名一一对应），
+/// 供统计页 / 分享卡片等按行名取样式时复用，避免各文件重复写样式。
+final summaryRowStyles = <String, ({IconData icon, Color color})>{
+  '火车': (icon: RecordCategory.train.icon, color: RecordCategory.train.base),
+  '飞机': (icon: RecordCategory.flight.icon, color: RecordCategory.flight.base),
+  '酒店': (icon: RecordCategory.hotel.icon, color: RecordCategory.hotel.base),
+  '市内交通': (icon: RecordCategory.car.icon, color: RecordCategory.car.base),
+  '往返交通': (icon: Icons.sync_alt, color: Color(0xFF14B8A6)),
+  '高速费': (icon: RecordCategory.highway.icon, color: RecordCategory.highway.base),
+  '地铁费': (icon: RecordCategory.subway.icon, color: RecordCategory.subway.base),
+  '差补': (icon: Icons.payments_outlined, color: Color(0xFF6366F1)),
+  '超标金额': (icon: Icons.warning_amber_outlined, color: Color(0xFFEF4444)),
+  '预借金额': (icon: Icons.account_balance_wallet_outlined, color: Color(0xFF06B6D4)),
+  '退补金额': (icon: Icons.currency_exchange, color: Color(0xFFF97316)),
+};
+
+/// 按年月（fmtYm 文本）分组报销单，组内保持原顺序。
+Map<String, List<Claim>> groupClaimsByMonth(List<Claim> claims) {
+  final groups = <String, List<Claim>>{};
+  for (final claim in claims) {
+    groups.putIfAbsent(fmtYm(claim.startDate), () => []).add(claim);
+  }
+  return groups;
+}
 
 /// 一张报销单。
 @immutable
@@ -72,7 +98,9 @@ class Claim {
 
   /// 报销汇总明细（火车 / 飞机 / 酒店 / 市内交通 / 往返交通 / 高速费 / 地铁费 /
   /// 差补 / 超标金额 / 预借金额 / 退补金额）；金额为 0 的行不展示（没有对应内容就不显示标签）。
-  List<({String label, double amount})> get summaryRows {
+  /// 每行直接携带图标与品牌色（取自 [summaryRowStyles]），渲染层不再按行名查样式。
+  List<({String label, double amount, IconData icon, Color color})>
+      get summaryRows {
     final totals = categoryTotals;
     final roundTrip = roundTripTotal;
     final rows = <({String label, double amount})>[
@@ -97,7 +125,16 @@ class Claim {
       (label: '退补金额', amount: balanceAmount),
     ];
     // 没有对应内容（金额为 0）的行不显示标签。
-    return [for (final row in rows) if (row.amount != 0) row];
+    return [
+      for (final row in rows)
+        if (row.amount != 0)
+          (
+            label: row.label,
+            amount: row.amount,
+            icon: summaryRowStyles[row.label]!.icon,
+            color: summaryRowStyles[row.label]!.color,
+          ),
+    ];
   }
 
   Claim copyWith({

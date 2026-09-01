@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 
 import '../../../app/theme.dart';
-import '../../../core/utils/format.dart';
 import '../models/claim.dart';
 import '../models/record.dart';
 import '../widgets/app_top_bar.dart';
@@ -55,29 +54,16 @@ class _ArchivePageState extends State<ArchivePage> {
 
   /// 左滑删除的二次确认。
   Future<bool> _confirmDelete(BuildContext context, Claim claim) async {
-    final c = context.colors;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          '删除报销单',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: c.fg,
-          ),
-        ),
+      builder: (ctx) => AppDialog(
+        title: '删除报销单',
         content: Text(
           '确定删除「${claim.name}」吗？将同时删除其全部明细，此操作不可恢复。',
-          style: TextStyle(fontSize: 14, color: c.fgMuted, height: 1.5),
+          style: TextStyle(fontSize: 14, color: ctx.colors.fgMuted, height: 1.5),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('取消', style: TextStyle(fontSize: 14, color: c.fgMuted)),
-          ),
+          appDialogButton(ctx, onPressed: () => Navigator.of(ctx).pop(false)),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
@@ -85,7 +71,7 @@ class _ArchivePageState extends State<ArchivePage> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: c.danger,
+                color: ctx.colors.danger,
               ),
             ),
           ),
@@ -102,10 +88,7 @@ class _ArchivePageState extends State<ArchivePage> {
       ..sort((a, b) => b.startDate.compareTo(a.startDate));
 
     // 按年月分组（保持倒序），排布方式与历史记录页一致。
-    final groups = <String, List<Claim>>{};
-    for (final claim in sorted) {
-      groups.putIfAbsent(fmtYm(claim.startDate), () => []).add(claim);
-    }
+    final groups = groupClaimsByMonth(sorted);
 
     return Scaffold(
       backgroundColor: c.bg,

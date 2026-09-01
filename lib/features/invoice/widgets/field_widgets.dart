@@ -25,6 +25,17 @@ class FieldLabel extends StatelessWidget {
   }
 }
 
+/// 日期胶囊的统一样式外壳：bgSecondary 底 + 圆角 + 边框，内容为一行。
+Widget _datePillShell(AppColorScheme c, List<Widget> children) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: c.bgSecondary,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: c.border),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: children),
+    );
+
 /// 日期范围胶囊；提供 [onTap] 时可点击一次选择起止日期，否则只读展示。
 class DateRangePill extends StatelessWidget {
   final DateTime start;
@@ -41,41 +52,30 @@ class DateRangePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final pill = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: c.bgSecondary,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: c.border),
+    final pill = _datePillShell(c, [
+      Icon(Icons.calendar_today_outlined, size: 14, color: c.accent),
+      const SizedBox(width: 6),
+      Text(
+        fmtMd(start),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: c.fg,
+        ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.calendar_today_outlined, size: 14, color: c.accent),
-          const SizedBox(width: 6),
-          Text(
-            fmtMd(start),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: c.fg,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Icon(Icons.arrow_forward, size: 12, color: c.fgSoft),
-          ),
-          Text(
-            fmtMd(end),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: c.fg,
-            ),
-          ),
-        ],
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Icon(Icons.arrow_forward, size: 12, color: c.fgSoft),
       ),
-    );
+      Text(
+        fmtMd(end),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: c.fg,
+        ),
+      ),
+    ]);
     final onTap = this.onTap;
     return onTap == null ? pill : PressScale(onTap: onTap, child: pill);
   }
@@ -97,31 +97,20 @@ class DatePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final pill = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: c.bgSecondary,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: c.border),
+    final pill = _datePillShell(c, [
+      Icon(Icons.calendar_today_outlined, size: 14, color: c.accent),
+      const SizedBox(width: 6),
+      Text(
+        fmtMd(date),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: c.fg,
+        ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.calendar_today_outlined, size: 14, color: c.accent),
-          const SizedBox(width: 6),
-          Text(
-            fmtMd(date),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: c.fg,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 13, color: c.fgSoft)),
-        ],
-      ),
-    );
+      const SizedBox(width: 4),
+      Text(label, style: TextStyle(fontSize: 13, color: c.fgSoft)),
+    ]);
     final onTap = this.onTap;
     return onTap == null ? pill : PressScale(onTap: onTap, child: pill);
   }

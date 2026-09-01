@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 
 /// 列表行：图标 + 标题（+ 副标题）+ 尾部控件。
+/// [trailing] 缺省时仅展示图标 + 标题（作卡片头部用）。
 class MineRow extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -16,7 +17,7 @@ class MineRow extends StatelessWidget {
     required this.icon,
     required this.title,
     this.subtitle,
-    required this.trailing,
+    this.trailing = const SizedBox.shrink(),
     this.onTap,
   });
 
@@ -68,43 +69,6 @@ class MineRow extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// 卡片头部：图标 + 标题（如「偏好设置」）。
-class MineHeader extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  const MineHeader({super.key, required this.icon, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: c.bgSecondary,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 18, color: c.fgMuted),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: c.fg,
-            ),
-          ),
-        ],
       ),
     );
   }

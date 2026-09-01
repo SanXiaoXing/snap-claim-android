@@ -6,8 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../core/utils/format.dart';
 import '../models/claim.dart';
-import '../models/record.dart';
-import 'chips.dart';
+import 'record_row.dart';
 import 'summary_pill.dart';
 
 /// 报销单分享卡。
@@ -242,7 +241,13 @@ class ShareCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             for (final row in claim.summaryRows) ...[
-              SummaryPill(label: row.label, amount: row.amount, c: c),
+              SummaryPill(
+                label: row.label,
+                amount: row.amount,
+                icon: row.icon,
+                color: row.color,
+                c: c,
+              ),
               if (row != claim.summaryRows.last) const SizedBox(height: 8),
             ],
           ],
@@ -277,7 +282,7 @@ class ShareCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             for (final r in shown) ...[
-              _ShareRecordRow(record: r, c: c),
+              RecordRow(record: r, compact: true),
               if (r != shown.last || hidden > 0) const SizedBox(height: 8),
             ],
             if (hidden > 0)
@@ -325,76 +330,6 @@ class ShareCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ShareRecordRow extends StatelessWidget {
-  final Record record;
-  final AppColorScheme c;
-  const _ShareRecordRow({required this.record, required this.c});
-
-  @override
-  Widget build(BuildContext context) {
-    final subtitle = record.subtitle.isEmpty &&
-            record.category == RecordCategory.car
-        ? (record.carTripType?.label ?? '')
-        : record.subtitle;
-    return Row(
-      children: [
-        Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: record.category.base.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            record.category.icon,
-            size: 14,
-            color: record.category.lightFg,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                record.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: c.fg,
-                ),
-              ),
-              if (subtitle.isNotEmpty)
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10, color: c.fgSoft),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          fmtMoneyShort(record.amount),
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: c.fg,
-          ),
-        ),
-        // 占位，避免与 chips 中的同名类型冲突。
-        const SizedBox(width: 6),
-        CategoryBadge(category: record.category),
-      ],
     );
   }
 }

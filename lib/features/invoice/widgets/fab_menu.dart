@@ -5,6 +5,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
+import 'press_scale.dart';
 
 class FabMenuItem {
   final IconData icon;
@@ -256,7 +257,7 @@ class _FabMenuState extends State<FabMenu> with SingleTickerProviderStateMixin {
 }
 
 /// 扇形子项:48px 圆形图标按钮,从主按钮中心向弧线终点弹开。
-class _FabAction extends StatefulWidget {
+class _FabAction extends StatelessWidget {
   final FabMenuItem item;
   final VoidCallback onTap;
   final AppColorScheme color;
@@ -270,56 +271,43 @@ class _FabAction extends StatefulWidget {
   });
 
   @override
-  State<_FabAction> createState() => _FabActionState();
-}
-
-class _FabActionState extends State<_FabAction> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    final c = widget.color;
-    final isDark = widget.isDark;
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _pressed ? 0.92 : 1.0,
-        duration: const Duration(milliseconds: 90),
-        curve: Curves.easeOut,
-        child: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [c.accent, c.accentLight],
+    final c = color;
+    final isDark = this.isDark;
+    // 按下缩放反馈由 PressScale 统一提供。
+    return PressScale(
+      onTap: onTap,
+      pressedScale: 0.92,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [c.accent, c.accentLight],
+          ),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: c.accent.withValues(alpha: 0.40),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+              spreadRadius: -2,
             ),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: c.accent.withValues(alpha: 0.40),
-                blurRadius: 18,
-                offset: const Offset(0, 6),
-                spreadRadius: -2,
+            BoxShadow(
+              color: Colors.white.withValues(
+                alpha: isDark ? 0.12 : 0.30,
               ),
-              BoxShadow(
-                color: Colors.white.withValues(
-                  alpha: isDark ? 0.12 : 0.30,
-                ),
-                blurRadius: 0,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: Icon(
-            widget.item.icon,
-            size: 24,
-            color: Colors.white,
-          ),
+              blurRadius: 0,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Icon(
+          item.icon,
+          size: 24,
+          color: Colors.white,
         ),
       ),
     );

@@ -6,7 +6,6 @@ import '../../../core/utils/format.dart';
 import '../../invoice/models/claim.dart';
 import '../../invoice/models/record.dart';
 import '../../invoice/widgets/app_top_bar.dart';
-import '../../invoice/widgets/summary_pill.dart';
 import '../models/stats_breakdown.dart';
 
 class StatsPage extends StatelessWidget {
@@ -660,7 +659,7 @@ class _BreakdownCard extends StatelessWidget {
 }
 
 /// 类别占比条：名称 + 笔数 + 占比百分比 + 金额 + 真实占比进度条。
-/// 图标与配色复用 summaryRowStyle，与报销汇总、分享卡片保持一致。
+/// 图标与配色复用 summaryRowStyles，与报销汇总、分享卡片保持一致。
 class _CategoryBar extends StatelessWidget {
   final StatsSlice slice;
 
@@ -669,7 +668,7 @@ class _CategoryBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final style = summaryRowStyle(slice.label);
+    final style = summaryRowStyles[slice.label]!;
     return Row(
       children: [
         Container(
@@ -769,7 +768,7 @@ class _DeductionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final style = summaryRowStyle(label);
+    final style = summaryRowStyles[label]!;
     return Row(
       children: [
         Container(

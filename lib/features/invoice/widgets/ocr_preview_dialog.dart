@@ -86,18 +86,8 @@ class _OcrPreviewDialogState extends State<OcrPreviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
-    return AlertDialog(
-      backgroundColor: c.card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text(
-        '识别结果（${_drafts.length} 条）',
-        style: TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          color: c.fg,
-        ),
-      ),
+    return AppDialog(
+      title: '识别结果（${_drafts.length} 条）',
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -118,10 +108,7 @@ class _OcrPreviewDialogState extends State<OcrPreviewDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('取消', style: TextStyle(fontSize: 14, color: c.fgMuted)),
-        ),
+        appDialogButton(context),
         FilledButton(
           onPressed: _confirm,
           child: Text('添加 ${_drafts.length} 条'),

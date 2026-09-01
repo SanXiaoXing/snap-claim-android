@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/backup/backup.dart';
 import '../../../core/backup/backup_service.dart';
 import '../../../core/utils/cache.dart';
 import '../../../core/utils/format.dart';
@@ -205,7 +206,7 @@ class _MinePageState extends State<MinePage> {
                   decoration: cardDecoration(c),
                   child: Column(
                     children: [
-                      MineHeader(icon: Icons.tune, title: '偏好设置'),
+                      MineRow(icon: Icons.tune, title: '偏好设置'),
                       MineDivider(),
                       MineRow(
                         icon: Icons.image_outlined,
@@ -239,7 +240,7 @@ class _MinePageState extends State<MinePage> {
                   decoration: cardDecoration(c),
                   child: Column(
                     children: [
-                      MineHeader(icon: Icons.save_outlined, title: '数据管理'),
+                      MineRow(icon: Icons.save_outlined, title: '数据管理'),
                       MineDivider(),
                       MineRow(
                         icon: Icons.file_upload_outlined,
@@ -307,7 +308,7 @@ class _MinePageState extends State<MinePage> {
                               ),
                               const Spacer(),
                               Text(
-                                'v1.4.2',
+                                'v$kAppVersion',
                                 style: TextStyle(
                                     fontSize: 12, color: c.fgMuted),
                               ),
@@ -359,21 +360,11 @@ class _MinePageState extends State<MinePage> {
 
   /// 外观模式三态选择（跟随系统 / 浅色 / 深色），选中后立即生效并持久化。
   Future<void> _pickThemeMode() async {
-    final c = context.colors;
     final current = widget.themeMode;
     final picked = await showDialog<ThemeMode>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          '外观模式',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: c.fg,
-          ),
-        ),
+      builder: (ctx) => AppDialog(
+        title: '外观模式',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -408,17 +399,8 @@ class _MinePageState extends State<MinePage> {
     final c = context.colors;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          '清除缓存',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: c.fg,
-          ),
-        ),
+      builder: (ctx) => AppDialog(
+        title: '清除缓存',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -436,10 +418,7 @@ class _MinePageState extends State<MinePage> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('取消', style: TextStyle(fontSize: 14, color: c.fgMuted)),
-          ),
+          appDialogButton(ctx, onPressed: () => Navigator.of(ctx).pop(false)),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text('清除'),
@@ -482,17 +461,8 @@ class _MinePageState extends State<MinePage> {
       final c = context.colors;
       final mode = await showDialog<_ImportMode>(
         context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: c.card,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(
-            '导入数据',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: c.fg,
-            ),
-          ),
+        builder: (ctx) => AppDialog(
+          title: '导入数据',
           content: Text(
             '备份文件（备份于 ${parsed.manifest.createdAt}）将如何导入？\n'
             '合并：保留现有数据，只加入备份中不存在的报销单。\n'
@@ -500,10 +470,7 @@ class _MinePageState extends State<MinePage> {
             style: TextStyle(fontSize: 14, color: c.fgMuted, height: 1.5),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text('取消', style: TextStyle(fontSize: 14, color: c.fgMuted)),
-            ),
+            appDialogButton(ctx),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(_ImportMode.merge),
               child: Text('合并导入', style: TextStyle(fontSize: 14, color: c.fg)),
@@ -548,17 +515,8 @@ class _MinePageState extends State<MinePage> {
     final c = context.colors;
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: c.fg,
-          ),
-        ),
+      builder: (ctx) => AppDialog(
+        title: title,
         content: groups.isEmpty
             ? Text(
                 raw ?? '',
@@ -581,10 +539,7 @@ class _MinePageState extends State<MinePage> {
                 ],
               ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('关闭', style: TextStyle(fontSize: 14, color: c.fgMuted)),
-          ),
+          appDialogButton(ctx, label: '关闭'),
         ],
       ),
     );

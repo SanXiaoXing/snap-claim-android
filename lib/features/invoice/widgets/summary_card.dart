@@ -63,7 +63,13 @@ class SummaryCard extends StatelessWidget {
             ),
             children: [
               for (final row in claim.summaryRows)
-                SummaryPill(label: row.label, amount: row.amount, c: c),
+                SummaryPill(
+                  label: row.label,
+                  amount: row.amount,
+                  icon: row.icon,
+                  color: row.color,
+                  c: c,
+                ),
             ],
           ),
         ],

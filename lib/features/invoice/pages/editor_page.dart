@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 
 import '../../../app/theme.dart';
-import '../../../core/utils/allowance.dart';
 import '../../../core/utils/app_tutorial.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/ocr.dart';
@@ -46,8 +45,6 @@ class _EditorPageState extends State<EditorPage> {
   late DateTime _start;
   late DateTime _end;
   late List<Record> _records;
-  // 差补金额由 Rust 核心库异步计算，算好后缓存到此供 _buildCurrent 同步取用。
-  late double _allowance;
   // 超标金额（人工填写），由 FAB「超标金额」弹窗设置，默认 0。
   late double _excess;
   // 名称是否自动跟随日期（新建时默认为日期范围，未被手动修改）。
@@ -79,9 +76,6 @@ class _EditorPageState extends State<EditorPage> {
     _nameCtrl = TextEditingController(text: _initialName);
     // 超标金额初值：既有报销单已填则沿用，否则为 0。
     _excess = widget.claim.excessAmount;
-    // 先用既有报销单存的差补作为初值，避免首帧闪烁；再异步重算。
-    _allowance = widget.claim.allowance;
-    _refreshAllowance();
     // 首帧渲染完成后弹首次引导（需要目标控件已挂载并完成布局）。
     WidgetsBinding.instance.addPostFrameCallback((_) {
       AppTutorial.maybeShowEditor(context, _fabKey, _swipeHintKey, _saveKey);
@@ -109,11 +103,14 @@ class _EditorPageState extends State<EditorPage> {
         savedAt: DateTime.now(),
       );
 
-  /// 调用 Rust 核心库重算差补并刷新界面。
-  Future<void> _refreshAllowance() async {
-    final a = await perDiemAllowance(_start, _end);
-    if (!mounted) return;
-    setState(() => _allowance = a);
+  /// 差补金额 = 出差天数 × 每日差补标准（100 元/天）。
+  /// 按自然天计（含首尾两天），仅比较日期部分。
+  double get _allowance {
+    final days = DateTime.utc(_end.year, _end.month, _end.day)
+            .difference(DateTime.utc(_start.year, _start.month, _start.day))
+            .inDays +
+        1;
+    return days * 100;
   }
 
   Future<void> _pickDateRange() async {
@@ -132,7 +129,6 @@ class _EditorPageState extends State<EditorPage> {
         _nameCtrl.text = _fmtDateRange();
       }
     });
-    _refreshAllowance();
   }
 
   void _save() {
@@ -279,26 +275,14 @@ class _EditorPageState extends State<EditorPage> {
     final c = context.colors;
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          '扫码结果',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: c.fg,
-          ),
-        ),
+      builder: (ctx) => AppDialog(
+        title: '扫码结果',
         content: Text(
           raw,
           style: TextStyle(fontSize: 14, color: c.fgMuted, height: 1.5),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('关闭', style: TextStyle(fontSize: 14, color: c.fgMuted)),
-          ),
+          appDialogButton(ctx, label: '关闭'),
         ],
       ),
     );
@@ -530,17 +514,8 @@ class _ManualAddDialogState extends State<_ManualAddDialog> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return AlertDialog(
-      backgroundColor: c.card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text(
-        '手动添加',
-        style: TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          color: c.fg,
-        ),
-      ),
+    return AppDialog(
+      title: '手动添加',
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -654,10 +629,7 @@ class _ManualAddDialogState extends State<_ManualAddDialog> {
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('取消', style: TextStyle(fontSize: 14, color: c.fgMuted)),
-        ),
+        appDialogButton(context),
         FilledButton(
           onPressed: _confirm,
           child: const Text('添加'),
@@ -680,17 +652,8 @@ class _ExitConfirmDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return AlertDialog(
-      backgroundColor: c.card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text(
-        '保存修改？',
-        style: TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          color: c.fg,
-        ),
-      ),
+    return AppDialog(
+      title: '保存修改？',
       content: Text(
         '当前报销单有未保存的修改，是否保存？',
         style: TextStyle(fontSize: 14, color: c.fgMuted, height: 1.5),
@@ -701,9 +664,9 @@ class _ExitConfirmDialog extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(_ExitAction.discard),
           child: Text('不保存', style: TextStyle(fontSize: 14, color: c.fgMuted)),
         ),
-        TextButton(
+        appDialogButton(
+          context,
           onPressed: () => Navigator.of(context).pop(_ExitAction.cancel),
-          child: Text('取消', style: TextStyle(fontSize: 14, color: c.fgMuted)),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_ExitAction.save),
