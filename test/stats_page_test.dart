@@ -140,8 +140,8 @@ void main() {
     expect(find.text('¥1,053'), findsNothing);
     expect(find.text('¥2,048'), findsNothing);
     // 累计退补 = 698 + 653 = 1351，与月度分布合计一致（同口径）。
-    // 该金额同时展示在年度大卡片与「累计退补」指标卡两处。
-    expect(find.text('¥1,351.00'), findsNWidgets(2));
+    // 该金额同时展示在年度大卡片、「累计退补」指标卡与「退补构成」合计三处。
+    expect(find.text('¥1,351.00'), findsNWidgets(3));
   });
 
   testWidgets('删除归档数据后统计随最新数据重算', (tester) async {
@@ -159,5 +159,67 @@ void main() {
 
     // 删除后：只剩 7 月 ¥698，8 月金额消失。
     expect(find.text('¥698'), findsOneWidget);
+  });
+
+  testWidgets('类别占比按退补 / 预借分组，展示真实百分比', (tester) async {
+    // 退补毛额 = 火车 553 + 高速 35 + 地铁 10 + 差补 200 = 798
+    // 预借合计 = 飞机 800 + 酒店 300 + 用车 50 = 1150
+    final claim = _mixedClaim('c1', 7, excess: 100, allowance: 200);
+    await _pump(tester, StatsPage(claims: [claim]));
+
+    // 退补构成：火车 553/798 ≈ 69.3%，差补 200/798 ≈ 25.1%。
+    expect(find.text('69.3%'), findsOneWidget);
+    expect(find.text('25.1%'), findsOneWidget);
+    // 预借构成：飞机 800/1150 ≈ 69.6%，酒店 300/1150 ≈ 26.1%。
+    expect(find.text('69.6%'), findsOneWidget);
+    expect(find.text('26.1%'), findsOneWidget);
+    // 预借金额不参与退补占比：旧口径（明细全量 1748）下火车占比会是 31.6%。
+    expect(find.text('31.6%'), findsNothing);
+  });
+
+  testWidgets('超标金额作为扣减项，退补合计与累计退补一致', (tester) async {
+    final claim = _mixedClaim('c1', 7, excess: 100, allowance: 200);
+    await _pump(tester, StatsPage(claims: [claim]));
+
+    // 超标 100 占退补毛额 798 的 12.5%，以负数展示。
+    expect(find.text('-12.5%'), findsOneWidget);
+    expect(find.text('-¥100'), findsOneWidget);
+    // 退补构成合计 = 798 − 100 = 698，与年度大卡片、累计退补指标卡同口径。
+    expect(find.text('¥698.00'), findsNWidgets(3));
+  });
+
+  testWidgets('用车按市内交通 / 往返交通拆分展示', (tester) async {
+    final now = DateTime.now();
+    final claim = Claim(
+      id: 'c9',
+      name: '用车报销',
+      startDate: DateTime(now.year, 9, 1),
+      endDate: DateTime(now.year, 9, 2),
+      savedAt: DateTime(now.year, 9, 2),
+      records: const [
+        Record(
+          id: 'r9-city',
+          category: RecordCategory.car,
+          title: '市内打车',
+          subtitle: '',
+          amount: 30,
+        ),
+        Record(
+          id: 'r9-round',
+          category: RecordCategory.car,
+          title: '机场往返',
+          subtitle: '',
+          amount: 20,
+          carTripType: CarTripType.roundTrip,
+        ),
+      ],
+    );
+    await _pump(tester, StatsPage(claims: [claim]));
+
+    // 预借构成：市内交通 30/50 = 60.0%，往返交通 20/50 = 40.0%。
+    expect(find.text('市内交通'), findsOneWidget);
+    expect(find.text('往返交通'), findsOneWidget);
+    expect(find.text('60.0%'), findsOneWidget);
+    expect(find.text('40.0%'), findsOneWidget);
   });
 }

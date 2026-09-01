@@ -6,6 +6,8 @@ import '../../../core/utils/format.dart';
 import '../../invoice/models/claim.dart';
 import '../../invoice/models/record.dart';
 import '../../invoice/widgets/app_top_bar.dart';
+import '../../invoice/widgets/summary_pill.dart';
+import '../models/stats_breakdown.dart';
 
 class StatsPage extends StatelessWidget {
   final List<Claim> claims;
@@ -48,7 +50,7 @@ class StatsPage extends StatelessWidget {
     final busiestMonth = busiest?.key;
     final busiestCount = busiest?.value ?? 0;
 
-    // 各类别统计。
+    // 各类别统计（用于「最常出行方式」等按明细类别的统计）。
     final catCounts = <RecordCategory, int>{};
     final catTotals = <RecordCategory, double>{};
     for (final r in allRecords) {
@@ -56,13 +58,25 @@ class StatsPage extends StatelessWidget {
       catTotals[r.category] =
           (catTotals[r.category] ?? 0) + r.amount;
     }
-    // 类别占比条的统一最大值（提前算好，避免循环内重复计算）。
-    final maxCatTotal = catTotals.values.fold(0.0, (a, b) => a > b ? a : b);
 
-    // 最常出行方式。
-    final topEntry = catCounts.isEmpty
+    // 类别占比：按报销汇总的同名口径分组（退补构成 / 预借构成），
+    // 用车拆成市内交通 / 往返交通，超标金额作为扣减项，与数据库内容保持一致。
+    final breakdown = StatsBreakdown.compute(yearClaims);
+
+    // 最常出行方式：只在出行方式之间比较（酒店属于住宿，不算出行方式）。
+    const travelCategories = <RecordCategory>{
+      RecordCategory.train,
+      RecordCategory.flight,
+      RecordCategory.car,
+      RecordCategory.highway,
+      RecordCategory.subway,
+    };
+    final travels = catCounts.entries
+        .where((e) => travelCategories.contains(e.key) && e.value > 0)
+        .toList();
+    final topEntry = travels.isEmpty
         ? null
-        : catCounts.entries.reduce((a, b) => a.value > b.value ? a : b);
+        : travels.reduce((a, b) => a.value > b.value ? a : b);
     final topCat = topEntry?.key;
     final topCatCount = topEntry?.value ?? 0;
 
@@ -247,28 +261,12 @@ class StatsPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // 类别占比。
+                  // 类别占比：按报销汇总口径分两组，组内展示真实百分比。
                   _SectionTitle(title: '类别占比'),
                   const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: cardDecoration(c),
-                    child: Column(
-                      children: [
-                        for (final cat in RecordCategory.values)
-                          if (catCounts[cat] != null) ...[
-                            _CategoryBar(
-                              category: cat,
-                              count: catCounts[cat]!,
-                              total: catTotals[cat] ?? 0,
-                              maxTotal: maxCatTotal,
-                            ),
-                            const SizedBox(height: 10),
-                          ],
-                      ],
-                    ),
-                  ),
+                  _BreakdownCard(group: breakdown.balance),
+                  const SizedBox(height: 10),
+                  _BreakdownCard(group: breakdown.advance),
                 ],
               ),
             ),
@@ -581,36 +579,107 @@ class _MonthBar extends StatelessWidget {
   }
 }
 
-/// 类别占比条。
-class _CategoryBar extends StatelessWidget {
-  final RecordCategory category;
-  final int count;
-  final double total;
-  final double maxTotal;
+/// 一组构成分析卡片：标题（含合计）+ 口径说明 + 各项占比条 + 扣减项。
+class _BreakdownCard extends StatelessWidget {
+  final StatsGroup group;
 
-  const _CategoryBar({
-    required this.category,
-    required this.count,
-    required this.total,
-    required this.maxTotal,
-  });
+  const _BreakdownCard({required this.group});
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final b = Theme.of(context).brightness;
-    final ratio =
-        maxTotal > 0 ? (total / maxTotal).clamp(0.0, 1.0) : 0.0;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: cardDecoration(c),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  group.title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: c.fg,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('合计', style: TextStyle(fontSize: 10, color: c.fgSoft)),
+                  const SizedBox(height: 1),
+                  Text(
+                    fmtMoney(group.net),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: c.fg,
+                      letterSpacing: -0.02,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(
+            group.hint,
+            style: TextStyle(fontSize: 11, color: c.fgMuted, height: 1.4),
+          ),
+          if (group.slices.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            for (var i = 0; i < group.slices.length; i++) ...[
+              _CategoryBar(slice: group.slices[i]),
+              if (i < group.slices.length - 1) const SizedBox(height: 10),
+            ],
+          ],
+          if (group.hasDeduction) ...[
+            const SizedBox(height: 10),
+            Divider(height: 1, color: c.border),
+            const SizedBox(height: 10),
+            _DeductionRow(
+              label: group.deductionLabel,
+              amount: group.deduction,
+              ratioText: '${(group.deductionRatio * 100).toStringAsFixed(1)}%',
+            ),
+          ],
+          if (group.isEmpty) ...[
+            const SizedBox(height: 10),
+            Text('暂无数据', style: TextStyle(fontSize: 12, color: c.fgSoft)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 类别占比条：名称 + 笔数 + 占比百分比 + 金额 + 真实占比进度条。
+/// 图标与配色复用 summaryRowStyle，与报销汇总、分享卡片保持一致。
+class _CategoryBar extends StatelessWidget {
+  final StatsSlice slice;
+
+  const _CategoryBar({required this.slice});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final style = summaryRowStyle(slice.label);
     return Row(
       children: [
         Container(
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: category.iconBg(b),
+            color: style.color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(category.icon, size: 16, color: category.base),
+          child: Icon(style.icon, size: 16, color: style.color),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -620,21 +689,33 @@ class _CategoryBar extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    category.label,
+                    slice.label,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: c.fg,
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '$count 笔',
-                    style: TextStyle(fontSize: 11, color: c.fgMuted),
-                  ),
+                  // 差补等非明细项没有笔数，不展示「0 笔」。
+                  if (slice.count > 0) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '${slice.count} 笔',
+                      style: TextStyle(fontSize: 11, color: c.fgMuted),
+                    ),
+                  ],
                   const Spacer(),
                   Text(
-                    fmtMoney(total),
+                    slice.percentText,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: style.color,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    fmtMoneyShort(slice.amount),
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -654,11 +735,11 @@ class _CategoryBar extends StatelessWidget {
                     ),
                   ),
                   FractionallySizedBox(
-                    widthFactor: ratio,
+                    widthFactor: slice.ratio,
                     child: Container(
                       height: 6,
                       decoration: BoxDecoration(
-                        color: category.base,
+                        color: style.color,
                         borderRadius: BorderRadius.circular(3),
                       ),
                     ),
@@ -666,6 +747,76 @@ class _CategoryBar extends StatelessWidget {
                 ],
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 扣减项行（超标金额）：超出标准部分不予报销，从退补金额中扣除。
+class _DeductionRow extends StatelessWidget {
+  final String label;
+  final double amount;
+  final String ratioText;
+
+  const _DeductionRow({
+    required this.label,
+    required this.amount,
+    required this.ratioText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final style = summaryRowStyle(label);
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: c.dangerBg,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(style.icon, size: 16, color: c.danger),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: c.fg,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '超出标准，不予报销',
+                style: TextStyle(fontSize: 11, color: c.fgMuted),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          '-$ratioText',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: c.danger,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '-${fmtMoneyShort(amount)}',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: c.danger,
           ),
         ),
       ],
