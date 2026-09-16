@@ -28,7 +28,7 @@
    * 把 APK 另传一份到国内对象存储，然后在这里加一条，国内用户就走直链了 ——
    * 页面本身放哪儿都不影响这件事，慢的是包。
    *
-   * template 里的 {tag} 会替换成版本号（如 v1.5.0），{name} 替换成包文件名。
+   * template 里的 {tag} 会替换成版本号（如 v1.5.1），{name} 替换成包文件名。
    * 也可以不动这个文件，在 index.html 里 main.js 之前塞一段
    * <script>window.SNAPCLAIM_SOURCES = [...]</script> 来覆盖。
    */
@@ -123,24 +123,24 @@
     }
   }
 
-  /* 渲染兜底数据：以当前最新版 v1.5.0 为准（数值取自 GitHub Release 资产列表）。
+  /* 渲染兜底数据：以当前最新版 v1.5.1 为准（数值取自 GitHub Release 资产列表）。
      GitHub 接口在某些网络下会 403 / 超时，这份数据保证页面永远可用。 */
   var FALLBACK = {
-    tag: 'v1.5.0',
-    publishedAt: '2026-09-01T15:37:10Z',
+    tag: 'v1.5.1',
+    publishedAt: '2026-09-16T14:05:00Z',
     assets: [
       {
-        name: 'SnapClaim_1.5.0_arm64-v8a.apk',
+        name: 'SnapClaim_1.5.1_arm64-v8a.apk',
         sizeHuman: '40.2 MB',
         download_count: null,
       },
       {
-        name: 'SnapClaim_1.5.0_armeabi-v7a.apk',
+        name: 'SnapClaim_1.5.1_armeabi-v7a.apk',
         sizeHuman: '32 MB',
         download_count: null,
       },
       {
-        name: 'SnapClaim_1.5.0_x86_64.apk',
+        name: 'SnapClaim_1.5.1_x86_64.apk',
         sizeHuman: '43.1 MB',
         download_count: null,
       },
@@ -149,6 +149,22 @@
 
   /* 内置的更新说明（仅当接口拿不到时展示，内容摘自仓库 RELEASELOG.md） */
   var FALLBACK_NOTES = [
+    {
+      tag: 'v1.5.1',
+      publishedAt: '2026-09-16T14:05:00Z',
+      body: [
+        '# Snap Claim for Android v1.5.1 🎚️✨',
+        '',
+        '## 🎚️ 历史记录页改版',
+        '',
+        '「归档页」并入「历史记录」页，用一个能滑的分段标签切换：',
+        '',
+        '- 分段标签支持点按与拖拽，跟手带滑动动画',
+        '- 标签上直接显示「未报销 / 已报销」各自数量',
+        '- 未报销左滑归档、已报销右滑撤销 / 左滑删除，手感与合并前一致',
+        '- 开启「减少动态效果」时自动降级为无动画切换',
+      ].join('\n'),
+    },
     {
       tag: 'v1.5.0',
       publishedAt: '2026-09-01T15:37:10Z',
