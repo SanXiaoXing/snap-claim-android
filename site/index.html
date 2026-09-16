@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SnapClaim · Android 下载 — 把散落的票据整理成一张报销单</title>
+<meta name="description" content="SnapClaim 是本地报销记账应用：扫码 / OCR 识别票据、自动算差补与退补、一键归档。不用注册登录，数据只存在你自己手机里。下载最新 Android 安装包。">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff">
+
+<!-- 社交分享卡片 -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="SnapClaim · Android 下载">
+<meta property="og:description" content="把散落在相册、邮箱和聊天记录里的票据捡回来，整理成一张能直接交上去的报销单。免登录，数据只在本地。">
+<meta property="og:image" content="assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="assets/favicon-64.png" type="image/png">
+<link rel="preload" as="image" href="assets/hero.webp" type="image/webp">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#download">跳到下载</a>
+
+<!-- ============================ 顶部导航 ============================ -->
+<header class="nav" id="nav">
+  <div class="container nav__inner">
+    <a class="brand" href="#top">
+      <img class="brand__tile" src="assets/logo-192.png" alt="" width="34" height="34">
+      <span>SnapClaim</span>
+      <span class="brand__tag">Android</span>
+    </a>
+    <nav class="nav__links" aria-label="页面导航">
+      <a class="nav__link" href="#features">功能</a>
+      <a class="nav__link" href="#download">下载</a>
+      <a class="nav__link" href="#money">报销规则</a>
+      <a class="nav__link" href="#changelog">更新日志</a>
+      <a class="nav__link" href="#faq">常见问题</a>
+    </nav>
+    <button class="icon-btn" id="theme-toggle" type="button" aria-label="切换深浅色" title="切换深浅色">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5 8.6 8.6 0 1 0 20.5 14.6Z"/></svg>
+    </button>
+    <a class="btn btn--ghost btn--sm nav__cta" href="https://github.com/SanXiaoXing/snap-claim-android" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2Z"/></svg>
+      源代码
+    </a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============================== 首屏 ============================== -->
+  <section class="hero">
+    <div class="container hero__grid">
+      <div>
+        <span class="badge"><span class="badge__dot"></span>最新版 <span id="hero-version">v1.5.0</span></span>
+        <h1>散落的票据，<em>捡回来</em>，<br>整理成一张报销单。</h1>
+        <p class="hero__lead">
+          车票在 12306 截图，机票在航司 App，酒店订单在同程，打车记录在微信——
+          等到要报销那天，翻相册翻到怀疑人生。<br>
+          SnapClaim 把这些票据识别好、钱算明白、归档收尾，一次做完。
+          <strong>不用注册，不用登录，数据只存在你自己的手机里。</strong>
+        </p>
+
+        <!-- 下载主卡片（版本、大小、校验值都由脚本按最新 Release 填充） -->
+        <div class="dl-card">
+          <div class="dl-card__head">
+            <span class="dl-card__title">下载最新版</span>
+            <span class="chip chip--accent" id="dl-version">v1.5.0</span>
+            <span class="chip" id="dl-date">2026-09-01</span>
+          </div>
+
+          <a class="btn btn--primary btn--lg btn--block dl-primary" id="btn-primary"
+             href="https://github.com/SanXiaoXing/snap-claim-android/releases/latest" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4.5 20h15"/></svg>
+            下载 Android 安装包（APK）
+          </a>
+          <p class="dl-primary__sub" id="primary-sub">正在读取最新版本信息…</p>
+
+          <div class="abi-list" id="abi-list"></div>
+
+          <div class="dl-card__foot">
+            <span>不知道该选哪个？选 <b>arm64-v8a</b>，近几年的手机都是它。</span>
+            <span id="dl-total" hidden></span>
+          </div>
+
+          <details class="sha" id="sha-row" hidden>
+            <summary>校验安装包（SHA-256）</summary>
+            <div class="sha__row">
+              <code id="sha-value"></code>
+              <button class="btn btn--ghost btn--sm" id="sha-copy" type="button">复制</button>
+            </div>
+          </details>
+        </div>
+
+        <ul class="trust">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>不用注册登录</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>完全离线可用</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>无广告、无统计</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>票据不上传服务器</li>
+        </ul>
+      </div>
+
+      <div class="visual">
+        <div class="visual__shot">
+          <picture>
+            <source srcset="assets/hero.webp" type="image/webp">
+            <img src="assets/hero.jpg" width="1400" height="788" alt="SnapClaim 主界面、报销明细与归档页截图" loading="eager">
+          </picture>
+        </div>
+        <div class="qr">
+          <div class="qr__code" id="qr-code" role="img" aria-label="下载二维码"></div>
+          <div class="qr__text">
+            <b>扫码装到手机</b>
+            <span id="qr-tip">用手机相机扫一下，直接下载最新安装包。</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== 功能 ============================== -->
+  <section class="section section--alt" id="features">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">它能帮你做什么</p>
+        <h2>票据进得去，钱算得清，账收得住</h2>
+        <p class="section__lead">从「看到一张票据」到「交出一张报销单」，中间那些烦人的步骤都交给它。</p>
+      </div>
+
+      <div class="cards">
+        <article class="card reveal">
+          <div class="card__icon">📷</div>
+          <h3>扫一下二维码</h3>
+          <p>对着发票上的二维码扫，名称、金额、日期自动填好，几秒钟一条明细。</p>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon">🔍</div>
+          <h3>拍一张或选截图</h3>
+          <p>纸质发票、电子发票截图都行。文字识别全程在你手机上完成，不联网、不上传。</p>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon">📤</div>
+          <h3>微信里直接分享过来</h3>
+          <p>在微信、相册、文件管理器里选中图片 → 分享 → SnapClaim，自动识别并弹出<b>可以改</b>的预览，确认即成一条明细。</p>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon">🧾</div>
+          <h3>长截图一次识别多条</h3>
+          <p>一屏三张订单的订票长图，会自己数出这是三笔，按订单顺序把钱一一对上，逐个等你确认。</p>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon">🧮</div>
+          <h3>钱不用自己算</h3>
+          <p>差补按天数自动算（含头尾），超标金额单独记并从退补里扣，六类明细自动汇总。</p>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon">📁</div>
+          <h3>报完就归档</h3>
+          <p>归档＝已报销。首页只留该处理的，翻历史也不会和报完的混在一起。</p>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon">🎒</div>
+          <h3>换手机不慌</h3>
+          <p>一键导出 <code>.snapbackup</code> 备份，换机后导入即可；还能选「合并」，把两部手机的数据按单据去重拼在一起。</p>
+        </article>
+        <article class="card reveal">
+          <div class="card__icon">🌙</div>
+          <h3>顺眼的地方都顺眼</h3>
+          <p>浅色 / 深色 / 跟随系统随你挑，记得住你的选择；首次打开每页都有分步引导，系统开了「减少动态」动画就自动收起来。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== 下载 ============================== -->
+  <section class="section" id="download">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">下载与安装</p>
+        <h2>装上就能用，60 秒的事</h2>
+        <p class="section__lead">
+          安装包按 CPU 架构拆分，选对架构体积更小、启动更轻快。不确定手机是哪种架构，就选
+          <b>arm64-v8a</b>——近几年出厂的手机基本都是它。
+        </p>
+      </div>
+
+      <div class="table-wrap reveal">
+        <table class="table--abi">
+          <thead>
+            <tr>
+              <th scope="col">架构</th>
+              <th scope="col">安装包大小</th>
+              <th scope="col">下载量</th>
+              <th scope="col">操作</th>
+            </tr>
+          </thead>
+          <tbody id="dl-table-body">
+            <tr><td colspan="4" class="muted">正在读取版本信息…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="steps" style="margin-top:26px">
+        <div class="step reveal">
+          <h3>点上面的按钮下载</h3>
+          <p>APK 会存在手机的「下载」目录里，一般是 30–45 MB。</p>
+        </div>
+        <div class="step reveal">
+          <h3>允许安装未知来源</h3>
+          <p>不是从应用商店装的，系统会弹一次提示，允许这一项即可，之后不会再问。</p>
+        </div>
+        <div class="step reveal">
+          <h3>打开，开始记第一张</h3>
+          <p>首次进入每个页面都有分步引导。装新版直接覆盖安装，已有数据不会丢。</p>
+        </div>
+      </div>
+
+      <p class="soft" style="margin-top:18px;font-size:13.5px">
+        提示：如果 GitHub 下载很慢，可以稍后重试或换网络；卸载 App 前请先导出备份，本地数据删了就找不回来了。
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================== 报销规则 ============================== -->
+  <section class="section section--alt" id="money">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">钱是怎么算的</p>
+        <h2>看不懂也没关系，App 里都算好了</h2>
+        <p class="section__lead">想核对的话看这张表。明细能记六类：火车、飞机、酒店、用车、高速费、地铁费；用车再分「市内交通」和「往返交通」。</p>
+      </div>
+
+      <div class="table-wrap reveal">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">项</th>
+              <th scope="col">怎么来的</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>差补</b></td>
+              <td>出差天数（含头尾）× 100 元</td>
+            </tr>
+            <tr>
+              <td><b>总金额</b></td>
+              <td>所有明细 + 差补 + 超标金额</td>
+            </tr>
+            <tr>
+              <td><b>预借金额</b></td>
+              <td>飞机 + 酒店 + 用车</td>
+            </tr>
+            <tr>
+              <td><b>退补金额</b></td>
+              <td>火车 + 高速费 + 地铁费 + 差补 − 超标金额</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== 更新日志 ============================== -->
+  <section class="section" id="changelog">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">更新日志</p>
+        <h2>每个版本改了什么</h2>
+        <p class="section__lead">版本号以 <code>pubspec.yaml</code> 为唯一来源，应用内显示与备份文件里的记录都取自它。</p>
+      </div>
+
+      <div class="timeline" id="timeline">
+        <div class="release__empty">正在读取 GitHub 上的发布记录…</div>
+      </div>
+      <p class="source-note" id="source-note"></p>
+    </div>
+  </section>
+
+  <!-- ============================== 常见问题 ============================== -->
+  <section class="section section--alt" id="faq">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">常见问题</p>
+        <h2>你可能想问的</h2>
+      </div>
+
+      <div class="faq-list">
+        <details class="faq reveal">
+          <summary>需要联网吗？</summary>
+          <p>不需要。除了你在「关于」页主动点反馈按钮去 GitHub 提 issue，App 不会联网。</p>
+        </details>
+        <details class="faq reveal">
+          <summary>会读取我的相册吗？</summary>
+          <p>不会主动扫。只有你自己选了一张图、或者主动把图分享给 SnapClaim 时，它才处理那一张。</p>
+        </details>
+        <details class="faq reveal">
+          <summary>识别错了怎么办？</summary>
+          <p>识别结果会先弹出来让你确认和修改，不会直接写进单子。改完再点确定。</p>
+        </details>
+        <details class="faq reveal">
+          <summary>数据丢了能找回吗？</summary>
+          <p>导出过备份就能导回来（导入时可选合并或覆盖）。没导出过的话——本地数据删了就真的没了，<b>建议定期导出一份</b>。</p>
+        </details>
+        <details class="faq reveal">
+          <summary>有 iOS 或其他平台的版本吗？</summary>
+          <p>代码里留着 iOS / macOS / Windows / Linux / Web 的工程壳，但目前只有 Android 在维护。</p>
+        </details>
+        <details class="faq reveal">
+          <summary>怎么知道新版本出来了？</summary>
+          <p>本页顶部显示的永远是最新版本（直接读取 GitHub 发布记录）；也可以点页面里的「在 GitHub 查看全部版本」订阅发布会通知。</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== 隐私 ============================== -->
+  <section class="section" id="privacy">
+    <div class="container">
+      <div class="callout reveal">
+        <h2>你的数据在哪儿？在你手机里，只有在你手机里。</h2>
+        <p>报销单和明细都写在手机本地的 SQLite 里，没有账号体系，也没有服务器可以上传——所以也就没有什么「隐私政策」要读。</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg><span>所有单据存本地，不上传任何服务器</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg><span>无注册、无登录，不收集个人信息</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg><span>相机权限只用于扫码，识别在本机完成</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg><span>唯一一次联网是你主动点击反馈按钮</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============================== 页脚 ============================== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer__grid">
+      <div class="footer__brand">
+        <a class="brand" href="#top" style="margin:0">
+          <img class="brand__tile" src="assets/logo-192.png" alt="" width="34" height="34">
+          <span>SnapClaim</span>
+        </a>
+        <p>Flutter + Rust 做的本地报销记账应用，大部分代码由 AI 生成，人类负责提需求、编译报错和收拾「惊喜」。</p>
+      </div>
+      <nav class="footer__links" aria-label="相关链接">
+        <a href="https://github.com/SanXiaoXing/snap-claim-android" target="_blank" rel="noopener">GitHub 仓库</a>
+        <a href="https://github.com/SanXiaoXing/snap-claim-android/releases" target="_blank" rel="noopener">全部版本</a>
+        <a href="https://github.com/SanXiaoXing/snap-claim-android/blob/main/RELEASELOG.md" target="_blank" rel="noopener">完整更新日志</a>
+        <a href="https://github.com/SanXiaoXing/snap-claim-android/issues/new" target="_blank" rel="noopener">反馈问题</a>
+      </nav>
+    </div>
+    <div class="footer__legal">
+      <span>作者 SanXiaoXing · 版权所有 © 2026，保留所有权利。</span>
+      <span>本页是纯静态页面，不埋点、不收集访问数据；版本信息来自 GitHub 公开接口。</span>
+    </div>
+  </div>
+</footer>
+
+<button class="to-top" id="to-top" type="button" aria-label="回到顶部">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m0 0-6 6m6-6 6 6"/></svg>
+</button>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="vendor/qrcode.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
