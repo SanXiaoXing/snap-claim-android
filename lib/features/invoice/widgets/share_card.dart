@@ -84,7 +84,7 @@ class ShareCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Logo：应用品牌图标图片（白底圆角容器 + favicon）。
+          // Logo：品牌图标（透明底，靠白底圆角容器衬托）。
           Container(
             width: 36,
             height: 36,
@@ -94,7 +94,7 @@ class ShareCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Image.asset(
-              'assets/icon/favicon.png',
+              'assets/icon/logo.webp',
               width: 36,
               height: 36,
               fit: BoxFit.cover,
@@ -116,7 +116,7 @@ class ShareCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  claim.archived ? '已归档' : '未归档',
+                  claim.archived ? '已报销' : '待报销',
                   style: TextStyle(
                     fontSize: 11,
                     color: Colors.white.withValues(alpha: 0.8),
@@ -308,11 +308,11 @@ class ShareCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // 底部品牌小标：favicon 缩略图。
+          // 底部品牌小标：品牌图标缩略图。
           ClipRRect(
             borderRadius: BorderRadius.circular(5),
             child: Image.asset(
-              'assets/icon/favicon.png',
+              'assets/icon/logo.webp',
               width: 18,
               height: 18,
               fit: BoxFit.cover,

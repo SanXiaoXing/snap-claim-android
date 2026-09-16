@@ -256,9 +256,6 @@ void main() {
   icon.shiftDown(3);
   icon.preview();
 
-  // 应用内品牌图标（分享卡片 Logo 用）。
-  writePng('assets/icon/favicon.png', icon, 512);
-
   // Web 图标。
   writePng('web/favicon.png', icon, 128);
   writePng('web/icons/Icon-192.png', icon, 192);

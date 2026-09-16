@@ -175,7 +175,7 @@ class _HistoryPageState extends State<HistoryPage> {
       },
       background: SwipeBackground(
         icon: Icons.archive_outlined,
-        label: '归档',
+        label: '完成报销',
         from: RecordCategory.car.base,
         to: Color.lerp(RecordCategory.car.base, c.card, 0.35)!,
         alignment: Alignment.centerRight,
@@ -216,7 +216,7 @@ class _HistoryPageState extends State<HistoryPage> {
       },
       background: SwipeBackground(
         icon: Icons.undo,
-        label: '撤销归档',
+        label: '撤销',
         from: RecordCategory.car.base,
         to: Color.lerp(RecordCategory.car.base, c.card, 0.35)!,
         alignment: Alignment.centerLeft,

@@ -1,10 +1,7 @@
-// 校验生成的图标 PNG：头部签名、尺寸与文件大小。
-// ignore_for_file: avoid_print
 import 'dart:io';
 
 void main() {
   final paths = [
-    'assets/icon/favicon.png',
     'web/favicon.png',
     'web/icons/Icon-192.png',
     'web/icons/Icon-512.png',
