@@ -17,7 +17,9 @@
   --accent-light: #34d399;
   --accent-bg: #ecfdf5;
   --accent-ring: rgba(16, 185, 129, 0.35);
-  --accent-glow: rgba(16, 185, 129, 0.18);
+  /* 右上角光晕的底色。刻意压得很淡：它要穿过 header 的毛玻璃
+     （saturate(180%) 会把绿色再加饱和），浓了顶部会显得刺眼 */
+  --accent-glow: rgba(16, 185, 129, 0.09);
   /* 首屏图片蒙层的底色（rgb 分量，便于调透明度），跟随主题 */
   --scrim: 255, 255, 255;
   --danger: #ef4444;
@@ -49,7 +51,7 @@ html[data-theme="dark"] {
   --accent-light: #45c99c;
   --accent-bg: #0f2b20;
   --accent-ring: rgba(46, 185, 138, 0.4);
-  --accent-glow: rgba(46, 185, 138, 0.14);
+  --accent-glow: rgba(46, 185, 138, 0.07);
   --scrim: 20, 18, 16;
   --danger: #e08b80;
   --code-bg: #26231e;
@@ -149,21 +151,75 @@ pre {
   border-radius: 6px;
 }
 
-/* ============================== 顶部导航 ============================== */
+/* ============================== 顶部导航 ==============================
+   玻璃层交给 ::before：它比导航条本身向下多出 --nav-fade 的一小截，
+   再用 mask 把「底色 + 模糊」一起淡出。
+   关键点：mask 对 backdrop-filter 同样生效，所以模糊本身就是渐隐的 ——
+   底部不再有那条 1px 实线，取而代之是一小段羽化把「模糊→清晰」的
+   突变线化掉。羽化带刻意收得很窄（10px 上下）：既要足够软化边界，
+   又不能让 header 视觉上「长高一截」——宽了会显得柔光铺得很开，反而难受。
+   注意 inset 要撑出导航盒、且 .nav 不能有 overflow:hidden，否则羽化带会被裁掉。 */
+
+/* 羽化带高度走注册属性，这样未滚动 → 滚动时它是真的在「变长」而不是硬切 */
+@property --nav-fade {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 10px;
+}
 
 .nav {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--header-bg);
-  backdrop-filter: saturate(180%) blur(14px);
-  -webkit-backdrop-filter: saturate(180%) blur(14px);
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.25s, box-shadow 0.25s;
+  /* 10px 只够把边界化开，header 视觉高度仍是它本来的 68px */
+  --nav-fade: 10px;
+  /* 底色和模糊都搬到 ::before 上了，本体保持透明，免得自己再切出一条硬边 */
+  background: none;
+  border-bottom: 0;
+  transition: --nav-fade 0.3s ease;
 }
 
 .nav.is-scrolled {
-  border-bottom-color: var(--border);
+  --nav-fade: 14px;
+}
+
+.nav::before {
+  content: "";
+  position: absolute;
+  /* 负的 z-index：压在导航内容之下，但仍在导航自己的层叠上下文里，不会被页面盖住 */
+  z-index: -1;
+  inset: 0 0 calc(-1 * var(--nav-fade));
+  background: var(--header-bg);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 calc(100% - var(--nav-fade)),
+    transparent
+  );
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--nav-fade)), transparent);
+}
+
+/* 系统关闭了透明度 / 浏览器不支持毛玻璃：老老实实给实底 + 细分割线。
+   这种降级下必须把悬出来的过渡带收掉，否则会露出一条悬空的色块 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .nav::before {
+    inset: 0;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .nav::before {
+    inset: 0;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
 }
 
 .nav__inner {
@@ -362,7 +418,9 @@ html[data-theme="dark"] .icon-sun {
   height: auto;
 }
 
-/* 右上角光晕：挂在首屏上而不是 body 上，所以滚过首屏就没了 */
+/* 右上角光晕：挂在首屏上而不是 body 上，所以滚过首屏就没了。
+   衰减用三段而不是「一条直线到头」：中心快速退到 30%，再拖着一条
+   长尾巴到 82% 才彻底没——边缘是化开的，看不出渐变在哪结束 */
 .hero__bg::before {
   content: "";
   position: absolute;
@@ -370,7 +428,12 @@ html[data-theme="dark"] .icon-sun {
   right: -200px;
   width: 720px;
   height: 720px;
-  background: radial-gradient(circle, var(--accent-glow), transparent 68%);
+  background: radial-gradient(
+    circle,
+    var(--accent-glow) 0%,
+    color-mix(in srgb, var(--accent-glow) 30%, transparent) 45%,
+    transparent 82%
+  );
   pointer-events: none;
 }
 
