@@ -49,7 +49,7 @@ Scaffold(
 规律：
 - **外层容器左右 20**、**卡片内 16** 是铁律。
 - 垂直节奏用 `12`（紧）/ `16`（松）两档，不要混用其它值。
-- 列表项之间一律 `SizedBox(height: 12)`（见 `home_page.dart:123`、`history_page.dart:121`）。
+- 列表项之间一律 `SizedBox(height: 12)`（见 `home_page.dart:123`、`history_page.dart:154`）。
 
 ---
 
@@ -98,18 +98,28 @@ Scaffold(
 # 4. 列表与分组
 
 ## 4.1 列表项之间
-- 一律 `SizedBox(height: 12)`（`home_page.dart:123`、`history_page.dart:121`、`detail_page.dart:179`）。
+- 一律 `SizedBox(height: 12)`（`home_page.dart:123`、`history_page.dart:154`、`detail_page.dart:179`）。
 
 ## 4.2 分组标题
-- 历史页按年月分组：`Padding(top:8, bottom:10)` + `fontSize:12, w600, c.fgMuted`（`history_page.dart:78-87`）。
+- 历史页按年月分组：`Padding(top:8, bottom:10)` + `fontSize:12, w600, c.fgMuted`（`history_page.dart:139-149`）。
 
 ## 4.3 滑动操作
-- 历史卡片：`Dismissible` 左滑归档（`endToStart`，阈值 `0.35`），背景用 `SwipeBackground`；滑出时 `HapticFeedback.mediumImpact()` 同帧反馈（`history_page.dart:91-108`）。
+- 历史页「未报销」tab 卡片：`Dismissible` 左滑归档（`endToStart`，阈值 `0.35`），背景用 `SwipeBackground`；滑出时 `HapticFeedback.mediumImpact()` 同帧反馈（`history_page.dart:163-188`）。
+- 历史页「已报销」tab 卡片：`Dismissible` 水平双向（`startToEnd` 阈值 `0.3` 右滑撤销归档、`endToStart` 阈值 `0.35` 左滑删除），删除走 `AppDialog` 二次确认（`history_page.dart:192-235`）。
 - 编辑页明细：`DismissibleRecordRow` 左滑删除，删除后 `setState` 移除（不弹确认）。
 - 规则：**明确的"提交"动作（滑动归档/删除/添加）才给触感反馈**，且要 `if (!mounted) return` 守卫。
 
-## 4.4 空状态
+## 4.4 分段 tab（历史页滑动切换）
+> 历史页把原独立「归档页」并入为第二段 tab，归档入口不再单开页面。
+- 组件 `SlidingSegmentedTabs`（`widgets/sliding_segmented_tabs.dart`）：`labels` + 可选 `counts`，由父级持有 `index` 并通过 `onChanged` 回传。
+- 尺寸：轨道 `height: 38`、底 `c.bgSecondary`、圆角 `19`、`1px c.border`；胶囊复用 `SlidingPill`（`top/bottom: 3`、`radius: 16`），`slot = 轨道宽 / labels.length`，`left = index*slot + 3`、`width = slot - 6`（用 `LayoutBuilder` 取宽）。
+- 标签：选中 `Colors.white` + `w700`、未选中 `c.fgMuted` + `w600`，字号 `13`；数量（传入时）字号 `11`；用 `AnimatedDefaultTextStyle`（220ms `easeOutCubic`）过渡。
+- 交互：点按立即切换；按住拖动胶囊实时跟手（`SlidingPill(animate:false)`），松手按「位移过半格 或 甩动速度足够」切换、否则回弹；**仅在真正发生切换时** `selectionClick()`。
+- ⚠️ 手势竞技场约束：手指落在卡片（`Dismissible`）上横滑时 `Dismissible` 必定赢，外层 `PageView` 拿不到手势；因此**内容区横滑不用于切 tab**（避免破坏归档/撤销手感），"滑动切 tab"由 tab 栏自身拖拽提供。`PageView` 仅保留在非卡片区域翻页，并用 `onPageChanged` 反向同步 tab（`history_page.dart` 顶部注释）。
+
+## 4.5 空状态
 - 统一用 `EmptyHint(icon, text, card: true/false)`（`empty_hint.dart`），不要自己写占位。
+- 历史页两段空态：`暂无未报销记录` / `暂无已报销记录`。
 
 ---
 
@@ -171,7 +181,7 @@ Container(padding:16, cardDecoration) ─ Column
 - 底栏 `_GlassTabBar`：
   - 外层 `SafeArea(top:false)`，高度 `64 + 16`，`Padding.fromLTRB(40,0,40,16)` 收窄整体宽度。
   - 胶囊 `ClipRRect(28)` + `BackdropFilter(blur 28)` + 半透明底色（亮色 `F8FAFC@0.92`、暗色 `2A2722@0.78`）+ `1px` 描边 + 投影。
-  - 选中胶囊 `_SelectedPill`：用 `LayoutBuilder` 算每格宽，**临界阻尼弹簧**（stiffness 246 / damping 31.4 ≈ 0.4s）滑动，从当前屏幕值出发可被打断重定向。
+  - 选中胶囊 `SlidingPill`（`widgets/sliding_pill.dart`，由原 `_SelectedPill` 提取为公共组件）：用 `LayoutBuilder` 算每格宽，**临界阻尼弹簧**（stiffness 246 / damping 31.4 ≈ 0.4s）滑动，从当前屏幕值出发可被打断重定向；`animate:false` 时直接跟随目标值（供历史页分段 tab 拖拽跟手复用）。
   - 菜单项 `_GlassTab`：`Expanded` + `Column` 图标(`22`)+文字(`10.5`)，选中 `Colors.white`、未选 `c.fgMuted`，图标 `AnimatedSwitcher` 在实心/描边间淡入缩放切换。
 
 ---

@@ -1,4 +1,5 @@
-// 删除流程回归测试：覆盖归档页 / 历史页 / 编辑页三条删除路径。
+// 删除流程回归测试：覆盖编辑页 / 历史页两条删除路径（归档相关用例已迁至
+// history_tabs_test.dart，随「归档页并入历史页」一并覆盖）。
 // 用 pumpAndSettle 检测「卡死」（无限动画/重建会导致超时抛出），
 // 并断言删除后列表正确移除、无异常。
 import 'package:flutter/material.dart';
@@ -7,7 +8,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:snap_claim_android/app/theme.dart';
 import 'package:snap_claim_android/features/invoice/models/claim.dart';
 import 'package:snap_claim_android/features/invoice/models/record.dart';
-import 'package:snap_claim_android/features/invoice/pages/archive_page.dart';
 import 'package:snap_claim_android/features/invoice/pages/editor_page.dart';
 import 'package:snap_claim_android/features/invoice/pages/history_page.dart';
 import 'package:snap_claim_android/src/rust/frb_generated.dart';
@@ -80,27 +80,6 @@ void main() {
     // pumpAndSettle 已通过 => 无无限动画（不卡死）。
   });
 
-  testWidgets('归档页左滑删除报销单后卡片消失且不卡死', (tester) async {
-    final deleted = <String>[];
-    await _pump(
-      tester,
-      ArchivePage(
-        claims: [_claim('a1'), _claim('a2')],
-        onRestore: (_) {},
-        onDelete: (c) => deleted.add(c.id),
-      ),
-    );
-
-    expect(find.text('报销单a1'), findsOneWidget);
-    expect(find.text('报销单a2'), findsOneWidget);
-
-    await _swipeAndConfirm(tester, find.text('报销单a1'));
-    deleted.add('a1');
-
-    expect(find.text('报销单a1'), findsNothing);
-    expect(find.text('报销单a2'), findsOneWidget);
-  });
-
   testWidgets('历史页左滑归档报销单后卡片消失且不卡死', (tester) async {
     final archived = <String>[];
     await _pump(
@@ -123,24 +102,5 @@ void main() {
     expect(find.text('报销单h1'), findsNothing);
     expect(find.text('报销单h2'), findsOneWidget);
     expect(archived, ['h1']);
-  });
-
-  testWidgets('归档页撤销归档（右滑）后卡片消失且不卡死', (tester) async {
-    final restored = <String>[];
-    await _pump(
-      tester,
-      ArchivePage(
-        claims: [_claim('x1', archived: true), _claim('x2', archived: true)],
-        onRestore: (c) => restored.add(c.id),
-        onDelete: (_) {},
-      ),
-    );
-
-    await tester.drag(find.text('报销单x1'), const Offset(600, 0));
-    await tester.pumpAndSettle();
-
-    expect(find.text('报销单x1'), findsNothing);
-    expect(find.text('报销单x2'), findsOneWidget);
-    expect(restored, ['x1']);
   });
 }

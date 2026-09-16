@@ -98,7 +98,7 @@ final c = context.colors;
 - 卡片、标签、表单字段、空状态、列表项 → `StatelessWidget`，只通过 `widget.xxx` 取 props。
 - 仅以下情况才用 `StatefulWidget`：
   1. 持有全局 / 页面状态（`SnapClaimApp` / `MainShell` / `EditorPage` / `DetailPage` / `MinePage`）
-  2. 自带动画（`CreateCta` / `FabMenu` / `_SelectedPill` 带 `AnimationController`）
+  2. 自带动画（`CreateCta` / `FabMenu` / `SlidingPill` / `SlidingSegmentedTabs` 带 `AnimationController` 或拖拽态）
   3. 内部瞬时态（如 `PressScale` 的 `_pressed`、弹窗里的临时选中）
 
 ## 3.2 build 方法组织惯例
@@ -131,7 +131,7 @@ Widget build(BuildContext context) {
 | `FieldLabel` / `DatePill` | `widgets/field_widgets.dart` | 表单字段 / 日期胶囊 |
 | `CategoryBadge` 等 | `widgets/chips.dart` | 分类标签体系 |
 | `EmptyHint` | `widgets/empty_hint.dart` | 空状态占位 |
-| `ClaimCard` | `widgets/claim_card.dart` | 报销单卡片（首页/历史/归档复用） |
+| `ClaimCard` | `widgets/claim_card.dart` | 报销单卡片（首页/历史（未报销 tab）/历史（已报销 tab）复用） |
 | `CreateCta` | `widgets/create_cta.dart` | 圆形创建按钮 + 呼吸光环 |
 | `_GlassTabBar` | `main_shell.dart` | 底部 Liquid Glass 导航栏 |
 

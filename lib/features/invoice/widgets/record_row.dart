@@ -214,7 +214,7 @@ class _DismissibleRecordRowState extends State<DismissibleRecordRow> {
     );
   }
 
-  /// 左滑删除背景（红色，右侧），与归档页删除效果保持一致。
+  /// 左滑删除背景（红色，右侧），与历史页「已报销」tab 的删除效果保持一致。
   Widget _deleteBackground(AppColorScheme c) {
     return SwipeBackground(
       icon: Icons.delete_outline,
