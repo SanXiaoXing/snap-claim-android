@@ -18,6 +18,8 @@
   --accent-bg: #ecfdf5;
   --accent-ring: rgba(16, 185, 129, 0.35);
   --accent-glow: rgba(16, 185, 129, 0.18);
+  /* 首屏图片蒙层的底色（rgb 分量，便于调透明度），跟随主题 */
+  --scrim: 255, 255, 255;
   --danger: #ef4444;
   --code-bg: #f1f5f9;
 
@@ -48,6 +50,7 @@ html[data-theme="dark"] {
   --accent-bg: #0f2b20;
   --accent-ring: rgba(46, 185, 138, 0.4);
   --accent-glow: rgba(46, 185, 138, 0.14);
+  --scrim: 20, 18, 16;
   --danger: #e08b80;
   --code-bg: #26231e;
 
@@ -79,18 +82,8 @@ body {
   overflow-x: hidden;
 }
 
-/* 首屏右上角的绿色光晕，纯装饰 */
-body::before {
-  content: "";
-  position: fixed;
-  top: -260px;
-  right: -200px;
-  width: 720px;
-  height: 720px;
-  background: radial-gradient(circle, var(--accent-glow), transparent 68%);
-  pointer-events: none;
-  z-index: 0;
-}
+/* 右上角的光晕挪到 .hero__bg::before（见「首屏」一节）：
+   之前挂在 body 上是 position: fixed，滚到哪一屏都跟着；现在只出现在首屏。 */
 
 img {
   max-width: 100%;
@@ -133,18 +126,6 @@ pre {
   margin-inline: auto;
   position: relative;
   z-index: 1;
-}
-
-.muted {
-  color: var(--fg-muted);
-}
-
-.soft {
-  color: var(--fg-soft);
-}
-
-.mono {
-  font-family: var(--mono);
 }
 
 .skip-link {
@@ -360,21 +341,100 @@ html[data-theme="dark"] .icon-sun {
   width: 100%;
 }
 
-/* ============================== 首屏 ============================== */
+/* ============================== 首屏 ==============================
+   产品图在桌面端铺满首屏作背景，文字压在左侧的蒙层上；
+   窄屏（<940px）图片回到正常流，显示在内容上方，不平铺、不裁切。 */
 
 .hero {
-  padding: clamp(44px, 6vw, 84px) 0 clamp(36px, 5vw, 66px);
+  position: relative;
+  /* 窄屏图片是通栏的，顶上不留缝，直接贴着导航 */
+  padding: 0 0 clamp(40px, 5vw, 70px);
 }
 
-.hero__grid {
-  display: grid;
-  gap: clamp(30px, 4vw, 54px);
-  align-items: center;
+.hero__bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero__bg img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* 右上角光晕：挂在首屏上而不是 body 上，所以滚过首屏就没了 */
+.hero__bg::before {
+  content: "";
+  position: absolute;
+  top: -260px;
+  right: -200px;
+  width: 720px;
+  height: 720px;
+  background: radial-gradient(circle, var(--accent-glow), transparent 68%);
+  pointer-events: none;
+}
+
+/* 窄屏：图片底边淡出，和下面的内容衔接 */
+.hero__bg::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 34%;
+  background: linear-gradient(180deg, transparent, var(--bg));
+  pointer-events: none;
+}
+
+.hero__inner {
+  padding-top: clamp(24px, 4vw, 40px);
+}
+
+.hero__intro {
+  max-width: 34rem;
 }
 
 @media (min-width: 940px) {
-  .hero__grid {
-    grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+  .hero {
+    /* 撑满一屏：视口高度减去固定导航 */
+    min-height: calc(100vh - 68px);
+    min-height: calc(100svh - 68px);
+    display: grid;
+    align-content: center;
+    padding-block: clamp(40px, 6vh, 76px);
+  }
+
+  .hero__bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .hero__bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  /* 图片底边淡出那条在桌面端不要，换成左侧的横向蒙层，保证文字可读、右侧产品图可见 */
+  .hero__bg::after {
+    inset: 0;
+    height: auto;
+    background: linear-gradient(
+      90deg,
+      rgb(var(--scrim)) 0%,
+      rgba(var(--scrim), 0.95) 38%,
+      rgba(var(--scrim), 0.72) 58%,
+      rgba(var(--scrim), 0.28) 74%,
+      rgba(var(--scrim), 0) 92%
+    );
+  }
+
+  .hero__inner {
+    padding-top: 0;
+  }
+
+  .hero__intro {
+    max-width: min(34rem, 54%);
   }
 }
 
@@ -421,101 +481,182 @@ html[data-theme="dark"] .icon-sun {
   font-weight: 700;
 }
 
-/* 下载主卡片：首屏的视觉重心 */
-.dl-card {
-  margin-top: 26px;
+/* 下载入口：分裂按钮 —— 左半一键下推荐包，右半展开菜单挑其他架构。
+   目标是把「下最常用的那个包」压缩到一次点击。 */
+.dl-select {
   position: relative;
+  margin-top: 26px;
+  max-width: 460px;
+}
+
+.dl-split {
+  display: flex;
+  align-items: stretch;
+  border-radius: 15px;
   overflow: hidden;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: clamp(18px, 2.4vw, 24px);
-  box-shadow: var(--shadow);
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  box-shadow: 0 14px 30px -14px var(--accent-ring), var(--shadow-sm);
 }
 
-.dl-card::after {
-  content: "";
-  position: absolute;
-  right: -70px;
-  bottom: -110px;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, var(--accent-glow), transparent 70%);
-  pointer-events: none;
-}
-
-.dl-card__head {
+.dl-split__main {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 13px;
+  padding: 13px 17px;
+  color: #fff;
+  text-decoration: none;
+  transition: background 0.2s;
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--fg-muted);
-  background: var(--bg-2);
+.dl-split__main:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
-.chip--accent {
-  color: var(--accent);
-  background: var(--accent-bg);
-  border-color: color-mix(in srgb, var(--accent) 24%, transparent);
+.dl-split__main:active {
+  background: rgba(255, 255, 255, 0.24);
 }
 
-.dl-card__title {
+.dl-split__icon {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dl-split__icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.dl-split__label {
+  flex: 1;
+  min-width: 0;
+  display: block;
+}
+
+.dl-split__label b {
+  display: block;
   font-size: 15.5px;
   font-weight: 800;
-  margin-right: auto;
+  line-height: 1.35;
 }
 
-.dl-primary {
-  position: relative;
-  z-index: 1;
+.dl-split__label small {
+  display: block;
+  margin-top: 1px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.86);
 }
 
-.dl-primary__sub {
-  margin-top: 9px;
+.dl-split__caret {
+  flex: none;
+  width: 54px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dl-split__caret:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dl-split__caret:active {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.dl-split__caret svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.24s;
+}
+
+.dl-select.is-open .dl-split__caret svg {
+  transform: rotate(180deg);
+}
+
+/* 这一版只有一个架构包时没有可选项，把下拉箭头收掉 */
+.dl-select.is-single .dl-split__caret {
+  display: none;
+}
+
+/* 用 visibility 而不是 display 收起：能过渡，且隐藏时不会被 Tab 聚焦到 */
+.dl-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  padding: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  max-height: min(64vh, 430px);
+  overflow-y: auto;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transform-origin: top center;
+  transition: opacity 0.18s ease-out, transform 0.2s ease-out, visibility 0.18s;
+}
+
+.dl-select.is-open .dl-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+.dl-menu__title {
+  padding: 6px 10px 8px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-soft);
+}
+
+.dl-menu__group {
+  display: grid;
+  gap: 3px;
+}
+
+.dl-menu__hint {
+  padding: 9px 11px;
   font-size: 12.5px;
   color: var(--fg-muted);
-  text-align: center;
 }
 
-.abi-list {
-  margin-top: 16px;
-  display: grid;
-  gap: 8px;
-}
-
-.abi {
+.dl-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 13px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-2);
+  padding: 9px 11px;
+  border-radius: 12px;
   text-decoration: none;
-  transition: border-color 0.2s, background 0.2s, transform 0.16s;
+  color: inherit;
+  transition: background 0.16s, transform 0.16s;
 }
 
-.abi:hover {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  transform: translateX(2px);
+.dl-item:hover,
+.dl-item:focus-visible {
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
 }
 
-.abi__icon {
+.dl-item__icon {
+  flex: none;
   width: 32px;
   height: 32px;
-  flex: none;
   display: grid;
   place-items: center;
   border-radius: 9px;
@@ -524,103 +665,126 @@ html[data-theme="dark"] .icon-sun {
   font-size: 15px;
 }
 
-.abi__text {
-  min-width: 0;
+.dl-item__body {
   flex: 1;
+  min-width: 0;
 }
 
-.abi__name {
+.dl-item__name {
+  display: block;
   font-family: var(--mono);
   font-size: 13.5px;
   font-weight: 700;
   color: var(--fg);
-  display: flex;
-  align-items: center;
-  gap: 7px;
 }
 
-.abi__note {
+.dl-item__note {
   display: block;
-  font-size: 12px;
-  color: var(--fg-muted);
   margin-top: 1px;
-}
-
-.abi__right {
-  text-align: right;
-  flex: none;
-}
-
-.abi__size {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--fg-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.abi__dl {
   font-size: 11.5px;
-  color: var(--fg-soft);
+  color: var(--fg-muted);
+}
+
+.dl-item__meta {
+  flex: none;
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-.dl-card__foot {
-  margin-top: 14px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 16px;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12.5px;
-  color: var(--fg-muted);
-}
-
-/* SHA-256 校验值：默认折叠，需要核对包再展开 */
-.sha {
-  margin-top: 12px;
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
-}
-
-.sha summary {
-  cursor: pointer;
-  list-style: none;
+.dl-item__size {
+  display: block;
   font-size: 12.5px;
   font-weight: 700;
   color: var(--fg-muted);
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
-.sha summary::-webkit-details-marker {
+.dl-item__dl {
+  display: block;
+  font-size: 11px;
+  color: var(--fg-soft);
+}
+
+/* 菜单底部：下载源切换。只配了一个源时这块是 hidden 的。
+   负外边距是为了让分割线横跨整个面板（.dl-menu 的 padding 是 8px） */
+.dl-menu__foot {
+  margin: 7px -8px -8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.dl-menu__foot[hidden] {
   display: none;
 }
 
-.sha summary::before {
-  content: "#";
-  color: var(--accent);
-  font-family: var(--mono);
-  font-weight: 700;
+.dl-menu__foot-label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-soft);
 }
 
-.sha__row {
-  margin-top: 10px;
+.dl-src {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dl-src__btn {
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: background 0.16s, border-color 0.16s, color 0.16s;
+}
+
+.dl-src__btn:hover {
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  color: var(--fg);
+}
+
+.dl-src__btn[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.dl-src__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 按钮下方一行元信息：发布日期、累计下载。版本号只在顶部 badge 出现一次 */
+.dl-meta {
+  margin-top: 12px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  justify-content: space-between;
+  gap: 4px 9px;
+  font-size: 12.5px;
+  color: var(--fg-muted);
 }
 
-.sha__row code {
-  font-size: 11.5px;
-  color: var(--fg-muted);
-  word-break: break-all;
-  background: var(--code-bg);
-  padding: 6px 9px;
-  border-radius: 8px;
-  flex: 1 1 260px;
+.dl-meta a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.dl-meta a:hover {
+  text-decoration: underline;
+}
+
+.dl-meta__sep {
+  color: var(--fg-soft);
 }
 
 .link-plain {
@@ -657,30 +821,13 @@ html[data-theme="dark"] .icon-sun {
   flex: none;
 }
 
-/* 首屏右侧：宣传图 + 扫码卡片 */
-.visual {
-  position: relative;
-}
-
-.visual__shot {
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  background: var(--bg-2);
-}
-
-.visual__shot img {
-  width: 100%;
-  height: auto;
-}
-
+/* 首屏里的扫码卡片：约到手机上装的另一条路 */
 .qr {
-  margin-top: 16px;
+  margin-top: 18px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
+  gap: 14px;
+  padding: 12px 14px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -688,12 +835,12 @@ html[data-theme="dark"] .icon-sun {
 }
 
 .qr__code {
-  width: 104px;
-  height: 104px;
+  width: 84px;
+  height: 84px;
   flex: none;
-  padding: 7px;
+  padding: 6px;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid var(--border);
 }
 
@@ -705,7 +852,7 @@ html[data-theme="dark"] .icon-sun {
 
 .qr__text b {
   display: block;
-  font-size: 14.5px;
+  font-size: 14px;
   margin-bottom: 3px;
 }
 
@@ -714,11 +861,11 @@ html[data-theme="dark"] .icon-sun {
   color: var(--fg-muted);
 }
 
-@media (max-width: 480px) {
+/* 太窄时并排会挤坏，改成上下摞着 */
+@media (max-width: 420px) {
   .qr {
     flex-direction: column;
     align-items: flex-start;
-    text-align: left;
   }
 }
 
@@ -841,101 +988,11 @@ td.num {
   white-space: nowrap;
 }
 
-/* 窄屏：表格不横向滚。下载表格改成一行一卡（架构+大小 一列，操作一列），
-   否则「下载」按钮会被挤到屏幕外，等于把主操作藏起来了。 */
+/* 窄屏：表格不横向滚，两列布局本来也能塞下 */
 @media (max-width: 620px) {
   table {
     min-width: 0;
   }
-
-  .table--abi thead {
-    display: none;
-  }
-
-  .table--abi tbody tr {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 3px 12px;
-    padding: 13px 16px;
-  }
-
-  .table--abi td {
-    padding: 0;
-    border: none;
-  }
-
-  .table--abi td:nth-child(1) {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .table--abi td:nth-child(2) {
-    grid-column: 1;
-    grid-row: 2;
-    font-size: 12.5px;
-  }
-
-  .table--abi td:nth-child(3) {
-    display: none;
-  }
-
-  .table--abi td:nth-child(4) {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    text-align: right;
-  }
-
-  .table--abi td:nth-child(4) a {
-    display: inline-flex;
-    align-items: center;
-    padding: 8px 15px;
-    border-radius: 10px;
-    background: var(--accent-bg);
-    color: var(--accent);
-  }
-}
-
-/* ============================== 安装步骤 ============================== */
-
-.steps {
-  counter-reset: step;
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-}
-
-.step {
-  position: relative;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px 20px 18px;
-}
-
-.step::before {
-  counter-increment: step;
-  content: counter(step);
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 800;
-  margin-bottom: 12px;
-}
-
-.step h3 {
-  font-size: 15px;
-  margin-bottom: 6px;
-}
-
-.step p {
-  font-size: 13.5px;
-  color: var(--fg-muted);
 }
 
 /* ============================== 更新日志 ============================== */

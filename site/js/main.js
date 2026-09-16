@@ -21,6 +21,47 @@
   var CACHE_TTL = 30 * 60 * 1000; // 30 分钟：GitHub 匿名接口每小时只有 60 次，别浪费
   var FETCH_TIMEOUT = 9000;
 
+  /* 下载源：安装包从哪儿取。数组第一项是默认源（即主按钮用的那个）。
+   *
+   * 为什么要可配置：GitHub 的 Release 附件托管在 objects.githubusercontent.com，
+   * 大陆访问经常被 QoS 限速到 50~200 KB/s、甚至下到一半被 RST 断流。
+   * 把 APK 另传一份到国内对象存储，然后在这里加一条，国内用户就走直链了 ——
+   * 页面本身放哪儿都不影响这件事，慢的是包。
+   *
+   * template 里的 {tag} 会替换成版本号（如 v1.5.0），{name} 替换成包文件名。
+   * 也可以不动这个文件，在 index.html 里 main.js 之前塞一段
+   * <script>window.SNAPCLAIM_SOURCES = [...]</script> 来覆盖。
+   */
+  var SOURCES = [
+    {
+      id: 'github',
+      label: 'GitHub 官方',
+      note: '官方发布，大陆可能较慢',
+      // 主按钮下方那行小字，不写就默认「安装包来自 <label>」
+      credit: '安装包来自 GitHub Releases 官方发布',
+      // GitHub 的资产地址以接口返回的 browser_download_url 为准，别自己拼
+      useAssetUrl: true,
+      template: REPO_URL + '/releases/download/{tag}/{name}',
+    },
+    /* 国内对象存储示例（腾讯云 COS / 阿里云 OSS）：把包传到 bucket 的 snapclaim/<版本>/ 下，
+       用云厂商自带的默认域名就能直接下（默认域名不需要备案；要绑自己的域名走 CDN 才需要）。
+       取消注释、把域名换成你自己的就能用 —— 数组第一项就是默认源，想让它当主力就挪到最前面：
+
+    {
+      id: 'cos',
+      label: '国内直链',
+      note: '腾讯云 COS · 大陆满速',
+      credit: '安装包来自国内镜像，与 GitHub 官方发布同源',
+      template: 'https://<bucket>.cos.<region>.myqcloud.com/snapclaim/{tag}/{name}',
+    },
+    */
+  ];
+
+  // 允许不改本文件就覆盖下载源（部署时在 HTML 里注入即可），也方便测试
+  if (Array.isArray(window.SNAPCLAIM_SOURCES) && window.SNAPCLAIM_SOURCES.length) {
+    SOURCES = window.SNAPCLAIM_SOURCES;
+  }
+
   /* ABI 元信息：数组顺序即推荐优先级，match 用来认 GitHub 上的包名 */
   var ABIS = [
     {
@@ -44,6 +85,44 @@
     },
   ];
 
+  /** 把下载源模板填成真实地址 */
+  function fillTemplate(template, tag, name) {
+    return String(template)
+      .replace(/\{tag\}/g, tag)
+      .replace(/\{name\}/g, name);
+  }
+
+  /**
+   * 单个包在指定下载源下的真实地址。
+   * GitHub 的资产地址以接口返回的 browser_download_url 为准（形如
+   * .../releases/download/<tag>/<name>），不要自己拼；其余源按 template 拼。
+   */
+  function assetUrl(source, tag, name, rawAssetUrl) {
+    if (!source || !name) return null;
+    if (source.useAssetUrl && rawAssetUrl) return rawAssetUrl;
+    return fillTemplate(source.template, tag, name);
+  }
+
+  /* 当前生效的下载源：默认取数组第一项；用户手动切换过就记住他的选择 */
+  var SOURCE_KEY = 'snapclaim:source';
+  var activeSource = SOURCES[0];
+
+  function pickSavedSource() {
+    var saved = null;
+    try {
+      saved = localStorage.getItem(SOURCE_KEY);
+    } catch (e) {
+      /* 隐私模式下读不到就算了，用默认源 */
+    }
+    if (!saved) return;
+    for (var i = 0; i < SOURCES.length; i++) {
+      if (SOURCES[i].id === saved) {
+        activeSource = SOURCES[i];
+        return;
+      }
+    }
+  }
+
   /* 渲染兜底数据：以当前最新版 v1.5.0 为准（数值取自 GitHub Release 资产列表）。
      GitHub 接口在某些网络下会 403 / 超时，这份数据保证页面永远可用。 */
   var FALLBACK = {
@@ -53,19 +132,16 @@
       {
         name: 'SnapClaim_1.5.0_arm64-v8a.apk',
         sizeHuman: '40.2 MB',
-        digest: 'sha256:9fa3f386a6f357f735dcd33882770ad1cf574792283bd2547da6f4d82f664f95',
         download_count: null,
       },
       {
         name: 'SnapClaim_1.5.0_armeabi-v7a.apk',
         sizeHuman: '32 MB',
-        digest: 'sha256:a5f7c616bae187f9ebdc99956a85a8e1455a7e40b455210e5c46192aa8e9da69',
         download_count: null,
       },
       {
         name: 'SnapClaim_1.5.0_x86_64.apk',
         sizeHuman: '43.1 MB',
-        digest: 'sha256:81d094fd8f96bf9a1a56775aab579dd229d3dbe829440b78a9cdd297eb134417',
         download_count: null,
       },
     ],
@@ -349,9 +425,15 @@
   }
 
   /* ---------------------------- 渲染：下载区 ---------------------------- */
+  /* 页面上只有两个下载相关容器：
+   *   #dl-toggle-*  → 主按钮（展示推荐包，不含版本号，避免和顶部 badge 重复）
+   *   #dl-menu-abi  → 下拉菜单里的架构包列表
+   * 版本号只在首屏 badge 出现一次；包名 / 大小 / 校验值各自只渲染一处。 */
 
   function normalizeRelease(release) {
+    var tag = release && release.tag_name ? release.tag_name : FALLBACK.tag;
     var assets = (release && release.assets) || [];
+
     var abis = ABIS.map(function (abi) {
       var asset = null;
       for (var i = 0; i < assets.length; i++) {
@@ -363,15 +445,19 @@
       return {
         meta: abi,
         name: asset ? asset.name : null,
-        url: asset ? asset.browser_download_url : null,
+        url: assetUrl(
+          activeSource,
+          tag,
+          asset ? asset.name : null,
+          asset ? asset.browser_download_url : null
+        ),
         size: asset && typeof asset.size === 'number' ? asset.size : null,
         sizeHuman: asset && asset.sizeHuman ? asset.sizeHuman : '',
-        digest: asset && asset.digest ? asset.digest : '',
         downloads: asset && typeof asset.download_count === 'number' ? asset.download_count : null,
       };
     });
 
-    // arm64 缺失时，退而求其次用第一个能拿到的包当主下载（保证按钮一定可用）
+    // arm64 缺失时，退而求其次用第一个能拿到的包当推荐项（保证菜单里一定有个能下的）
     var primary = null;
     for (var i = 0; i < abis.length; i++) {
       if (abis[i].url) {
@@ -381,7 +467,7 @@
     }
 
     return {
-      tag: release && release.tag_name ? release.tag_name : FALLBACK.tag,
+      tag: tag,
       publishedAt: release && release.published_at ? release.published_at : FALLBACK.publishedAt,
       body: release && release.body ? release.body : '',
       assets: assets,
@@ -396,127 +482,271 @@
     };
   }
 
+  function availableAbis(release) {
+    return release.abis.filter(function (item) {
+      return !!item.url;
+    });
+  }
+
   function renderDownload(release) {
-    var tag = release.tag;
-    var date = formatDate(release.publishedAt);
-
-    setText('#hero-version', tag);
-    setText('#hero-date', date ? '发布于 ' + date : '');
-    setText('#dl-version', tag);
-    setText('#dl-date', date);
-
     var primary = release.primary;
-    var btn = $('#btn-primary');
-    if (btn && primary) {
-      btn.href = primary.url;
-      var sizeText = primary.size ? formatBytes(primary.size) : primary.sizeHuman;
-      setText('#primary-sub', primary.name + (sizeText ? ' · ' + sizeText : ''));
-    }
 
-    // ABI 列表：主按钮已经是 arm64 时，这里只列其余架构，避免重复入口
-    var list = $('#abi-list');
-    if (list) {
-      var rest = release.abis.filter(function (item) {
-        return item.url && (!primary || item.name !== primary.name);
-      });
-      list.innerHTML = rest
-        .map(function (item) {
-          var sizeText = item.size ? formatBytes(item.size) : item.sizeHuman;
-          return [
-            '<a class="abi" href="' + escapeHtml(item.url) + '" rel="noopener">',
-            '<span class="abi__icon">' + item.meta.icon + '</span>',
-            '<span class="abi__text">',
-            '<span class="abi__name">' + escapeHtml(item.meta.key) + '</span>',
-            '<span class="abi__note">' + escapeHtml(item.meta.note) + '</span>',
-            '</span>',
-            '<span class="abi__right">',
-            '<span class="abi__size">' + escapeHtml(sizeText || '—') + '</span>',
-            '<span class="abi__dl">' + downloadText(item.downloads) + '</span>',
-            '</span>',
-            '</a>',
-          ].join('');
-        })
-        .join('');
+    // 版本号 → 只写给顶部 badge
+    setText('#hero-version', release.tag);
 
-      if (!rest.length) {
-        list.innerHTML = '';
-      }
-    }
+    // 左半：一键下推荐包
+    var btn = $('#dl-primary');
+    if (btn) btn.href = primary ? primary.url : RELEASES_URL;
 
-    // 下载完整表格（含主包，方便对照架构与大小）
-    var tbody = $('#dl-table-body');
-    if (tbody) {
-      tbody.innerHTML = release.abis
-        .map(function (item) {
-          var sizeText = item.size ? formatBytes(item.size) : item.sizeHuman;
-          if (!item.url) {
-            return (
-              '<tr><td><span class="mono">' +
-              escapeHtml(item.meta.key) +
-              '</span></td><td class="muted">这一版没有提供</td><td class="num">—</td><td></td></tr>'
-            );
-          }
-          return [
-            '<tr>',
-            '<td><span class="mono">' + escapeHtml(item.meta.key) + '</span>',
-            item.meta.recommended
-              ? ' <span class="chip chip--accent">推荐</span>'
-              : '',
-            '</td>',
-            '<td class="muted">' + escapeHtml(sizeText || '—') + '</td>',
-            '<td class="num muted">' +
-              (typeof item.downloads === 'number' && item.downloads > 0
-                ? downloadText(item.downloads)
-                : '—') +
-              '</td>',
-            '<td class="num"><a class="link-plain" href="' +
-              escapeHtml(item.url) +
-              '" rel="noopener">下载</a></td>',
-            '</tr>',
-          ].join('');
-        })
-        .join('');
-    }
+    var primarySize = primary ? (primary.size ? formatBytes(primary.size) : primary.sizeHuman) : '';
+    setText(
+      '#dl-primary-sub',
+      primary
+        ? '推荐 ' + primary.meta.key + (primarySize ? ' · ' + primarySize : '')
+        : '正在读取最新版本…'
+    );
 
-    // 校验信息：优先 sha256（GitHub 新版本才带 digest），退回到「去 Release 页核对」
-    var primaryDigest = (primary && primary.digest) || '';
-    var sha = primaryDigest.replace(/^sha256:/i, '');
-    if (!sha) {
-      var fallbackAsset = FALLBACK.assets.filter(function (a) {
-        return primary && a.name === primary.name;
-      })[0];
-      sha = fallbackAsset ? fallbackAsset.digest.replace(/^sha256:/i, '') : '';
-    }
-    var shaRow = $('#sha-row');
-    if (shaRow && sha) {
-      shaRow.hidden = false;
-      setText('#sha-value', sha);
-      var copyBtn = $('#sha-copy');
-      if (copyBtn) {
-        copyBtn.addEventListener('click', function () {
-          copyText(sha, 'SHA-256 已复制');
-        });
-      }
-    }
+    // 右半：只列「其他」架构 —— 推荐包已经挂在左边的按钮上了，菜单里不再重复列一遍
+    var rest = availableAbis(release).filter(function (item) {
+      return !primary || item.name !== primary.name;
+    });
 
-    var totalNote = $('#dl-total');
-    if (totalNote && release.hasCounts && release.totalDownloads > 0) {
-      totalNote.hidden = false;
-      totalNote.textContent = '累计下载 ' + release.totalDownloads + ' 次';
-    }
+    var root = $('#dl-select');
+    // 只有「没有别的架构包」且「没有别的下载源」时，菜单才是空的，才收起下拉箭头
+    if (root) root.classList.toggle('is-single', rest.length === 0 && SOURCES.length < 2);
 
+    renderAbiMenu(rest);
+    renderSourceFoot();
+    renderDownloadMeta(release);
     renderQr(primary ? primary.url : RELEASES_URL);
   }
 
+  /** 主按钮下方一行元信息 */
+  function renderDownloadMeta(release) {
+    var meta = $('#dl-meta');
+    if (!meta) return;
+
+    var parts = [];
+    var date = formatDate(release.publishedAt);
+    if (date) parts.push('发布于 ' + date);
+    if (release.hasCounts && release.totalDownloads > 0) {
+      parts.push('累计下载 ' + release.totalDownloads + ' 次');
+    }
+    parts.push(activeSource.credit || '安装包来自 ' + activeSource.label);
+
+    meta.innerHTML = parts
+      .map(function (text) {
+        return '<span>' + escapeHtml(text) + '</span>';
+      })
+      .join('<span class="dl-meta__sep" aria-hidden="true">·</span>');
+  }
+
+  /** 下拉菜单里的架构包列表 */
+  function renderAbiMenu(list) {
+    var box = $('#dl-menu-abi');
+    if (!box) return;
+
+    // 没有其他架构包时，菜单里只剩「下载源」，标题就别再写「其他 CPU 架构」了
+    var title = $('#dl-menu-title');
+
+    if (!list.length) {
+      if (title) title.textContent = SOURCES.length > 1 ? '下载源' : '其他 CPU 架构';
+      box.hidden = true;
+      box.innerHTML =
+        '<p class="dl-menu__hint">这一版只提供上面那一个包，直接用左边的按钮下载即可。</p>';
+      return;
+    }
+
+    if (title) title.textContent = '其他 CPU 架构';
+    box.hidden = false;
+
+    box.innerHTML = list
+      .map(function (item) {
+        var sizeText = item.size ? formatBytes(item.size) : item.sizeHuman;
+        var count = downloadText(item.downloads);
+        return [
+          '<a class="dl-item" href="',
+          escapeHtml(item.url),
+          '" rel="noopener">',
+          '<span class="dl-item__icon" aria-hidden="true">',
+          item.meta.icon,
+          '</span>',
+          '<span class="dl-item__body">',
+          '<span class="dl-item__name">',
+          escapeHtml(item.meta.key),
+          '</span>',
+          '<span class="dl-item__note">',
+          escapeHtml(item.meta.note),
+          '</span>',
+          '</span>',
+          '<span class="dl-item__meta">',
+          '<span class="dl-item__size">',
+          escapeHtml(sizeText || '—'),
+          '</span>',
+          count ? '<span class="dl-item__dl">' + escapeHtml(count) + '</span>' : '',
+          '</span>',
+          '</a>',
+        ].join('');
+      })
+      .join('');
+  }
+
+  /** 菜单底部的下载源切换：只配了一个源时整块隐藏 */
+  function renderSourceFoot() {
+    var foot = $('#dl-menu-foot');
+    if (!foot) return;
+
+    if (SOURCES.length < 2) {
+      foot.hidden = true;
+      foot.innerHTML = '';
+      return;
+    }
+
+    foot.hidden = false;
+    foot.innerHTML = [
+      '<span class="dl-menu__foot-label">下载源</span>',
+      '<div class="dl-src" role="group" aria-label="选择下载源">',
+      SOURCES.map(function (source) {
+        var on = source.id === activeSource.id;
+        return [
+          '<button class="dl-src__btn" type="button" data-src="',
+          escapeHtml(source.id),
+          '" aria-pressed="',
+          on ? 'true' : 'false',
+          '" title="',
+          escapeHtml(source.note || source.label),
+          '">',
+          escapeHtml(source.label),
+          '</button>',
+        ].join('');
+      }).join(''),
+      '</div>',
+    ].join('');
+  }
+
+  /** 换源：只重渲染下载区，不重新请求接口，也不用刷新页面 */
+  function switchSource(id) {
+    var next = null;
+    for (var i = 0; i < SOURCES.length; i++) {
+      if (SOURCES[i].id === id) next = SOURCES[i];
+    }
+    if (!next || next === activeSource) return;
+
+    activeSource = next;
+    try {
+      localStorage.setItem(SOURCE_KEY, id);
+    } catch (e) {
+      /* 存不了就只在本次会话生效 */
+    }
+
+    if (lastRawRelease) renderDownload(normalizeRelease(lastRawRelease));
+    toast('下载源已切到「' + activeSource.label + '」');
+
+    // 上面的重渲染把面板整个换掉了，把焦点还给刚点的那个按钮，键盘操作不会断
+    var again = document.querySelector('.dl-src__btn[data-src="' + id + '"]');
+    if (again) again.focus();
+  }
+
   function downloadText(count) {
-    return typeof count === 'number' && count > 0
-      ? '下载 ' + count + ' 次'
-      : '';
+    return typeof count === 'number' && count > 0 ? '下载 ' + count + ' 次' : '';
   }
 
   function setText(sel, text) {
     var el = $(sel);
     if (el) el.textContent = text || '';
+  }
+
+  /* ------------------------ 首屏下载下拉菜单交互 ------------------------ */
+
+  function initDownloadMenu() {
+    var root = $('#dl-select');
+    var toggle = $('#dl-toggle');
+    var menu = $('#dl-menu');
+    if (!root || !toggle || !menu) return;
+
+    function items() {
+      return Array.prototype.slice.call(menu.querySelectorAll('.dl-item, .dl-src__btn'));
+    }
+
+    function isOpen() {
+      return root.classList.contains('is-open');
+    }
+
+    function open(focusTarget) {
+      root.classList.add('is-open');
+      toggle.setAttribute('aria-expanded', 'true');
+      if (focusTarget) focusTarget.focus();
+    }
+
+    function close(refocus) {
+      if (!isOpen()) return;
+      root.classList.remove('is-open');
+      toggle.setAttribute('aria-expanded', 'false');
+      if (refocus) toggle.focus();
+    }
+
+    toggle.addEventListener('click', function () {
+      if (isOpen()) {
+        close(false);
+      } else {
+        open(items()[0]);
+      }
+    });
+
+    // 菜单里的点击分两种：架构项点完就收起（链接照常跳转）；
+    // 下载源按钮是原位切换 —— 换源会重渲染面板，先掐断冒泡，否则「点外关闭」逻辑
+    // 会因为目标节点已被摘掉而误判成点了外面，把菜单收起来。
+    menu.addEventListener('click', function (e) {
+      var target = e.target;
+      if (!target || !target.closest) return;
+
+      var src = target.closest('.dl-src__btn');
+      if (src) {
+        e.stopPropagation();
+        switchSource(src.getAttribute('data-src'));
+        return;
+      }
+
+      if (target.closest('.dl-item')) close(false);
+    });
+
+    // 点菜单外任意处收起
+    document.addEventListener('click', function (e) {
+      if (isOpen() && !root.contains(e.target)) close(false);
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && isOpen()) close(true);
+    });
+
+    // 键盘在菜单内移动；从按钮按 ↓ 也能展开
+    root.addEventListener('keydown', function (e) {
+      var keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+      if (keys.indexOf(e.key) === -1) return;
+      var list = items();
+      if (!list.length) return;
+      e.preventDefault();
+
+      if (!isOpen()) {
+        open(e.key === 'ArrowUp' || e.key === 'End' ? list[list.length - 1] : list[0]);
+        return;
+      }
+
+      var current = list.indexOf(document.activeElement);
+      var next = 0;
+      if (e.key === 'ArrowDown') next = current < 0 ? 0 : (current + 1) % list.length;
+      else if (e.key === 'ArrowUp') next = current <= 0 ? list.length - 1 : current - 1;
+      else if (e.key === 'End') next = list.length - 1;
+      list[next].focus();
+    });
+
+    // Tab 走出去就收起，别留一个悬空的面板
+    root.addEventListener('focusout', function (e) {
+      // 换源会把面板整个重渲染，旧按钮被摘掉时焦点会掉到 body ——
+      // 那不是「用户离开了」，等 switchSource 把焦点还回来
+      if (document.activeElement === document.body) return;
+      if (e.relatedTarget && !root.contains(e.relatedTarget)) close(false);
+    });
   }
 
   /* ----------------------------- 渲染：二维码 ----------------------------- */
@@ -583,11 +813,7 @@
     var note = $('#source-note');
     if (note) {
       if (live) {
-        note.innerHTML =
-          '数据来自 GitHub Releases 接口（缓存 30 分钟）· ' +
-          '<a class="link-plain" href="' +
-          RELEASES_URL +
-          '" target="_blank" rel="noopener">在 GitHub 查看全部版本</a>';
+        note.textContent = '数据来自 GitHub Releases 接口，缓存 30 分钟；读不到时会展示内置的版本记录。';
       } else {
         note.innerHTML =
           '⚠️ 暂时读不到 GitHub 发布数据，下面是内置的版本记录。新版本请以 ' +
@@ -778,40 +1004,10 @@
     return out.join('');
   }
 
-  /* ----------------------------- 复制到剪贴板 ----------------------------- */
-
-  function copyText(text, okMsg) {
-    function done() {
-      toast(okMsg || '已复制');
-    }
-
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(text).then(done, function () {
-        fallbackCopy(text, done);
-      });
-      return;
-    }
-    fallbackCopy(text, done);
-  }
-
-  function fallbackCopy(text, done) {
-    var area = document.createElement('textarea');
-    area.value = text;
-    area.setAttribute('readonly', '');
-    area.style.position = 'fixed';
-    area.style.opacity = '0';
-    document.body.appendChild(area);
-    area.select();
-    try {
-      document.execCommand('copy');
-      done();
-    } catch (e) {
-      toast('复制失败，请手动选择');
-    }
-    document.body.removeChild(area);
-  }
-
   /* ------------------------------- 启动 ------------------------------- */
+
+  /* 当前这一版的原始 release 数据（地址还没按下载源换算），换源时直接拿它重算 */
+  var lastRawRelease = null;
 
   function boot(data) {
     var releases = data.releases || [];
@@ -820,33 +1016,30 @@
         return !r.draft && !r.prerelease;
       })[0] || releases[0];
 
-    var normalized = normalizeRelease(latest);
-    if (!data.live) {
-      // 接口不可用：用兜底数据里的包名 / 大小 / 校验值 + 官方下载地址拼出可用链接
-      normalized = normalizeRelease({
-        tag_name: FALLBACK.tag,
-        published_at: FALLBACK.publishedAt,
-        assets: FALLBACK.assets.map(function (a) {
-          return {
-            name: a.name,
-            size: null,
-            sizeHuman: a.sizeHuman,
-            digest: a.digest,
-            browser_download_url:
-              REPO_URL + '/releases/download/' + FALLBACK.tag + '/' + a.name,
-          };
-        }),
-      });
-    }
+    // 接口不可用时 latest 是空的：用兜底数据里的包名 / 大小 + 官方下载地址拼出等价结构
+    lastRawRelease = latest || {
+      tag_name: FALLBACK.tag,
+      published_at: FALLBACK.publishedAt,
+      assets: FALLBACK.assets.map(function (a) {
+        return {
+          name: a.name,
+          size: null,
+          sizeHuman: a.sizeHuman,
+          browser_download_url: REPO_URL + '/releases/download/' + FALLBACK.tag + '/' + a.name,
+        };
+      }),
+    };
 
-    renderDownload(normalized);
+    renderDownload(normalizeRelease(lastRawRelease));
     renderChangelog(data);
   }
 
   function init() {
+    pickSavedSource();
     initTheme();
     initNav();
     initReveal();
+    initDownloadMenu();
 
     loadReleases().then(function (data) {
       boot(data);

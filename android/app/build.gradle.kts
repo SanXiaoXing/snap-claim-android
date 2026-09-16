@@ -1,8 +1,24 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// release 签名配置：本地优先读取 android/key.properties（已 gitignore、不入库），
+// CI 由 GitHub Secrets 写入该文件；Windows / macOS / CI 三处共用同一把密钥，
+// 保证所有环境构建的 release APK 签名一致，可互相覆盖升级。
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+fun signingProp(name: String, envName: String): String? =
+    (keystoreProperties[name] as String?)?.takeIf { it.isNotBlank() }
+        ?: System.getenv(envName)?.takeIf { it.isNotBlank() }
 
 android {
     namespace = "cn.sanxiaoxing.snap_claim"
@@ -25,11 +41,28 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFileValue = signingProp("storeFile", "KEYSTORE_FILE")
+            if (storeFileValue != null) storeFile = file(storeFileValue)
+            keyAlias = signingProp("keyAlias", "KEY_ALIAS")
+            keyPassword = signingProp("keyPassword", "KEY_PASSWORD")
+            storePassword = signingProp("storePassword", "KEYSTORE_PASSWORD")
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // 正式签名：同一把密钥在 Windows / macOS / CI 三处复用，保证 APK 签名一致、可互相覆盖升级。
+            // 仅当本机未配置 key.properties（或未注入环境变量）时退回 debug 签名，便于本地快速调试。
+            val releaseSigning = signingConfigs.getByName("release")
+            signingConfig = if (releaseSigning.storeFile != null && !releaseSigning.keyAlias.isNullOrEmpty()) {
+                releaseSigning
+            } else {
+                println("WARNING: 未检测到 release 签名配置（key.properties / 环境变量），" +
+                    "本包将使用 debug 签名，无法与其他机器构建的 APK 互相覆盖安装！")
+                signingConfigs.getByName("debug")
+            }
             // 显式应用 ProGuard 规则：ML Kit 语言模型类为 compileOnly 依赖，
             // 需 dontwarn 抑制 R8 缺失类报错（见 proguard-rules.pro）。
             proguardFiles(
