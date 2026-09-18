@@ -164,6 +164,7 @@ class _AiSituationSheetState extends State<_AiSituationSheet> {
         _status = _AiSheetStatus.success;
         _copied = false;
       });
+      HapticFeedback.lightImpact();
     } catch (e) {
       if (!mounted) return;
       if (_stopping) {
@@ -203,39 +204,9 @@ class _AiSituationSheetState extends State<_AiSituationSheet> {
   Widget _buildCopyButton({required bool reduceMotion}) {
     final c = context.colors;
     final done = _copied;
-    final duration =
-        Duration(milliseconds: reduceMotion ? 0 : 220);
-
-    Widget stateRow({
-      required IconData icon,
-      required String label,
-      bool scaleIcon = false,
-    }) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedScale(
-            scale: scaleIcon && !done ? 0.72 : 1.0,
-            duration: duration,
-            curve: Curves.easeOutBack,
-            child: Icon(icon, size: 20, color: Colors.white),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            maxLines: 1,
-            style: const TextStyle(
-              fontSize: 15,
-              height: 1.0,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              letterSpacing: 0.4,
-            ),
-          ),
-        ],
-      );
-    }
+    final duration = Duration(milliseconds: reduceMotion ? 0 : 220);
+    final icon = done ? Icons.check_circle_rounded : Icons.copy_rounded;
+    final label = done ? '复制成功' : '复制全文';
 
     return Semantics(
       button: true,
@@ -249,9 +220,7 @@ class _AiSituationSheetState extends State<_AiSituationSheet> {
           width: double.infinity,
           height: 52,
           decoration: BoxDecoration(
-            color: done
-                ? Color.lerp(c.accent, Colors.white, 0.06)
-                : c.accent,
+            color: done ? Color.lerp(c.accent, Colors.white, 0.06) : c.accent,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: done
@@ -266,26 +235,25 @@ class _AiSituationSheetState extends State<_AiSituationSheet> {
               ),
             ],
           ),
-          child: Stack(
-            alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              IgnorePointer(
-                child: AnimatedOpacity(
-                  duration: duration,
-                  opacity: done ? 0 : 1,
-                  child:
-                      stateRow(icon: Icons.copy_rounded, label: '复制全文'),
-                ),
+              AnimatedScale(
+                scale: done ? 1 : 0.72,
+                duration: duration,
+                curve: Curves.easeOutBack,
+                child: Icon(icon, size: 20, color: Colors.white),
               ),
-              IgnorePointer(
-                child: AnimatedOpacity(
-                  duration: duration,
-                  opacity: done ? 1 : 0,
-                  child: stateRow(
-                    icon: Icons.check_circle_rounded,
-                    label: '复制成功',
-                    scaleIcon: true,
-                  ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 15,
+                  height: 1.0,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: 0.4,
                 ),
               ),
             ],
@@ -536,7 +504,15 @@ class _AiSituationSheetState extends State<_AiSituationSheet> {
               children: [
                 Row(
                   children: [
-                    const AIMascot(awake: true, size: 36),
+                    AIMascot(
+                      awake: true,
+                      size: 36,
+                      phase: switch (_status) {
+                        _AiSheetStatus.generating => MascotPhase.searching,
+                        _AiSheetStatus.success => MascotPhase.celebrate,
+                        _ => MascotPhase.idle,
+                      },
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(

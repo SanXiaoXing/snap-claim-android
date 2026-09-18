@@ -1,6 +1,6 @@
 // AI 小球：移植 docs/design/askAI.md 中的 AIMascot 形象。
 // 视觉：主色 blob + 两颗竖椭圆眼；blob 圆角缓慢形变，眼睛周期性眨眼。
-// 减少动态时停形变、停眨眼，仅保留静态小球。
+// phase：generating→searching 摆动；success→celebrate 转圈 + 轻跳。
 import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
@@ -8,24 +8,26 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
 
-enum MascotGaze { up, down, left, right }
+enum MascotPhase { idle, searching, celebrate }
 
 /// askAI 风格的 AI 小球形象。
 class AIMascot extends StatefulWidget {
-  /// 是否「醒着」：醒着时眼睛看向 [gaze]，并轻微上扬放大。
   final bool awake;
 
-  /// 醒着时视线方向（指向弹层时用）。
-  final MascotGaze? gaze;
+  /// 醒着时眼睛是否看向左侧（底栏圆钮用）。
+  final bool lookLeft;
 
-  /// 小球直径。
   final double size;
+
+  /// 生成中 searching，生成完成 celebrate；切入 celebrate 时播一次转圈。
+  final MascotPhase phase;
 
   const AIMascot({
     super.key,
     this.awake = false,
-    this.gaze,
+    this.lookLeft = false,
     this.size = 32,
+    this.phase = MascotPhase.idle,
   });
 
   @override
@@ -33,17 +35,32 @@ class AIMascot extends StatefulWidget {
 }
 
 class _AIMascotState extends State<AIMascot>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _blobCtrl;
+  late final AnimationController _spinCtrl;
+  MascotPhase _phase = MascotPhase.idle;
+
+  // 近圆软 blob 关键帧 [tlx,tly,trx,try,brx,bry,blx,bly]
+  static const _blobFrames = <List<double>>[
+    [0.52, 0.50, 0.48, 0.52, 0.50, 0.48, 0.50, 0.50],
+    [0.54, 0.46, 0.46, 0.54, 0.54, 0.46, 0.46, 0.54],
+    [0.56, 0.48, 0.44, 0.56, 0.52, 0.44, 0.48, 0.52],
+    [0.46, 0.54, 0.54, 0.46, 0.48, 0.54, 0.52, 0.46],
+    [0.50, 0.52, 0.50, 0.48, 0.54, 0.50, 0.46, 0.50],
+  ];
 
   @override
   void initState() {
     super.initState();
     _blobCtrl = AnimationController(
       vsync: this,
-      // 形变整圈 7.2s：花 / 叶 / 三角 / 菱形轮播，比纯 blob 更有戏。
       duration: const Duration(milliseconds: 7200),
     );
+    _spinCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _phase = widget.phase;
   }
 
   @override
@@ -56,110 +73,147 @@ class _AIMascotState extends State<AIMascot>
   void didUpdateWidget(covariant AIMascot oldWidget) {
     super.didUpdateWidget(oldWidget);
     _syncMotion();
+    if (widget.phase != _phase) {
+      final enteringCelebrate = widget.phase == MascotPhase.celebrate;
+      _phase = widget.phase;
+      if (enteringCelebrate && !_reduce) _spinCtrl.forward(from: 0);
+    }
   }
 
+  bool get _reduce =>
+      MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
   void _syncMotion() {
-    final reduce =
-        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    if (reduce) {
+    if (_reduce) {
       _blobCtrl.stop();
       _blobCtrl.value = 0.35;
-    } else {
-      if (!_blobCtrl.isAnimating) _blobCtrl.repeat();
+    } else if (!_blobCtrl.isAnimating) {
+      _blobCtrl.repeat();
     }
   }
 
   @override
   void dispose() {
     _blobCtrl.dispose();
+    _spinCtrl.dispose();
     super.dispose();
   }
 
-  Offset get _eyeShift {
-    if (!widget.awake) {
-      return const Offset(0.5, -0.5);
+  /// spinBounce：前 65% 一圈，后 35% 阻尼回弹。
+  ({double angle, double hopY, double scale, double eyeBoost}) _spinPose() {
+    final t = _spinCtrl.value;
+    if (t <= 0) {
+      return (angle: 0, hopY: 0, scale: 1, eyeBoost: 1);
     }
-    return switch (widget.gaze) {
-      MascotGaze.down => const Offset(0.5, 2),
-      MascotGaze.left => const Offset(-2, -0.5),
-      MascotGaze.right => const Offset(2, -0.5),
-      MascotGaze.up || null => const Offset(0.5, -2),
-    };
+    if (t < 0.65) {
+      final p = t / 0.65;
+      final hop = math.sin(p * math.pi);
+      return (
+        angle: Curves.easeOutCubic.transform(p) * 2 * math.pi,
+        hopY: -hop * widget.size * 0.14,
+        scale: 1 + hop * 0.08,
+        eyeBoost: 1 + hop * 0.06,
+      );
+    }
+    final p = (t - 0.65) / 0.35;
+    final decay = (1 - p) * (1 - p);
+    final wobble = math.sin(p * math.pi * 2);
+    return (
+      angle: wobble * 0.14 * decay,
+      hopY: wobble * widget.size * 0.03 * decay,
+      scale: 1 + wobble * 0.03 * decay,
+      eyeBoost: 1,
+    );
   }
 
-  /// 眨眼：4.5s 周期，约 38%–42% 处眨眼（比原先 6.5s 更明快）。
-  double _blinkScale(double seconds) {
-    final phase = (seconds % 4.5) / 4.5;
-    if (phase >= 0.38 && phase <= 0.42) {
-      final t = (phase - 0.38) / 0.04;
-      final mid = t < 0.5 ? t * 2 : (1 - t) * 2;
-      return 1 - 0.90 * mid;
+  ({double angle, double tx, double ty, double eyeBoost, Offset eyeShift})
+  _phasePose(double seconds) {
+    final s = widget.size / 40.0;
+    switch (widget.phase) {
+      case MascotPhase.searching:
+        final et = math.sin(seconds * 1.3);
+        return (
+          angle: et * 13 * math.pi / 180,
+          tx: et * 6.5 * s,
+          ty: math.sin(seconds * 1.7) * 2.5 * s,
+          eyeBoost: 1.04,
+          eyeShift: Offset(et * 2.8 * s, math.sin(seconds * 2.1) * 1.1 * s),
+        );
+      case MascotPhase.celebrate:
+        return (
+          angle: 0,
+          tx: math.sin(seconds * 0.9) * 1.2 * s,
+          ty: -math.sin(seconds * 1.6).abs() * 2.2 * s,
+          eyeBoost: 1.08,
+          eyeShift: Offset(0.5 * s, -1.8 * s),
+        );
+      case MascotPhase.idle:
+        return (
+          angle: 0,
+          tx: 0,
+          ty: 0,
+          eyeBoost: 1,
+          eyeShift: Offset.zero,
+        );
     }
-    return 1;
   }
+
+  Offset get _baseEyeShift => !widget.awake
+      ? const Offset(0.5, -0.5)
+      : widget.lookLeft
+          ? const Offset(-2, -0.5)
+          : const Offset(0.5, -2);
+
+  double _blink(double seconds, double period, double a, double b, double depth) {
+    final p = (seconds % period) / period;
+    if (p < a || p > b) return 1;
+    final t = (p - a) / (b - a);
+    return 1 - depth * (t < 0.5 ? t * 2 : (1 - t) * 2);
+  }
+
+  double _blinkScale(double seconds) => widget.phase == MascotPhase.searching
+      ? _blink(seconds, 6.2, 0.55, 0.58, 0.75)
+      : _blink(seconds, 4.5, 0.38, 0.42, 0.90);
 
   BorderRadius _blobRadius(double t) {
-    // 全程接近圆的软有机形：轻微不对称呼吸，无尖角。
-    // 关键帧比例都落在 0.44–0.56，视觉上始终像圆球在轻轻「呼吸」。
-    BorderRadius nearCircle = BorderRadius.only(
-      topLeft: Radius.elliptical(0.52, 0.50),
-      topRight: Radius.elliptical(0.48, 0.52),
-      bottomRight: Radius.elliptical(0.50, 0.48),
-      bottomLeft: Radius.elliptical(0.50, 0.50),
-    );
-    BorderRadius softFlower = BorderRadius.only(
-      topLeft: Radius.elliptical(0.54, 0.46),
-      topRight: Radius.elliptical(0.46, 0.54),
-      bottomRight: Radius.elliptical(0.54, 0.46),
-      bottomLeft: Radius.elliptical(0.46, 0.54),
-    );
-    BorderRadius softLeaf = BorderRadius.only(
-      topLeft: Radius.elliptical(0.56, 0.48),
-      topRight: Radius.elliptical(0.44, 0.56),
-      bottomRight: Radius.elliptical(0.52, 0.44),
-      bottomLeft: Radius.elliptical(0.48, 0.52),
-    );
-    BorderRadius softDrop = BorderRadius.only(
-      topLeft: Radius.elliptical(0.46, 0.54),
-      topRight: Radius.elliptical(0.54, 0.46),
-      bottomRight: Radius.elliptical(0.48, 0.54),
-      bottomLeft: Radius.elliptical(0.52, 0.46),
-    );
-    BorderRadius ease = BorderRadius.only(
-      topLeft: Radius.elliptical(0.50, 0.52),
-      topRight: Radius.elliptical(0.50, 0.48),
-      bottomRight: Radius.elliptical(0.54, 0.50),
-      bottomLeft: Radius.elliptical(0.46, 0.50),
-    );
-
-    BorderRadius scale(BorderRadius r, double s) => BorderRadius.only(
-          topLeft: Radius.elliptical(r.topLeft.x * s, r.topLeft.y * s),
-          topRight: Radius.elliptical(r.topRight.x * s, r.topRight.y * s),
-          bottomRight:
-              Radius.elliptical(r.bottomRight.x * s, r.bottomRight.y * s),
-          bottomLeft:
-              Radius.elliptical(r.bottomLeft.x * s, r.bottomLeft.y * s),
-        );
-
     final s = widget.size;
-    // 五段：近圆 → 轻花 → 叶 → 水滴 → 过渡 → 近圆
-    final frames = [
-      scale(nearCircle, s),
-      scale(softFlower, s),
-      scale(softLeaf, s),
-      scale(softDrop, s),
-      scale(ease, s),
-      scale(nearCircle, s),
-    ];
+    BorderRadius br(List<double> f) => BorderRadius.only(
+          topLeft: Radius.elliptical(f[0] * s, f[1] * s),
+          topRight: Radius.elliptical(f[2] * s, f[3] * s),
+          bottomRight: Radius.elliptical(f[4] * s, f[5] * s),
+          bottomLeft: Radius.elliptical(f[6] * s, f[7] * s),
+        );
+    final frames = [for (final f in _blobFrames) br(f), br(_blobFrames.first)];
     final seg = t * (frames.length - 1);
     final i = seg.floor().clamp(0, frames.length - 2);
     return BorderRadius.lerp(frames[i], frames[i + 1], seg - i)!;
   }
 
+  Widget _ball({required double ball, required double eyeW, required double eyeH, required double eyeGap}) {
+    final c = context.colors;
+    return Container(
+      width: ball,
+      height: ball,
+      decoration: BoxDecoration(
+        color: c.accent,
+        borderRadius: BorderRadius.circular(ball * 0.48),
+      ),
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _eye(eyeW, eyeH),
+            SizedBox(width: eyeGap),
+            _eye(eyeW, eyeH),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
-    final reduce = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduce = _reduce;
     final ball = widget.size;
     final eyeH = ball * 0.225;
     final eyeW = ball * 0.10;
@@ -167,41 +221,45 @@ class _AIMascotState extends State<AIMascot>
 
     return RepaintBoundary(
       child: AnimatedBuilder(
-        animation: _blobCtrl,
+        animation: Listenable.merge([_blobCtrl, _spinCtrl]),
         builder: (context, _) {
-          final blink = reduce ? 1.0 : _blinkScale(
-            DateTime.now().millisecondsSinceEpoch / 1000,
-          );
-          final t = _blobCtrl.value;
-          final awakeScale = widget.awake ? 1.05 : 1.0;
-          final rotate = (widget.awake ? 6 : -7) * math.pi / 180;
-          final shift = _eyeShift;
+          if (reduce) return _ball(ball: ball, eyeW: eyeW, eyeH: eyeH, eyeGap: eyeGap);
 
-          return Transform.rotate(
-            angle: reduce ? 0 : rotate,
-            child: Transform.scale(
-              scale: reduce ? 1 : awakeScale,
-              child: Container(
-                width: ball,
-                height: ball,
-                decoration: BoxDecoration(
-                  color: c.accent,
-                  borderRadius: reduce
-                      ? BorderRadius.circular(ball * 0.48)
-                      : _blobRadius(t),
-                ),
-                child: Center(
-                  child: Transform.translate(
-                    offset: reduce ? Offset.zero : shift,
-                    child: Transform.scale(
-                      scaleY: blink,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _eye(eyeW, eyeH),
-                          SizedBox(width: eyeGap),
-                          _eye(eyeW, eyeH),
-                        ],
+          final seconds = DateTime.now().millisecondsSinceEpoch / 1000;
+          final spin = _spinPose();
+          final phase = _phasePose(seconds);
+          final rotate = (widget.awake ? 6 : -7) * math.pi / 180 + spin.angle + phase.angle;
+          final shift = phase.eyeShift == Offset.zero ? _baseEyeShift : phase.eyeShift;
+          final scale = (widget.awake ? 1.05 : 1.0) * spin.scale;
+          final blink = _blinkScale(seconds) * spin.eyeBoost * phase.eyeBoost;
+          final c = context.colors;
+
+          return Transform.translate(
+            offset: Offset(phase.tx, phase.ty + spin.hopY),
+            child: Transform.rotate(
+              angle: rotate,
+              child: Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: ball,
+                  height: ball,
+                  decoration: BoxDecoration(
+                    color: c.accent,
+                    borderRadius: _blobRadius(_blobCtrl.value),
+                  ),
+                  child: Center(
+                    child: Transform.translate(
+                      offset: shift,
+                      child: Transform.scale(
+                        scaleY: blink,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _eye(eyeW, eyeH),
+                            SizedBox(width: eyeGap),
+                            _eye(eyeW, eyeH),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -214,20 +272,17 @@ class _AIMascotState extends State<AIMascot>
     );
   }
 
-  Widget _eye(double w, double h) {
-    return Container(
-      width: w,
-      height: h,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(h),
-      ),
-    );
-  }
+  Widget _eye(double w, double h) => Container(
+        width: w,
+        height: h,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(h),
+        ),
+      );
 }
 
 /// 菜单栏右侧的独立 AI 圆钮：玻璃圆壳 + 内嵌小球。
-/// 与主菜单胶囊物理分隔，对应 askAI 的 blobOnly 触发器形态。
 class AiBallButton extends StatefulWidget {
   final VoidCallback? onTap;
 
@@ -243,9 +298,7 @@ class _AiBallButtonState extends State<AiBallButton> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // 与主胶囊高度一致（MainShell 胶囊 64）。
     const size = 64.0;
-    final mascotSize = 40.0;
 
     return Semantics(
       button: true,
@@ -291,8 +344,8 @@ class _AiBallButtonState extends State<AiBallButton> {
                 child: Center(
                   child: AIMascot(
                     awake: _awake,
-                    gaze: MascotGaze.left,
-                    size: mascotSize,
+                    lookLeft: true,
+                    size: 40,
                   ),
                 ),
               ),

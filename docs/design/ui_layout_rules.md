@@ -185,6 +185,7 @@ Container(padding:16, cardDecoration) ─ Column
   - 选中胶囊 `SlidingPill`（`widgets/sliding_pill.dart`，由原 `_SelectedPill` 提取为公共组件）：用 `LayoutBuilder` 算每格宽，**临界阻尼弹簧**（stiffness 246 / damping 31.4 ≈ 0.4s）滑动，从当前屏幕值出发可被打断重定向；`animate:false` 时直接跟随目标值（供历史页分段 tab 拖拽跟手复用）。
   - 菜单项 `_GlassTab`：`Expanded` + `Column` 图标(`22`)+文字(`10.5`)，选中 `Colors.white`、未选 `c.fgMuted`，图标 `AnimatedSwitcher` 在实心/描边间淡入缩放切换。
   - AI 小球 `AiBallButton`（`widgets/ai_mascot.dart`）：玻璃圆壳 **64px 与主胶囊同高** + 内嵌 `AIMascot`（约 40px accent blob + 双眼；形变**始终近圆**的软有机呼吸——轻花/叶/水滴，比例约 0.44–0.56，无尖角；眨眼周期 **4.5s**；减少动态时停动画）。点击弹出「AI 情况说明」占位底部弹层。
+  - **生成中 / 生成完成动效**（参考 grok-icon-study）：AI 弹层头部 `AIMascot` 用 `phase` 驱动——`generating` → **searching**（左右搜寻摆动 + 眼睛扫视）；`success` → **celebrate**（spinBounce 一圈 360° + 弹跳回弹，约 900ms，随后持续轻跳）。切入 celebrate 时自动播转圈；`disableAnimations` 时全部跳过。
 
 ---
 
