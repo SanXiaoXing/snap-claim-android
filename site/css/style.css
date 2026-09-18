@@ -69,8 +69,8 @@ html[data-theme="dark"] {
 
 html {
   scroll-behavior: smooth;
-  /* 顶部导航固定高度，锚点跳转时别被挡住 */
-  scroll-padding-top: 88px;
+  /* 顶部导航 68px + 制度提醒条约 40px，锚点跳转时别被挡住 */
+  scroll-padding-top: 128px;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -329,6 +329,110 @@ html[data-theme="dark"] .icon-sun {
   }
 }
 
+/* ============================== 制度提醒条幅 ==============================
+   横向滚动的合规提醒条：文案较长，滚动保证时限规则持续可见。
+   动机（hierarchy + awareness）：报销时限必须被同事与审批人反复注意到，
+   不能只在某一段正文里出现一次。系统开启「减少动态」时停止自动滚动，
+   退化为可手动横向阅读的静态文本（与全站 reduced-motion 策略一致）。 */
+
+.notice {
+  position: sticky;
+  top: 68px; /* 紧贴固定导航下沿 */
+  z-index: 49;
+  background: var(--accent-bg);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+}
+
+.notice__inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  width: min(1080px, 100% - 40px);
+  margin-inline: auto;
+}
+
+/* 标签用正文色，保证在浅/深色 accent 底上都过对比度 */
+.notice__chip {
+  flex: none;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--fg);
+  background: color-mix(in srgb, var(--accent) 16%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  border-radius: 999px;
+  padding: 2px 10px;
+  line-height: 1.5;
+}
+
+.notice__viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 14px,
+    #000 calc(100% - 14px),
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 14px,
+    #000 calc(100% - 14px),
+    transparent
+  );
+}
+
+.notice__track {
+  display: flex;
+  width: max-content;
+  animation: notice-scroll 36s linear infinite;
+}
+
+.notice__seg {
+  flex: none;
+  padding-right: 3rem; /* 两段等宽含尾隙，-50% 才能无缝衔接 */
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+@keyframes notice-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* 悬停暂停，方便读完整句 */
+.notice:hover .notice__track,
+.notice:focus-within .notice__track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notice__track {
+    animation: none;
+  }
+
+  .notice__seg[aria-hidden="true"] {
+    display: none;
+  }
+
+  .notice__viewport {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
 /* ============================== 按钮 ============================== */
 
 .btn {
@@ -457,9 +561,9 @@ html[data-theme="dark"] .icon-sun {
 
 @media (min-width: 940px) {
   .hero {
-    /* 撑满一屏：视口高度减去固定导航 */
-    min-height: calc(100vh - 68px);
-    min-height: calc(100svh - 68px);
+    /* 撑满一屏：视口高度减去固定导航 + 制度提醒条 */
+    min-height: calc(100vh - 108px);
+    min-height: calc(100svh - 108px);
     display: grid;
     align-content: center;
     padding-block: clamp(40px, 6vh, 76px);
