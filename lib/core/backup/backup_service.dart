@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../ai/ai_settings.dart';
 import '../database/database.dart';
 import '../utils/format.dart';
 import 'backup.dart';
@@ -45,11 +46,13 @@ class BackupService {
     try {
       await tmpFile.delete();
     } catch (_) {} // 临时文件删除失败不影响导出结果。
+    final ai = (await loadAiSettings()).toBackupJson();
     final manifest = BackupManifest(
       formatVersion: kBackupFormatVersion,
       appVersion: kAppVersion,
       databaseVersion: AppDatabase.schemaVersion,
       createdAt: fmtDateDashed(DateTime.now()),
+      ai: ai,
     );
     return encodeBackup(manifest: manifest, sqliteBytes: sqliteBytes);
   }

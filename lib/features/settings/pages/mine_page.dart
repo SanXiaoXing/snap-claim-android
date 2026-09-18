@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/ai/ai_settings.dart';
 import '../../../core/backup/backup.dart';
 import '../../../core/backup/backup_service.dart';
 import '../../../core/utils/cache.dart';
@@ -18,6 +19,7 @@ import '../widgets/mine_result_line.dart';
 import '../widgets/mine_row.dart';
 import '../widgets/mine_stat_cell.dart';
 import 'about_page.dart';
+import 'ai_settings_page.dart';
 import 'stats_page.dart';
 
 class MinePage extends StatefulWidget {
@@ -222,6 +224,18 @@ class _MinePageState extends State<MinePage> {
                         subtitle: '扫码快速录入票据',
                         trailing: Icon(Icons.chevron_right, size: 18, color: c.fgSoft),
                         onTap: _scanQr,
+                      ),
+                      MineDivider(),
+                      MineRow(
+                        icon: Icons.auto_awesome_outlined,
+                        title: 'AI 设置',
+                        subtitle: '配置 API Key 与模型',
+                        trailing: Icon(Icons.chevron_right, size: 18, color: c.fgSoft),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const AiSettingsPage(),
+                          ),
+                        ),
                       ),
                       MineDivider(),
                       MineRow(
@@ -488,12 +502,14 @@ class _MinePageState extends State<MinePage> {
       if (mode == _ImportMode.merge) {
         // 合并：按 id 去重，只加入备份中当前库不存在的报销单。
         final count = await BackupService.instance.merge(parsed.sqliteBytes);
+        await applyAiSettingsFromBackup(parsed.manifest.ai);
         await widget.onDataRestored();
         if (!mounted) return;
         _snack('已合并导入 $count 张报销单');
       } else {
         // 覆盖：替换整个数据库文件（原行为）。
         await BackupService.instance.restore(parsed.sqliteBytes);
+        await applyAiSettingsFromBackup(parsed.manifest.ai);
         await widget.onDataRestored();
         if (!mounted) return;
         _snack('导入成功');
