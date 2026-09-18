@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SnapClaim · AI 小球底栏预览</title>
+  <link rel="stylesheet" href="ai-ball.css" />
+</head>
+<body>
+  <div class="stage">
+    <header class="stage-head">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <p class="brand-kicker">SnapClaim · UI Preview</p>
+          <h1>底栏菜单 + 独立 AI 小球</h1>
+        </div>
+      </div>
+      <div class="stage-actions">
+        <button type="button" class="chip" id="themeToggle" aria-pressed="false">深色模式</button>
+        <button type="button" class="chip chip-ghost" id="reduceToggle" aria-pressed="false">减少动态</button>
+      </div>
+    </header>
+
+    <p class="stage-note">
+      对齐 Flutter 实现：主胶囊（首页 / 历史 / 我的）与右侧 AI 圆钮物理分隔；
+      小球形象来自 <code>docs/design/askAI.md</code>（blob + 双眼，形变与眨眼）。
+    </p>
+
+    <div class="phone-shell" data-theme="light" id="phone">
+      <div class="phone-notch" aria-hidden="true"></div>
+
+      <!-- 模拟内容区：底部会被玻璃栏模糊 -->
+      <div class="phone-screen">
+        <div class="mock-page">
+          <div class="mock-top">
+            <span class="mock-title">SnapClaim</span>
+            <span class="mock-sub">报销单 · 本地优先</span>
+          </div>
+
+          <div class="mock-cta">
+            <div class="mock-cta-ring"></div>
+            <div class="mock-cta-core">
+              <span>建一张单</span>
+            </div>
+          </div>
+
+          <div class="mock-cards">
+            <article class="mock-card">
+              <div class="mock-card-row">
+                <span class="badge">火车</span>
+                <strong>¥ 286.50</strong>
+              </div>
+              <p>上海 → 杭州 · 往返</p>
+            </article>
+            <article class="mock-card">
+              <div class="mock-card-row">
+                <span class="badge badge-hotel">酒店</span>
+                <strong>¥ 1,280.00</strong>
+              </div>
+              <p>两晚 · 出差住宿</p>
+            </article>
+            <article class="mock-card">
+              <div class="mock-card-row">
+                <span class="badge badge-car">用车</span>
+                <strong>¥ 96.00</strong>
+              </div>
+              <p>市内交通</p>
+            </article>
+          </div>
+
+          <div class="mock-hint">内容延伸到玻璃底栏下方，用 backdrop-filter 模拟 Liquid Glass。</div>
+        </div>
+
+        <!-- 底栏：主胶囊 + 独立 AI 小球 -->
+        <nav class="dock" aria-label="底部导航">
+          <div class="dock-row">
+            <div class="tab-pill" role="tablist" aria-label="主导航">
+              <div class="tab-pill-shell">
+                <div class="sliding-pill" id="slidingPill" aria-hidden="true"></div>
+                <button type="button" class="tab is-active" role="tab" aria-selected="true" data-index="0">
+                  <span class="tab-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 3.2 3.5 10.2V21h6.2v-6.1h4.6V21h6.2V10.2L12 3.2z"/></svg>
+                  </span>
+                  <span class="tab-label">首页</span>
+                </button>
+                <button type="button" class="tab" role="tab" aria-selected="false" data-index="1">
+                  <span class="tab-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M4 7h16v2H4V7zm2 4h12v9H6v-9zm3-8h6l1 3H8l1-3z"/></svg>
+                  </span>
+                  <span class="tab-label">历史</span>
+                </button>
+                <button type="button" class="tab" role="tab" aria-selected="false" data-index="2">
+                  <span class="tab-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-4 0-7 2.2-7 5v1h14v-1c0-2.8-3-5-7-5z"/></svg>
+                  </span>
+                  <span class="tab-label">我的</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 与主胶囊分隔的 AI 小球 -->
+            <button type="button" class="ai-ball" id="aiBall" aria-label="AI 情况说明">
+              <span class="ai-mascot" id="aiMascot" aria-hidden="true">
+                <span class="ai-eyes">
+                  <span class="ai-eye"></span>
+                  <span class="ai-eye"></span>
+                </span>
+              </span>
+            </button>
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    <section class="spec">
+      <h2>布局规格</h2>
+      <ul>
+        <li><strong>Row</strong>：主胶囊 <code>flex:1</code> + 间距 <code>12px</code> + 圆钮 <code>64px</code>（与胶囊同高）</li>
+        <li><strong>胶囊</strong>：高 64，圆角 32，亮色 <code>#F8FAFC / 92%</code>，描边 <code>#CBD5E1 / 60%</code></li>
+        <li><strong>AI 圆钮</strong>：<code>64px</code>（与主胶囊同高）；内嵌约 40px accent blob（<code>#10B981</code> / 深色 <code>#2EB98A</code>）</li>
+        <li><strong>动效</strong>：blob 始终近圆软形变（轻花/叶/水滴，无尖角，7.2s）；眼睛眨眼周期 <code>4.5s</code>；按压小球 scale 0.96 并「醒来」看向主菜单</li>
+      </ul>
+    </section>
+  </div>
+
+  <!-- AI 弹层 -->
+  <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <span class="ai-mascot ai-mascot-lg" id="sheetMascot" aria-hidden="true">
+        <span class="ai-eyes">
+          <span class="ai-eye"></span>
+          <span class="ai-eye"></span>
+        </span>
+      </span>
+      <div>
+        <h2 id="sheetTitle">AI 情况说明</h2>
+        <p>与主菜单分离的 AI 入口</p>
+      </div>
+    </div>
+    <p class="sheet-body">
+      在这里输入原因，后续可由 GLM-4.7 Flash 扩写成正式「情况说明」公文。当前为入口形象与占位面板。
+    </p>
+    <button type="button" class="sheet-ok" id="sheetOk">知道了</button>
+  </div>
+
+  <script src="ai-ball.js"></script>
+</body>
+</html>

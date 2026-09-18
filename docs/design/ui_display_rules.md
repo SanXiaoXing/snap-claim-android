@@ -133,7 +133,8 @@ Widget build(BuildContext context) {
 | `EmptyHint` | `widgets/empty_hint.dart` | 空状态占位 |
 | `ClaimCard` | `widgets/claim_card.dart` | 报销单卡片（首页/历史（未报销 tab）/历史（已报销 tab）复用） |
 | `CreateCta` | `widgets/create_cta.dart` | 圆形创建按钮 + 呼吸光环 |
-| `_GlassTabBar` | `main_shell.dart` | 底部 Liquid Glass 导航栏 |
+| `_GlassTabBar` | `main_shell.dart` | 底部 Liquid Glass 导航栏（主胶囊 + 右侧独立 AI 圆钮） |
+| `AIMascot` / `AiBallButton` | `widgets/ai_mascot.dart` | askAI 风格 AI 小球 / 菜单栏右侧独立圆钮 |
 
 ---
 
