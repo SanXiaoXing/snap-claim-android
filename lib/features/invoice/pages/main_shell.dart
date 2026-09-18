@@ -1,5 +1,6 @@
-// 底部三栏外壳：首页 / 历史 / 我的。底部导航为悬浮 Liquid Glass 壳 +
-// 选中态 accent 胶囊滑动的胶状菜单栏。背景使用 BackdropFilter 模糊下方内容。
+// 底部外壳：主菜单胶囊（首页 / 历史 / 我的）+ 右侧独立 AI 小球圆钮。
+// 布局对齐 docs/design/askAI.md 的 blobOnly 触发器形态：小球与主菜单
+// 物理分隔，不并入同一胶囊。背景使用 BackdropFilter 模糊下方内容。
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../settings/pages/mine_page.dart';
 import '../models/claim.dart';
+import '../widgets/ai_mascot.dart';
 import '../widgets/sliding_pill.dart';
 import 'history_page.dart';
 import 'home_page.dart';
@@ -97,6 +99,7 @@ class _MainShellState extends State<MainShell> {
       bottomNavigationBar: _GlassTabBar(
         index: _index,
         onChanged: (i) => setState(() => _index = i),
+        onAiTap: () => _showAiSheet(context),
       ),
     );
   }
@@ -124,19 +127,108 @@ class _MainShellState extends State<MainShell> {
       ),
     );
   }
+
+  /// AI 小球入口：底部弹层占位（后续可接 GLM 情况说明）。
+  void _showAiSheet(BuildContext context) {
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+          decoration: BoxDecoration(
+            color: c.card,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: c.border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const AIMascot(awake: true, size: 36),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'AI 情况说明',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: c.fg,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '与主菜单分离的 AI 入口',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: c.fgMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  '在这里输入原因，后续可由 GLM-4.7 Flash 扩写成正式「情况说明」公文。当前为入口形象与占位面板。',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    height: 1.55,
+                    color: c.fgMuted,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                    child: const Text('知道了'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
-/// 底部悬浮菜单栏：Liquid Glass 壳 + 选中态浮动胶囊在三项之间平滑滑动。
-/// - 圆角 32px 全胶囊外壳（高度 64 的半高）+ 高光描边 + 柔和投影。
+/// 底部悬浮菜单栏：左侧 Liquid Glass 主胶囊 + 右侧独立 AI 小球。
+/// - 主胶囊：圆角 32px 全胶囊外壳（高度 64）+ 高光描边 + 柔和投影。
 /// - BackdropFilter 模糊下方内容，营造真正悬浮在内容之上的玻璃质感。
-/// - 选中态浮动胶囊用 accent 填充，与外壳内壁仅留 2px（左右）/ 4px（上下）缝隙，
-///   圆角同为半高 28，与外壳构成同心圆角。
+/// - 选中态浮动胶囊用 accent 填充，与外壳内壁仅留 2px（左右）/ 4px（上下）缝隙。
+/// - AI 小球：与主胶囊留 12px 缝隙的独立圆钮（64px，与主胶囊同高），
+///   玻璃壳 + askAI blob（花/叶/三角/菱形形变）。
 /// - 选中项图标实心 / 文字反色为白；未选中保持 muted 灰。
 class _GlassTabBar extends StatelessWidget {
   final int index;
   final ValueChanged<int> onChanged;
+  final VoidCallback? onAiTap;
 
-  const _GlassTabBar({required this.index, required this.onChanged});
+  const _GlassTabBar({
+    required this.index,
+    required this.onChanged,
+    this.onAiTap,
+  });
 
   static const _items = [
     MenuItemSpec(
@@ -162,87 +254,96 @@ class _GlassTabBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: SizedBox(
-        // 固定高度 = 胶囊 + 底部留白：Center 在有限高度内不会垂直撑满（贴底），
-        // 同时宽度保持有界，内部 Row + Expanded 布局正常。
+        // 固定高度 = 胶囊 / 圆钮 + 底部留白：与内容对齐，避免贴死手势区。
         height: 64 + 16,
-        child: Center(
-          child: Padding(
-            // 左右留白加大，整体宽度比屏幕收窄 80，胶囊更紧凑。
-            padding: const EdgeInsets.fromLTRB(40, 0, 40, 16),
-            child: ClipRRect(
-              // 外壳高度 64 → 圆角取半高 32，做成完全胶囊（原来的 28 留了直边）。
-              borderRadius: BorderRadius.circular(32),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-                child: Container(
-                  height: 64,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    // 液态玻璃：单一半透明纯色，按明暗自适应表面色 + 不透明度。
-                    // - 亮色模式：c.bgSecondary（slate-50，#F8FAFC）+ 0.92 alpha。
-                    //   跟页面纯白 c.bg（#FFFFFF）形成清晰的高度差，不再融成一片。
-                    // - 暗色模式：自定的暖灰（#2A2722）+ 0.78 alpha，跟 c.bg（#141210）拉开对比。
-                    // 两个模式都配 1px 描边 + 投影，让"悬浮"边界更明确。
-                    color: isDark
-                        ? const Color(0xFF2A2722).withValues(alpha: 0.78)
-                        : const Color(0xFFF8FAFC).withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(32),
-                    // 1px 描边：亮色用深灰低透明（避免白边看不见），
-                    // 暗色用白色低透明（玻璃边缘高光）。
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.10)
-                          : const Color(0xFFCBD5E1).withValues(alpha: 0.6),
-                      width: 1.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black
-                            .withValues(alpha: isDark ? 0.55 : 0.22),
-                        blurRadius: 28,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
-                  // 用 LayoutBuilder 取得容器宽度，让 Stack 内的
-                  // AnimatedPositioned 能直接拿到每格 / 胶囊宽度。
-                  // LayoutBuilder 必须在 Stack 外层，否则 Positioned
-                  // 会失去 StackParentData 报错。
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      // 每格宽度 = 容器宽 / itemCount（已扣 horizontal padding 8）。
-                      final slot = constraints.maxWidth / _items.length;
-                      // 胶囊与外壳内壁只留 2px 缝隙（原 4px），选中态更饱满贴边。
-                      final pillWidth = slot - 4;
-                      return Stack(
-                        children: [
-                          // 选中态浮动胶囊：在内容之上覆盖，跟随选中项平滑滑动。
-                          SlidingPill(
-                            // LayoutBuilder 坐标系已从容器内边距之后开始，
-                            // 不能再加 padding 4，否则胶囊会整体右偏、盖不准。
-                            left: index * slot + 2,
-                            width: pillWidth,
-                          ),
-                          // 三个菜单项（图标 + 文字上下排列）。
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              for (var i = 0; i < _items.length; i++)
-                                _GlassTab(
-                                  spec: _items[i],
-                                  position: i,
-                                  selectedIndex: index,
-                                  onTap: () => onChanged(i),
-                                ),
-                            ],
+        child: Padding(
+          // 左右收进 20：左侧主胶囊可伸缩，右侧固定 AI 圆钮（56）+ 12 缝隙。
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Row(
+            children: [
+              // 主菜单胶囊（可伸缩），与 AI 小球物理分隔。
+              Expanded(
+                child: ClipRRect(
+                  // 外壳高度 64 → 圆角取半高 32，做成完全胶囊。
+                  borderRadius: BorderRadius.circular(32),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+                    child: Container(
+                      height: 64,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        // 液态玻璃：单一半透明纯色，按明暗自适应表面色 + 不透明度。
+                        // - 亮色模式：c.bgSecondary（slate-50，#F8FAFC）+ 0.92 alpha。
+                        //   跟页面纯白 c.bg（#FFFFFF）形成清晰的高度差，不再融成一片。
+                        // - 暗色模式：自定的暖灰（#2A2722）+ 0.78 alpha，跟 c.bg（#141210）拉开对比。
+                        // 两个模式都配 1px 描边 + 投影，让"悬浮"边界更明确。
+                        color: isDark
+                            ? const Color(0xFF2A2722).withValues(alpha: 0.78)
+                            : const Color(0xFFF8FAFC).withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(32),
+                        // 1px 描边：亮色用深灰低透明（避免白边看不见），
+                        // 暗色用白色低透明（玻璃边缘高光）。
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.10)
+                              : const Color(0xFFCBD5E1)
+                                  .withValues(alpha: 0.6),
+                          width: 1.0,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black
+                                .withValues(alpha: isDark ? 0.55 : 0.22),
+                            blurRadius: 28,
+                            offset: const Offset(0, 12),
                           ),
                         ],
-                      );
-                    },
+                      ),
+                      // 用 LayoutBuilder 取得容器宽度，让 Stack 内的
+                      // SlidingPill 能直接拿到每格 / 胶囊宽度。
+                      // LayoutBuilder 必须在 Stack 外层，否则 Positioned
+                      // 会失去 StackParentData 报错。
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          // 每格宽度 = 容器宽 / itemCount（已扣 horizontal padding 8）。
+                          final slot = constraints.maxWidth / _items.length;
+                          // 胶囊与外壳内壁只留 2px 缝隙（原 4px），选中态更饱满贴边。
+                          final pillWidth = slot - 4;
+                          return Stack(
+                            children: [
+                              // 选中态浮动胶囊：在内容之上覆盖，跟随选中项平滑滑动。
+                              SlidingPill(
+                                // LayoutBuilder 坐标系已从容器内边距之后开始，
+                                // 不能再加 padding 4，否则胶囊会整体右偏、盖不准。
+                                left: index * slot + 2,
+                                width: pillWidth,
+                              ),
+                              // 三个菜单项（图标 + 文字上下排列）。
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  for (var i = 0; i < _items.length; i++)
+                                    _GlassTab(
+                                      spec: _items[i],
+                                      position: i,
+                                      selectedIndex: index,
+                                      onTap: () => onChanged(i),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+              // 与主胶囊明确分隔（对齐参考图中「圆钮独立在外」）。
+              const SizedBox(width: 12),
+              AiBallButton(onTap: onAiTap),
+            ],
           ),
         ),
       ),

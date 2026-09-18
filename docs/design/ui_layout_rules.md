@@ -179,10 +179,12 @@ Container(padding:16, cardDecoration) ─ Column
 - `Scaffold(extendBody: true)` —— 让 body 延伸到底栏下方，供 `BackdropFilter` 模糊。
 - `body: Stack(fit:expand)` 同时放三个页面，非选中页 `IgnorePointer` + `AnimatedOpacity(0)` + `AnimatedSlide`（切换 320ms `easeOutCubic`，减少动态时 `Duration.zero`）。
 - 底栏 `_GlassTabBar`：
-  - 外层 `SafeArea(top:false)`，高度 `64 + 16`，`Padding.fromLTRB(40,0,40,16)` 收窄整体宽度。
-  - 胶囊 `ClipRRect(28)` + `BackdropFilter(blur 28)` + 半透明底色（亮色 `F8FAFC@0.92`、暗色 `2A2722@0.78`）+ `1px` 描边 + 投影。
+  - 外层 `SafeArea(top:false)`，高度 `64 + 16`，`Padding.fromLTRB(20,0,20,16)`。
+  - **布局**：`Row` = 主菜单胶囊 `Expanded` + 间距 `12` + 独立 AI 圆钮 `AiBallButton`（`64px`，与主胶囊同高）。小球不并入主胶囊（对齐 askAI blobOnly / 参考图分隔形态）。
+  - 胶囊 `ClipRRect(32)` + `BackdropFilter(blur 28)` + 半透明底色（亮色 `F8FAFC@0.92`、暗色 `2A2722@0.78`）+ `1px` 描边 + 投影。
   - 选中胶囊 `SlidingPill`（`widgets/sliding_pill.dart`，由原 `_SelectedPill` 提取为公共组件）：用 `LayoutBuilder` 算每格宽，**临界阻尼弹簧**（stiffness 246 / damping 31.4 ≈ 0.4s）滑动，从当前屏幕值出发可被打断重定向；`animate:false` 时直接跟随目标值（供历史页分段 tab 拖拽跟手复用）。
   - 菜单项 `_GlassTab`：`Expanded` + `Column` 图标(`22`)+文字(`10.5`)，选中 `Colors.white`、未选 `c.fgMuted`，图标 `AnimatedSwitcher` 在实心/描边间淡入缩放切换。
+  - AI 小球 `AiBallButton`（`widgets/ai_mascot.dart`）：玻璃圆壳 **64px 与主胶囊同高** + 内嵌 `AIMascot`（约 40px accent blob + 双眼；形变**始终近圆**的软有机呼吸——轻花/叶/水滴，比例约 0.44–0.56，无尖角；眨眼周期 **4.5s**；减少动态时停动画）。点击弹出「AI 情况说明」占位底部弹层。
 
 ---
 
