@@ -39,6 +39,38 @@ void main() {
     expect(parsed.sqliteBytes, sqlite);
   });
 
+  test('manifest 可携带 ai 配置字段并往返还原', () {
+    const manifest = BackupManifest(
+      formatVersion: 1,
+      appVersion: '1.5.1',
+      databaseVersion: 3,
+      createdAt: '2026-09-19',
+      ai: {
+        'base_url': 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+        'model': 'glm-4.7-flash',
+        'api_key': 'secret',
+      },
+    );
+    final bytes =
+        encodeBackup(manifest: manifest, sqliteBytes: [1, 2, 3]);
+    final parsed = decodeBackup(bytes);
+    expect(parsed.manifest.ai?['model'], 'glm-4.7-flash');
+    expect(parsed.manifest.ai?['api_key'], 'secret');
+  });
+
+  test('无 ai 字段的旧备份仍可解析（ai == null）', () {
+    const manifest = BackupManifest(
+      formatVersion: 1,
+      appVersion: '1.5.0',
+      databaseVersion: 3,
+      createdAt: '2026-09-01',
+    );
+    final bytes =
+        encodeBackup(manifest: manifest, sqliteBytes: [9]);
+    final parsed = decodeBackup(bytes);
+    expect(parsed.manifest.ai, isNull);
+  });
+
   test('打包产物是 .snapbackup 二进制：魔数 SNAPBACK + 格式版本字节', () {
     final manifest = _manifest();
     final bytes = encodeBackup(manifest: manifest, sqliteBytes: [7, 8, 9]);

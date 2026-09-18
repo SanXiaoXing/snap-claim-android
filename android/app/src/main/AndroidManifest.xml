@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- 扫码所需相机权限；相册选图在 Android 13+ 由 photo picker 托管，无需额外声明。 -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- AI 情况说明：仅在用户点「生成」时访问自己配置的智谱接口。 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="SnapClaim"
         android:name="${applicationName}"

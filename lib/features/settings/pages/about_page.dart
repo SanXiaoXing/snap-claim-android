@@ -201,6 +201,44 @@ class AboutPage extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // ----------------------------------------------------------
+                  // 数据与联网
+                  // ----------------------------------------------------------
+                  _card(
+                    context,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _sectionTitle(
+                          context,
+                          '数据与联网',
+                          Icons.lock_outline,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '报销单与明细只存在本机。记账本身不联网。',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: c.fgMuted,
+                            height: 1.7,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '若你配置并使用「AI 情况说明」，仅在点「生成」时会把输入的原因文字与你的 API Key 发往你配置的智谱接口。'
+                          'Key 存本机，并可能写入 .snapbackup 备份，请自行保管备份文件。',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: c.fgMuted,
+                            height: 1.7,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ----------------------------------------------------------
                   // 开发者彩蛋
                   // ----------------------------------------------------------
                   _card(

@@ -9,6 +9,7 @@ import '../../../app/theme.dart';
 import '../../settings/pages/mine_page.dart';
 import '../models/claim.dart';
 import '../widgets/ai_mascot.dart';
+import '../widgets/ai_sheet.dart';
 import '../widgets/sliding_pill.dart';
 import 'history_page.dart';
 import 'home_page.dart';
@@ -128,87 +129,9 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  /// AI 小球入口：底部弹层占位（后续可接 GLM 情况说明）。
+  /// AI 小球入口：打开「情况说明」生成弹层（配置在「我的 → AI 设置」）。
   void _showAiSheet(BuildContext context) {
-    final c = context.colors;
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-          decoration: BoxDecoration(
-            color: c.card,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: c.border),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const AIMascot(awake: true, size: 36),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'AI 情况说明',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: c.fg,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '与主菜单分离的 AI 入口',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: c.fgMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  '在这里输入原因，后续可由 GLM-4.7 Flash 扩写成正式「情况说明」公文。当前为入口形象与占位面板。',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    height: 1.55,
-                    color: c.fgMuted,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(sheetContext).pop(),
-                    child: const Text('知道了'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    showAiSituationSheet(context);
   }
 }
 

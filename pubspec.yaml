@@ -39,6 +39,8 @@ dependencies:
   file_picker: 10.3.10
   tutorial_coach_mark: ^1.3.3
   url_launcher: ^6.3.2
+  # AI 情况说明：访问智谱 OpenAI 兼容 chat/completions（SSE 流式）。
+  http: ^1.2.2
 
 dev_dependencies:
   flutter_test:

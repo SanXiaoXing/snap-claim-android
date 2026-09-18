@@ -15,17 +15,20 @@ const String kAppVersion = '1.5.1';
 const String kBackupMagic = 'SNAPBACK';
 
 /// 备份 manifest：记录格式 / App / 数据库版本与创建时间，供导入时校验。
+/// [ai] 可选：AI 情况说明配置（base_url / model / api_key），旧备份可为 null。
 class BackupManifest {
   final int formatVersion;
   final String appVersion;
   final int databaseVersion;
   final String createdAt; // yyyy-MM-dd
+  final Map<String, dynamic>? ai;
 
   const BackupManifest({
     required this.formatVersion,
     required this.appVersion,
     required this.databaseVersion,
     required this.createdAt,
+    this.ai,
   });
 
   Map<String, dynamic> toJson() => {
@@ -33,6 +36,7 @@ class BackupManifest {
         'app_version': appVersion,
         'database_version': databaseVersion,
         'created_at': createdAt,
+        if (ai != null) 'ai': ai,
       };
 
   factory BackupManifest.fromJson(Map<String, dynamic> json) => BackupManifest(
@@ -40,6 +44,9 @@ class BackupManifest {
         appVersion: json['app_version'] as String? ?? '',
         databaseVersion: json['database_version'] as int? ?? 0,
         createdAt: json['created_at'] as String? ?? '',
+        ai: json['ai'] is Map
+            ? Map<String, dynamic>.from(json['ai'] as Map)
+            : null,
       );
 }
 
