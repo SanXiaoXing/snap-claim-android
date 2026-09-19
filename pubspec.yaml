@@ -1,13 +1,7 @@
 name: snap_claim_android
-description: "A new Flutter project."
+description: "SnapClaim — 本地报销记账（Android）"
 # 以下代码行防止该包被意外发布到 pub.dev。
 publish_to: 'none'
-
-hooks:
-  user_defines:
-    sqlite3:
-      source: system
-      name_windows: winsqlite3
 
 version: 2.0.0+11
 

@@ -21,40 +21,19 @@
   var CACHE_TTL = 30 * 60 * 1000; // 30 分钟：GitHub 匿名接口每小时只有 60 次，别浪费
   var FETCH_TIMEOUT = 9000;
 
-  /* 下载源：安装包从哪儿取。数组第一项是默认源（即主按钮用的那个）。
-   *
-   * 为什么要可配置：GitHub 的 Release 附件托管在 objects.githubusercontent.com，
-   * 大陆访问经常被 QoS 限速到 50~200 KB/s、甚至下到一半被 RST 断流。
-   * 把 APK 另传一份到国内对象存储，然后在这里加一条，国内用户就走直链了 ——
-   * 页面本身放哪儿都不影响这件事，慢的是包。
-   *
-   * template 里的 {tag} 会替换成版本号（如 v1.5.1），{name} 替换成包文件名。
-   * 也可以不动这个文件，在 index.html 里 main.js 之前塞一段
-   * <script>window.SNAPCLAIM_SOURCES = [...]</script> 来覆盖。
+  /* 下载源：数组第一项是默认源（主按钮）。
+   * GitHub 资产地址以接口返回的 browser_download_url 为准。
+   * 可用 window.SNAPCLAIM_SOURCES 在 HTML 里覆盖。
    */
   var SOURCES = [
     {
       id: 'github',
       label: 'GitHub 官方',
       note: '官方发布，大陆可能较慢',
-      // 主按钮下方那行小字，不写就默认「安装包来自 <label>」
       credit: '安装包来自 GitHub Releases 官方发布',
-      // GitHub 的资产地址以接口返回的 browser_download_url 为准，别自己拼
       useAssetUrl: true,
       template: REPO_URL + '/releases/download/{tag}/{name}',
     },
-    /* 国内对象存储示例（腾讯云 COS / 阿里云 OSS）：把包传到 bucket 的 snapclaim/<版本>/ 下，
-       用云厂商自带的默认域名就能直接下（默认域名不需要备案；要绑自己的域名走 CDN 才需要）。
-       取消注释、把域名换成你自己的就能用 —— 数组第一项就是默认源，想让它当主力就挪到最前面：
-
-    {
-      id: 'cos',
-      label: '国内直链',
-      note: '腾讯云 COS · 大陆满速',
-      credit: '安装包来自国内镜像，与 GitHub 官方发布同源',
-      template: 'https://<bucket>.cos.<region>.myqcloud.com/snapclaim/{tag}/{name}',
-    },
-    */
   ];
 
   // 允许不改本文件就覆盖下载源（部署时在 HTML 里注入即可），也方便测试

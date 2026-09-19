@@ -1,19 +1,13 @@
+// ignore_for_file: avoid_print
 import 'dart:io';
 
 void main() {
   final paths = [
-    'web/favicon.png',
-    'web/icons/Icon-192.png',
-    'web/icons/Icon-512.png',
-    'web/icons/Icon-maskable-192.png',
-    'web/icons/Icon-maskable-512.png',
     'android/app/src/main/res/mipmap-mdpi/ic_launcher.png',
     'android/app/src/main/res/mipmap-hdpi/ic_launcher.png',
     'android/app/src/main/res/mipmap-xhdpi/ic_launcher.png',
     'android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png',
     'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png',
-    'assets/icon/preview_adaptive.png',
-    'assets/icon/preview_adaptive_round.png',
   ];
   var fail = 0;
   for (final p in paths) {

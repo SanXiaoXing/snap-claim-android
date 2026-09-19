@@ -256,23 +256,12 @@ void main() {
   icon.shiftDown(3);
   icon.preview();
 
-  // Web 图标。
-  writePng('web/favicon.png', icon, 128);
-  writePng('web/icons/Icon-192.png', icon, 192);
-  writePng('web/icons/Icon-maskable-192.png', icon, 192);
-  writePng('web/icons/Icon-512.png', icon, 512);
-  writePng('web/icons/Icon-maskable-512.png', icon, 512);
-
   // Android 启动图标（mipmap 各密度）。
   writePng('android/app/src/main/res/mipmap-mdpi/ic_launcher.png', icon, 48);
   writePng('android/app/src/main/res/mipmap-hdpi/ic_launcher.png', icon, 72);
   writePng('android/app/src/main/res/mipmap-xhdpi/ic_launcher.png', icon, 96);
   writePng('android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png', icon, 144);
   writePng('android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png', icon, 192);
-
-  // 自适应图标预览（资源目录已有同名文件，一并更新保持图标一致）。
-  writePng('assets/icon/preview_adaptive.png', icon, 512);
-  writePng('assets/icon/preview_adaptive_round.png', icon, 512);
 
   print('done');
 }

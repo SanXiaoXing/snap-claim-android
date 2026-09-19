@@ -2,7 +2,7 @@
 name = "snap_claim_core"
 version = "0.1.0"
 edition = "2021"
-description = "snap_claim 核心逻辑：发票解析、OCR、设置等"
+description = "snap_claim 核心逻辑：发票/OCR/二维码解析"
 
 [lib]
 name = "snap_claim_core"

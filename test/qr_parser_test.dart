@@ -1,4 +1,4 @@
-// 二维码解析器单元测试：覆盖 JSON / 竖线分隔 / 携程(etrip)三种格式。
+// 二维码解析器单元测试：覆盖携程 etrip 格式与失败回退。
 // 解析逻辑由 Rust 核心库 (snap_claim_core) 完成，Dart 侧通过桥异步调用。
 import 'package:flutter_test/flutter_test.dart';
 
@@ -49,28 +49,9 @@ void main() {
     });
   });
 
-  group('原有格式', () {
-    test('JSON 格式仍可解析', () async {
-      final r = await parseQrContent(
-        '{"category":"train","title":"G123 北京南 → 上海虹桥","subtitle":"二等座","amount":553}',
-      );
-      expect(r.record, isNotNull);
-      expect(r.record!.category, RecordCategory.train);
-      expect(r.record!.amount, 553);
-    });
-
-    test('竖线分隔仍可解析', () async {
-      final r = await parseQrContent('train|G123 北京南→上海虹桥|二等座|553');
-      expect(r.record, isNotNull);
-      expect(r.record!.category, RecordCategory.train);
-      expect(r.record!.title, 'G123 北京南→上海虹桥');
-      expect(r.record!.amount, 553);
-    });
-
-    test('无法识别时回退为纯文本', () async {
-      final r = await parseQrContent('hello world');
-      expect(r.record, isNull);
-      expect(r.raw, 'hello world');
-    });
+  test('无法识别时回退为纯文本', () async {
+    final r = await parseQrContent('hello world');
+    expect(r.record, isNull);
+    expect(r.raw, 'hello world');
   });
 }

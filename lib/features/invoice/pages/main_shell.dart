@@ -1,5 +1,5 @@
 // 底部外壳：主菜单胶囊（首页 / 历史 / 我的）+ 右侧独立 AI 小球圆钮。
-// 布局对齐 docs/design/askAI.md 的 blobOnly 触发器形态：小球与主菜单
+// 布局对齐 askAI blobOnly 触发器形态：小球与主菜单
 // 物理分隔，不并入同一胶囊。背景使用 BackdropFilter 模糊下方内容。
 import 'dart:ui' show ImageFilter;
 

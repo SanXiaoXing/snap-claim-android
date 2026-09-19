@@ -1,4 +1,4 @@
-// AI 小球：移植 docs/design/askAI.md 中的 AIMascot 形象。
+// AI 小球：askAI 风格 AIMascot 形象。
 // 视觉：主色 blob + 两颗竖椭圆眼；blob 圆角缓慢形变，眼睛周期性眨眼。
 // phase：generating→searching 摆动；success→celebrate 转圈 + 轻跳。
 import 'dart:math' as math;

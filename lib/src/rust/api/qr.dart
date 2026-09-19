@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `failed_result`, `is_valid_category`, `ok_result`, `parse_amount`, `parse_flat_json`, `parse_literal`, `parse_string`, `skip_ws`, `try_parse_etrip`, `try_parse_json`, `try_parse_pipe`
+// These functions are ignored because they are not marked as `pub`: `failed_result`, `ok_result`, `try_parse_etrip`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
 /// 将扫码内容解析为 [QrParseResult]。

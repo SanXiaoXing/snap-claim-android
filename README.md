@@ -139,7 +139,7 @@ A：识别结果会先弹出来让你确认和修改，不会直接写进单子�
 A：如果你导出过备份，可以导回来。如果没有导出过——抱歉，本地数据删了就真的没了。**建议定期导出一份。**
 
 **Q：有其他平台的版本吗？**
-A：代码里留着 iOS / macOS / Windows / Linux / Web 的工程壳，但目前**只有 Android 在维护**。
+A：没有。仓库只维护 **Android** 工程。
 
 ---
 
@@ -174,7 +174,7 @@ A：代码里留着 iOS / macOS / Windows / Linux / Web 的工程壳，但目前
 
 | 层 | 技术 | 职责 |
 |---|---|---|
-| UI | Flutter (Material 3) | 跨平台界面、动效与交互 |
+| UI | Flutter (Material 3) | Android 界面、动效与交互 |
 | 核心 | Rust（`snap_claim_core`） | 票据文字的结构化解析、二维码内容解析 |
 | 桥接 | flutter_rust_bridge 2.12.0 | Dart ↔ Rust 绑定 |
 | 存储 | sqflite（SQLite，schema v3） | 报销单与明细本地持久化 |
@@ -197,9 +197,9 @@ A：代码里留着 iOS / macOS / Windows / Linux / Web 的工程壳，但目前
 
 ```
 snap-claim-android/
-├── android/ ios/ macos/ linux/ windows/ web/   # 各平台原生壳
+├── android/                                    # Android 原生壳
 ├── assets/                                     # 图标 + README 宣传图
-├── docs/                                       # 设计约定 + 早期原型
+├── docs/                                       # 设计约定
 │
 ├── lib/
 │   ├── app/                                    # 根组件（全局状态）+ 主题色板
@@ -213,7 +213,8 @@ snap-claim-android/
 │   └── src/rust/                               # flutter_rust_bridge 生成代码
 │
 ├── rust/src/api/                               # ocr.rs（票据文字）/ qr.rs（二维码）
-├── rust_builder/                               # Rust 构建插件壳
+├── rust_builder/                               # Rust 构建插件壳（Android FFI）
+├── site/                                       # 静态下载页
 ├── test/                                       # 单元 / 组件测试
 └── tool/                                       # 图标生成与校验脚本
 ```
@@ -227,7 +228,11 @@ flutter run                                   # 连接真机 / 模拟器
 flutter build apk --release                   # 单 APK
 flutter build apk --release --split-per-abi   # 按 ABI 拆分（推荐）
 
+cargo build --manifest-path rust/Cargo.toml   # 宿主机 Rust 动态库（跑桥接测试前）
 flutter test                                  # Flutter 测试
+# 含 RustLib.init 的测试需指定宿主动态库目录：
+# FRB_DART_LOAD_EXTERNAL_LIBRARY_NATIVE_LIB_DIR=$PWD/rust/target/debug flutter test
+
 cargo test --manifest-path rust/Cargo.toml    # Rust 解析逻辑测试
 
 flutter_rust_bridge_codegen generate          # 改过 Rust 接口后重新生成桥接
