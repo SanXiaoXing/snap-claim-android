@@ -22,10 +22,7 @@ class AiGenerateException implements Exception {
 
 /// 拼出 chat/completions 完整 URL。
 Uri buildAiChatCompletionsUri(String baseUrl) {
-  var raw = baseUrl.trim();
-  while (raw.endsWith('/')) {
-    raw = raw.substring(0, raw.length - 1);
-  }
+  final raw = baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
   if (raw.isEmpty) return Uri.parse(kAiDefaultBaseUrl);
   if (raw.endsWith('/chat/completions')) return Uri.parse(raw);
   return Uri.parse('$raw/chat/completions');
