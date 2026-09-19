@@ -1,0 +1,140 @@
+# 构建各 ABI 的 release APK，并附加到与版本一致的 GitHub Release。
+#
+# 触发方式：
+#   1. 推送 v* 标签（如 v1.5.0）：用该标签对应（或新建）的 Release，附加 APK。
+#   2. 手动 workflow_dispatch：按版本号 v<version> 附加（无则新建 Release）。
+#
+# 版本来源：RELEASELOG.md 顶部的最新版本条目（如 `## 1.5.0 (2026-09-01) — build 9`），
+# 并校验与 pubspec.yaml 一致，避免把旧版本 APK 挂到新版本 Release 上。
+# Release title：`Snap Claim for Android v<version>`；
+# Release 正文：取 RELEASELOG.md 中该版本条目的内容。
+name: Build & Release APKs
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # softprops/action-gh-release 需要写权限才能附加/创建 Release
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Flutter 3.x 要求 JDK 17；同时缓存 Gradle 依赖。
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      # 固定 Flutter 版本，与本地开发环境一致，避免构建漂移。
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          cache: true
+
+      # 项目经 flutter_rust_bridge / cargokit 交叉编译 Rust 核心库，
+      # 需要安装 Android 的三个目标平台工具链。
+      - name: Setup Rust (Android targets)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      # 注入 release 签名：keystore 以 base64 存在 GitHub Secret（ANDROID_KEYSTORE_BASE64），
+      # 口令/别名分别为 ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_PASSWORD / ANDROID_KEY_ALIAS。
+      # 与本地（Windows / macOS）共用同一把密钥，保证 CI 产物与本地产物签名一致、可互相覆盖升级。
+      # 若 Secrets 未配置，此步骤直接失败（而非静默退回 debug 签名）。
+      - name: Set up release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          : "${KEYSTORE_BASE64:?缺少 Secret: ANDROID_KEYSTORE_BASE64}"
+          : "${KEYSTORE_PASSWORD:?缺少 Secret: ANDROID_KEYSTORE_PASSWORD}"
+          : "${KEY_PASSWORD:?缺少 Secret: ANDROID_KEY_PASSWORD}"
+          : "${KEY_ALIAS:?缺少 Secret: ANDROID_KEY_ALIAS}"
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          cat > android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=release.keystore
+          EOF
+
+      - name: Build release APKs (per ABI)
+        run: flutter build apk --release --split-per-abi
+
+      # 校验产物签名确为 release 密钥（Owner 应为 CN=Snap Claim，而非 Android Debug）。
+      - name: Verify APK signature
+        run: |
+          for f in build/app/outputs/flutter-apk/SnapClaim_*.apk; do
+            echo "== $(basename "$f") =="
+            keytool -printcert -jarfile "$f" 2>/dev/null | grep -E "Owner|SHA256:" || true
+          done
+
+      # 从 RELEASELOG.md 顶部版本条目解析版本号与 build 号，
+      # 与 pubspec.yaml（version: 1.5.1+10）比对校验；
+      # 同时抽取该版本的 changelog 段落作为 Release 正文。
+      - name: Resolve version, title and release notes
+        id: version
+        run: |
+          VER="$(sed -n 's/^## \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p' RELEASELOG.md | head -1)"
+          BUILD="$(sed -n 's/^## [0-9.]* ([^)]*) — build \([0-9]*\).*/\1/p' RELEASELOG.md | head -1)"
+          if [ -z "$VER" ] || [ -z "$BUILD" ]; then
+            echo "::error::无法从 RELEASELOG.md 解析版本号"
+            exit 1
+          fi
+          # 与 pubspec.yaml 交叉校验：RELEASELOG 的版本/build 必须与之一致。
+          PSPEC="$(sed -n 's/^version: *\([0-9.]*\)+\([0-9]*\).*/\1 \2/p' pubspec.yaml | head -1)"
+          if [ "$PSPEC" != "$VER $BUILD" ]; then
+            echo "::error::RELEASELOG.md ($VER build $BUILD) 与 pubspec.yaml ($PSPEC) 不一致"
+            exit 1
+          fi
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${{ github.ref_name }}"
+            if [ "${TAG#v}" != "$VER" ]; then
+              echo "::error::标签 $TAG 与版本 $VER 不一致，拒绝发布"
+              exit 1
+            fi
+          else
+            TAG="v$VER"
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "name=Snap Claim for Android v$VER" >> "$GITHUB_OUTPUT"
+          # Release 正文：RELEASELOG.md 中从 `## $VER (` 到下一个**版本标题**之间的内容。
+          # 注意终止条件只认「版本标题」（`## 1.2.3 ...` 这种以数字开头的），
+          # 不能写成 `^## `，否则会在条目内的第一个子标题（`## 🔧 ...`）处提前截断。
+          {
+            echo "body<<RELEASE_BODY_EOF"
+            awk -v ver="$VER" '
+              $0 ~ "^## " ver " " { insec = 1; next }
+              insec && $0 ~ "^## [0-9]+\\.[0-9]+\\.[0-9]+ " { exit }
+              insec { print }
+            ' RELEASELOG.md
+            echo "RELEASE_BODY_EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "--- 解析结果 ---"
+          echo "version=$VER build=$BUILD tag=$TAG"
+          echo "--- 构建产物 ---"
+          ls -lh build/app/outputs/flutter-apk/SnapClaim_*.apk
+
+      # 附加到 Release：标签对应 Release 已存在则直接附加，
+      # 不存在则按该标签创建（title 为版本号，正文为 changelog）后再附加。
+      - name: Attach APKs to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.name }}
+          body: ${{ steps.version.outputs.body }}
+          files: build/app/outputs/flutter-apk/SnapClaim_*.apk

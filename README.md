@@ -8,7 +8,7 @@
 
 不用注册，不用登录，数据只存在你自己的手机里。
 
-![version](https://img.shields.io/badge/version-1.5.1-2ea44f?style=flat-square)
+![version](https://img.shields.io/badge/version-2.0.0-2ea44f?style=flat-square)
 ![platform](https://img.shields.io/badge/platform-Android-3ddc84?style=flat-square&logo=android&logoColor=white)
 ![flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=flat-square&logo=flutter&logoColor=white)
 ![rust](https://img.shields.io/badge/Rust-core-000000?style=flat-square&logo=rust&logoColor=white)
@@ -145,7 +145,7 @@ A：代码里留着 iOS / macOS / Windows / Linux / Web 的工程壳，但目前
 
 ## 版本
 
-当前版本 **v1.5.1**。
+当前版本 **v2.0.0**。
 
 完整的更新记录（写得挺长的）在 [RELEASELOG.md](RELEASELOG.md)。
 
