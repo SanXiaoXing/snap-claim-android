@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive 前景：白色单据字形（底色由 background 层提供）。
+     字形按 24×24 网格设计，缩放 2 倍成 48dp 后平移 30，
+     使字形几何中心精确落在 108 视口的中心 (54,54)——
+     启动器裁成圆形/圆角方形时不会偏移或被切边。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="2"
+        android:scaleY="2"
+        android:translateX="30"
+        android:translateY="30">
+        <!-- 单据主体 + 折角 + 两行文本（子路径反向，nonzero 规则挖空出线条）。 -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M14,2H6C4.9,2 4,2.9 4,4v16c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V8L14,2zM16,18H8v-2h8V18zM16,14H8v-2h8V14zM13,9V3.5L18.5,9H13z" />
+    </group>
+</vector>

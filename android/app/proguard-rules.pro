@@ -20,5 +20,12 @@
 -keep class cn.sanxiaoxing.snap_claim.OwedWidgetProvider { *; }
 -keep class cn.sanxiaoxing.snap_claim.QuickActionsWidgetProvider { *; }
 -keep class cn.sanxiaoxing.snap_claim.MainActivity { *; }
+-keep class cn.sanxiaoxing.snap_claim.R$raw { *; }
+-keep class cn.sanxiaoxing.snap_claim.R$mipmap { *; }
 -keep class es.antonborri.home_widget.** { *; }
+
+# 桌面长按快捷方式：release 下 R8 裁剪会导致 setDynamicShortcuts 失败、菜单为空。
+-keep class io.flutter.plugins.quickactions.** { *; }
+-keep class io.flutter.plugins.quickactionsexample.** { *; }
+-dontwarn io.flutter.plugins.quickactions.**
 

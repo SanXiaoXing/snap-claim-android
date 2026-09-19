@@ -10,7 +10,14 @@ const int kTabIndexMine = 2;
 
 const String kOpenMineAction = 'open_mine';
 const String kNewClaimAction = 'new_claim';
-const String kEditClaimPrefix = 'edit_claim:';
+
+/// 打开报销单的 action 前缀。
+/// 使用下划线而非冒号：Android ShortcutInfo.id / 部分 OEM 启动器对 `:` 不友好，
+/// release 下会导致整组动态快捷方式注册失败（长按菜单为空）。
+const String kEditClaimPrefix = 'edit_claim_';
+
+/// 兼容旧协议（小组件 URI / 历史数据）中的冒号形式。
+const String kEditClaimPrefixLegacy = 'edit_claim:';
 
 /// 同一入口 action 的去重时间窗：拦住 quick_actions 冷启动双投递。
 const Duration kEntryActionDedupeWindow = Duration(milliseconds: 800);
@@ -36,6 +43,7 @@ class EntryAction {
 }
 
 /// 解析入口 action 字符串；非法 / 无法识别返回 null。
+/// 同时接受 `edit_claim_<id>`（推荐）与 `edit_claim:<id>`（旧协议）。
 EntryAction? parseEntryAction(String raw) {
   final action = raw.trim();
   if (action == kOpenMineAction) {
@@ -46,6 +54,10 @@ EntryAction? parseEntryAction(String raw) {
   }
   if (action.startsWith(kEditClaimPrefix)) {
     final id = action.substring(kEditClaimPrefix.length);
+    if (id.isNotEmpty) return EntryAction(EntryActionKind.editClaim, claimId: id);
+  }
+  if (action.startsWith(kEditClaimPrefixLegacy)) {
+    final id = action.substring(kEditClaimPrefixLegacy.length);
     if (id.isNotEmpty) return EntryAction(EntryActionKind.editClaim, claimId: id);
   }
   return null;

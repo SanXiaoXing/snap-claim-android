@@ -25,6 +25,9 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- 长按快捷方式全部由 Dart 侧动态注册（含末尾的「新建报销单」）。
+                 不要在这里挂 android.app.shortcuts 静态项：系统恒定把静态项排在
+                 动态项之前，「新建」会跑到菜单最上面。 -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

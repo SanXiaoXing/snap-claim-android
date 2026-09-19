@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  快捷方式图标仅被 Dart 以字符串形式引用，Android 资源收缩看不见它们，
+  release 包可能被裁掉，启动器回退成系统占位图。显式 keep。
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@mipmap/ic_shortcut_claim,@mipmap/ic_shortcut_new,@drawable/ic_shortcut_claim_fg,@drawable/ic_shortcut_new_fg,@color/shortcut_icon_claim_bg,@color/shortcut_icon_new_bg" />

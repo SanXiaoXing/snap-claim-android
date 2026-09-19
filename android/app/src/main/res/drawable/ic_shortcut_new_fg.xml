@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive 前景：白色加号字形（底色由 background 层提供）。
+     与单据图标同用 24×24 网格；加号视觉重量轻，故放大 2.2 倍（33.6dp）
+     并平移 27.6，保持几何中心在 108 视口中心 (54,54)。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="2.2"
+        android:scaleY="2.2"
+        android:translateX="27.6"
+        android:translateY="27.6">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+    </group>
+</vector>

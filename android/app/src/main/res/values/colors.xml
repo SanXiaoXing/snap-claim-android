@@ -20,4 +20,8 @@
     <color name="quick_dot_accent">#FF10B981</color>
     <color name="quick_icon_bg">#FF1E293B</color>
     <color name="quick_icon_fg">#FFFFFFFF</color>
+
+    <!-- 长按快捷方式图标底色：报销单用中性深色、新建用品牌绿，菜单里一眼区分二者。 -->
+    <color name="shortcut_icon_claim_bg">#FF1E293B</color>
+    <color name="shortcut_icon_new_bg">#FF10B981</color>
 </resources>

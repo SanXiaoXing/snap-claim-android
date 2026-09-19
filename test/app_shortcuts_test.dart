@@ -52,15 +52,15 @@ void main() {
     });
   });
 
-  group('buildEntryItems（长按）', () {
-    test('0 张未归档单 → 仅新建 + 图标', () {
+  group('buildEntryItems（默认含新建，小组件等）', () {
+    test('0 张未归档单 → 仅新建 + 加号图标', () {
       final items = buildEntryItems(const [], withIcons: true);
       expect(items, hasLength(1));
       expect(items.single.action, kNewClaimAction);
-      expect(items.single.icon, 'ic_shortcut_new');
+      expect(items.single.icon, kShortcutIconNew);
     });
 
-    test('归档不出现；2+ 按 savedAt 降序取前 2', () {
+    test('归档不出现；2+ 按 savedAt 降序取前 2，末尾追加新建', () {
       final items = buildEntryItems([
         _claim(id: 'old', name: '最旧', savedAt: DateTime(2026, 7, 1)),
         _claim(id: 'archived', name: '归档', archived: true, savedAt: DateTime(2026, 7, 20)),
@@ -75,11 +75,41 @@ void main() {
       ], withIcons: true);
       expect(items, hasLength(3));
       expect(items[0].title, '最新');
+      expect(items[0].icon, kShortcutIconClaim);
       expect(items[1].title, '20260302-20260305');
+      expect(items[1].icon, kShortcutIconClaim);
       expect(items[2].action, kNewClaimAction);
+      expect(items[2].icon, kShortcutIconNew);
       for (final item in items) {
         expect(parseEntryAction(item.action), isNotNull);
       }
+    });
+  });
+
+  group('buildEntryItems（长按菜单顺序）', () {
+    test('「新建报销单」恒为最后一条，前面才是报销单', () {
+      final items = buildEntryItems([
+        _claim(id: 'old', name: '较旧', savedAt: DateTime(2026, 7, 1)),
+        _claim(id: 'newest', name: '最新', savedAt: DateTime(2026, 7, 30)),
+      ], withIcons: true);
+      expect(items, hasLength(kMaxClaimShortcuts + 1));
+      expect(items.last.action, kNewClaimAction);
+      expect(items.last.title, '新建报销单');
+      expect(items.last.icon, kShortcutIconNew);
+      // 最后一条之前全是报销单，且各自指向编辑 action。
+      for (final item in items.take(items.length - 1)) {
+        expect(item.action.startsWith(kEditClaimPrefix), isTrue);
+        expect(item.icon, kShortcutIconClaim);
+      }
+    });
+
+    test('没有未归档单 → 菜单只剩「新建」一条（不留空菜单）', () {
+      final items = buildEntryItems(
+        [_claim(id: 'x', archived: true)],
+        withIcons: true,
+      );
+      expect(items, hasLength(1));
+      expect(items.single.action, kNewClaimAction);
     });
   });
 

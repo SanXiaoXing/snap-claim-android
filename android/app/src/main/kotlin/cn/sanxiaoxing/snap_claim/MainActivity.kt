@@ -17,6 +17,15 @@ class MainActivity : FlutterActivity() {
         /// 冷启动时 Flutter 尚未就绪，分享图片路径先暂存于此，待 Dart 侧取走。
         @Volatile
         private var pendingImagePaths: List<String> = emptyList()
+
+        /// 快捷方式图标：仅被 Dart 以字符串名引用，Android 资源收缩看不见它们，
+        /// 这里占位引用一次，避免 release 包裁掉后长按菜单回退成系统占位图。
+        @Suppress("unused")
+        private val shortcutIconKeep = intArrayOf(
+            R.mipmap.ic_launcher,
+            R.mipmap.ic_shortcut_claim,
+            R.mipmap.ic_shortcut_new,
+        )
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

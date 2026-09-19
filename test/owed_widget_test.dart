@@ -102,7 +102,13 @@ void main() {
         parseHomeWidgetEntryUri(
           Uri.parse('snapclaim://entry/edit_claim/abc-123'),
         ),
-        'edit_claim:abc-123',
+        'edit_claim_abc-123',
+      );
+      expect(
+        parseHomeWidgetEntryUri(
+          Uri.parse('snapclaim://entry/edit_claim_abc-123'),
+        ),
+        'edit_claim_abc-123',
       );
     });
 

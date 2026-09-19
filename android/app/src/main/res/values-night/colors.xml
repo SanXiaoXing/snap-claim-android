@@ -7,6 +7,7 @@
     <color name="owed_settled_end">#047857</color>
     <color name="owed_text_primary">#FFFFFF</color>
     <color name="owed_text_secondary">#E6FFFFFF</color>
+    <color name="owed_brand_badge">#40FFFFFF</color>
 
     <!-- 快捷操作小组件：深色卡片底 + 浅色文字，避免桌面刺眼浅底。 -->
     <color name="quick_card_bg">#FF1D1B17</color>
@@ -19,4 +20,8 @@
     <color name="quick_dot_accent">#FF2EB98A</color>
     <color name="quick_icon_bg">#FF3B382F</color>
     <color name="quick_icon_fg">#FFF5F2EA</color>
+
+    <!-- 长按快捷方式图标底色：深色桌面下比卡片底略亮，保证轮廓可见。 -->
+    <color name="shortcut_icon_claim_bg">#FF3B382F</color>
+    <color name="shortcut_icon_new_bg">#FF2EB98A</color>
 </resources>

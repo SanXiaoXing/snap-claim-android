@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 启动器长按快捷方式：adaptive icon，MIUI/HyperOS 可正确加载。
+     底色采用中性深色，与「新建」的绿色形成区分。 -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/shortcut_icon_claim_bg" />
+    <foreground android:drawable="@drawable/ic_shortcut_claim_fg" />
+    <monochrome android:drawable="@drawable/ic_shortcut_claim_fg" />
+</adaptive-icon>
