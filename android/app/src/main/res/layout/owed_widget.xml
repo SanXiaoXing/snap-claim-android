@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 公司欠我 · 2×2：参考 iOS 卡片——标题居左上、金额左对齐大字占中部、
+     右下品牌角标（S 圆徽 + SnapClaim）。行高用 weight 撑满，
+     长方形/正方形格子下都不会留大块空白。 -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/owed_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/owed_bg_positive">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/owed_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/owed_widget_title"
+            android:textColor="@color/owed_text_secondary"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/owed_amount"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical|start"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="@color/owed_text_primary"
+            android:textStyle="bold"
+            android:includeFontPadding="false"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="20sp"
+            android:autoSizeMaxTextSize="36sp"
+            android:autoSizeStepGranularity="1sp"
+            tools:text="¥1,866.00" />
+
+        <TextView
+            android:id="@+id/owed_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:textColor="@color/owed_text_secondary"
+            android:textSize="12sp"
+            android:visibility="gone"
+            android:maxLines="1"
+            tools:text="已结清"
+            tools:visibility="visible" />
+
+        <!-- 品牌角标：右下角对齐，纯 RemoteViews 稳妥控件。 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end|center_vertical"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:background="@drawable/owed_brand_badge"
+                android:gravity="center"
+                android:text="@string/owed_brand_initial"
+                android:textColor="@color/owed_text_primary"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:includeFontPadding="false" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:text="@string/app_name"
+                android:textColor="@color/owed_text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

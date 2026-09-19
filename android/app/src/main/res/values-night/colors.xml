@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 深色模式：品牌色略压暗，避免桌面浅底刺眼；文字仍保持高对比。 -->
+<resources>
+    <color name="owed_positive_start">#DC2626</color>
+    <color name="owed_positive_end">#B91C1C</color>
+    <color name="owed_settled_start">#059669</color>
+    <color name="owed_settled_end">#047857</color>
+    <color name="owed_text_primary">#FFFFFF</color>
+    <color name="owed_text_secondary">#E6FFFFFF</color>
+
+    <!-- 快捷操作小组件：深色卡片底 + 浅色文字，避免桌面刺眼浅底。 -->
+    <color name="quick_card_bg">#FF1D1B17</color>
+    <color name="quick_card_border">#FF2E2B25</color>
+    <color name="quick_title_fg">#FFEEEAE1</color>
+    <color name="quick_amount_fg">#FFA8A194</color>
+    <color name="quick_accent_fg">#FF45C99C</color>
+    <color name="quick_divider">#FF2E2B25</color>
+    <color name="quick_dot">#FF7C766B</color>
+    <color name="quick_dot_accent">#FF2EB98A</color>
+    <color name="quick_icon_bg">#FF3B382F</color>
+    <color name="quick_icon_fg">#FFF5F2EA</color>
+</resources>

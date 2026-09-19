@@ -204,13 +204,15 @@ class _AiSituationSheetState extends State<_AiSituationSheet> {
   Widget _buildCopyButton({required bool reduceMotion}) {
     final c = context.colors;
     final done = _copied;
-    final duration = Duration(milliseconds: reduceMotion ? 0 : 220);
-    final icon = done ? Icons.check_circle_rounded : Icons.copy_rounded;
-    final label = done ? '复制成功' : '复制全文';
+    final duration = Duration(milliseconds: reduceMotion ? 0 : 240);
+    final bg = done ? c.accentBg : c.accent;
+    final fg = done ? c.accent : Colors.white;
+    final icon = done ? Icons.check_circle_rounded : Icons.content_copy_rounded;
+    final label = done ? '已复制' : '复制全文';
 
     return Semantics(
       button: true,
-      label: done ? '已复制成功' : '复制全文',
+      label: done ? '已复制到剪贴板' : '复制全文',
       child: PressScale(
         onTap: _copyOutput,
         pressedScale: 0.97,
@@ -220,40 +222,34 @@ class _AiSituationSheetState extends State<_AiSituationSheet> {
           width: double.infinity,
           height: 52,
           decoration: BoxDecoration(
-            color: done ? Color.lerp(c.accent, Colors.white, 0.06) : c.accent,
+            color: bg,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: done
-                  ? c.accentLight
-                  : c.accent.withValues(alpha: 0.45),
+              color: done ? c.accent : c.accent.withValues(alpha: 0.5),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: c.accent.withValues(alpha: done ? 0.28 : 0.2),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
+            boxShadow: done
+                ? null
+                : [
+                    BoxShadow(
+                      color: c.accent.withValues(alpha: 0.18),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AnimatedScale(
-                scale: done ? 1 : 0.72,
-                duration: duration,
-                curve: Curves.easeOutBack,
-                child: Icon(icon, size: 20, color: Colors.white),
-              ),
+              Icon(icon, size: 19, color: fg),
               const SizedBox(width: 8),
               Text(
                 label,
                 maxLines: 1,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   height: 1.0,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  letterSpacing: 0.4,
+                  color: fg,
                 ),
               ),
             ],
@@ -263,10 +259,7 @@ class _AiSituationSheetState extends State<_AiSituationSheet> {
     );
   }
 
-  String _formatDoc(String raw) => raw
-      .replaceAll('\r\n', '\n')
-      .replaceAll('\r', '\n')
-      .trim();
+  String _formatDoc(String raw) => raw.replaceAll(RegExp(r'\r\n?'), '\n').trim();
 
   Widget _primaryButton({
     required String label,
@@ -455,8 +448,7 @@ class _AiSituationSheetState extends State<_AiSituationSheet> {
             ],
             if (canCopy)
               _buildCopyButton(
-                reduceMotion: MediaQuery.maybeOf(context)?.disableAnimations ??
-                    false,
+                reduceMotion: MediaQuery.maybeOf(context)?.disableAnimations ?? false,
               )
             else if (generating)
               _primaryButton(label: '停止', onPressed: _stop, danger: true)

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 欠款 =0：绿色系（已结清），与金额卡同一圆角体系。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="315"
+        android:startColor="@color/owed_settled_start"
+        android:endColor="@color/owed_settled_end"
+        android:type="linear" />
+    <corners android:radius="20dp" />
+</shape>

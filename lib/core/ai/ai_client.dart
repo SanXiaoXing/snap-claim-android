@@ -1,5 +1,5 @@
 // 智谱 GLM / OpenAI 兼容 chat/completions 的 SSE 流式客户端。
-// 对齐官方文档：https://docs.bigmodel.cn/cn/guide/models/free/glm-4.7-flash
+// 对齐官方文档：https://docs.bigmodel.cn/cn/guide/models/free/glm-4-flash-250414
 import 'dart:async';
 import 'dart:convert';
 
@@ -22,10 +22,7 @@ class AiGenerateException implements Exception {
 
 /// 拼出 chat/completions 完整 URL。
 Uri buildAiChatCompletionsUri(String baseUrl) {
-  var raw = baseUrl.trim();
-  while (raw.endsWith('/')) {
-    raw = raw.substring(0, raw.length - 1);
-  }
+  final raw = baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
   if (raw.isEmpty) return Uri.parse(kAiDefaultBaseUrl);
   if (raw.endsWith('/chat/completions')) return Uri.parse(raw);
   return Uri.parse('$raw/chat/completions');

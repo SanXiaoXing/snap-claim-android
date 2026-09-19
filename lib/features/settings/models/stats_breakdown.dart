@@ -64,9 +64,6 @@ class StatsGroup {
     this.deductionLabel = '超标金额',
   });
 
-  /// 扣减前的毛额（即占比分母）。
-  double get gross => denominator;
-
   /// 该组最终合计（毛额 − 扣减项），退补组即「累计退补金额」。
   double get net => denominator - deduction;
 

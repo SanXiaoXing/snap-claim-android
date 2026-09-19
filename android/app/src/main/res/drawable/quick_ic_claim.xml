@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 快捷操作 row0：深色圆底 + 白色公文包（报销单），参考 iOS 卡片图标风格。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="22dp"
+    android:height="22dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@color/quick_icon_bg"
+        android:pathData="M12,1 C18.08,1 23,5.92 23,12 C23,18.08 18.08,23 12,23 C5.92,23 1,18.08 1,12 C1,5.92 5.92,1 12,1 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@color/quick_icon_fg"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M7,9 h10 a1.4,1.4 0 0 1 1.4,1.4 v4.8 a1.4,1.4 0 0 1 -1.4,1.4 h-10 a1.4,1.4 0 0 1 -1.4,-1.4 v-4.8 a1.4,1.4 0 0 1 1.4,-1.4 z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@color/quick_icon_fg"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M10,9 V7.6 a1.4,1.4 0 0 1 1.4,-1.4 h1.2 a1.4,1.4 0 0 1 1.4,1.4 V9" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@color/quick_icon_fg"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M7.4,12.4 h9.2" />
+</vector>

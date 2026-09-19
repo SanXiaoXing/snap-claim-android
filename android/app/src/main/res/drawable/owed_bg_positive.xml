@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 欠款 >0：品牌红渐变，圆角加大，更接近方形卡片质感。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="315"
+        android:startColor="@color/owed_positive_start"
+        android:endColor="@color/owed_positive_end"
+        android:type="linear" />
+    <corners android:radius="20dp" />
+</shape>

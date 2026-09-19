@@ -6,6 +6,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/database/database.dart';
+import '../core/utils/app_shortcuts.dart';
+import '../core/utils/entry_action.dart';
+import '../core/utils/home_widgets.dart';
 import '../core/utils/ocr.dart';
 import '../core/utils/shared_image.dart';
 import '../features/invoice/models/claim.dart';
@@ -23,12 +26,13 @@ class SnapClaimApp extends StatefulWidget {
 }
 
 class _SnapClaimAppState extends State<SnapClaimApp> {
-  // 全局导航 Key：系统分享直达需在首帧后 push 编辑页 / 弹 OCR 进度窗。
   final _navKey = GlobalKey<NavigatorState>();
-  // 热启动（应用已在后台运行）时的分享图片事件订阅。
+  final _shellKey = GlobalKey<MainShellState>();
   StreamSubscription<List<String>>? _sharedSub;
+  StreamSubscription<EntryAction>? _entrySub;
+  Future<void>? _initFuture;
+  int _initialTab = kTabIndexHome;
 
-  // 主题偏好存储键：保存 ThemeMode 的名称（system / light / dark）。
   static const _themePrefsKey = 'themeMode';
 
   ThemeMode _themeMode = ThemeMode.system;
@@ -39,16 +43,17 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
   void initState() {
     super.initState();
     SharedImageReceiver.init();
-    _init();
-    // 冷启动：应用从分享面板被拉起，取走待处理图片并走 OCR 解析。
+    // 先监听入口 action，再 bind 快捷方式 / 桌面小组件：冷启动点击回调不丢。
+    _entrySub = EntryActionReceiver.onAction.listen(_dispatchEntryAction);
+    AppShortcuts.bind();
+    HomeWidgets.bindEntryActions();
+    _initFuture = _init();
     _consumePendingSharedImages();
-    // 热启动：应用已在运行，监听新分享的图片路径。
+    _consumePendingEntryActions();
     _sharedSub =
         SharedImageReceiver.onSharedImages.listen(_handleSharedImages);
   }
 
-  /// 首帧前的初始化：并行读取报销单与持久化的主题设置，
-  /// 两者都就绪后才渲染主界面，避免主题先以默认值闪一下再切换。
   Future<void> _init() async {
     List<Claim> claims;
     try {
@@ -70,9 +75,10 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
       _themeMode = themeMode;
       _loading = false;
     });
+    await AppShortcuts.refresh(claims);
+    await HomeWidgets.refreshAll(claims);
   }
 
-  /// 外观模式三态切换：更新内存并持久化，重启应用后保持。
   void _setThemeMode(ThemeMode mode) {
     setState(() => _themeMode = mode);
     _persist(() async {
@@ -86,8 +92,14 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
 
   @override
   void dispose() {
+    _entrySub?.cancel();
     _sharedSub?.cancel();
     super.dispose();
+  }
+
+  void _afterClaimsChanged() {
+    AppShortcuts.refresh(_claims);
+    HomeWidgets.refreshAll(_claims);
   }
 
   void _saveClaim(Claim claim) {
@@ -101,10 +113,10 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
         _claims = [claim, ..._claims];
       }
     });
+    _afterClaimsChanged();
     _persist(() => AppDatabase.instance.upsertClaim(claim), '保存报销单');
   }
 
-  /// 归档报销单（归档 = 已报销）：更新内存状态并持久化。
   void _archiveClaim(Claim claim) {
     final archived = claim.copyWith(archived: true);
     setState(() {
@@ -115,10 +127,10 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
         _claims = next;
       }
     });
+    _afterClaimsChanged();
     _persist(() => AppDatabase.instance.upsertClaim(archived), '归档报销单');
   }
 
-  /// 撤销归档（已报销 → 未归档）：更新内存状态并持久化。
   void _restoreClaim(Claim claim) {
     final restored = claim.copyWith(archived: false);
     setState(() {
@@ -129,18 +141,18 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
         _claims = next;
       }
     });
+    _afterClaimsChanged();
     _persist(() => AppDatabase.instance.upsertClaim(restored), '撤销归档');
   }
 
-  /// 删除报销单：从内存移除并从数据库删除（含明细）。
   void _deleteClaim(Claim claim) {
     setState(() {
       _claims = _claims.where((e) => e.id != claim.id).toList();
     });
+    _afterClaimsChanged();
     _persist(() => AppDatabase.instance.deleteClaim(claim.id), '删除报销单');
   }
 
-  /// 从数据库重新加载报销单（备份导入替换数据库文件后调用）。
   Future<void> _reloadClaims() async {
     List<Claim> claims;
     try {
@@ -151,33 +163,81 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
     }
     if (!mounted) return;
     setState(() => _claims = claims);
+    await AppShortcuts.refresh(claims);
+    await HomeWidgets.refreshAll(claims);
   }
 
-  /// 持久化到数据库：内存已先行更新，写入失败不打断 UI，
-  /// 但必须打印错误——否则数据看似已保存、重启后却丢失且无从排查。
   void _persist(Future<void> Function() op, String what) {
     op().catchError((Object e) {
       debugPrint('$what失败（数据未写入磁盘，重启应用后可能丢失）: $e');
     });
   }
 
-  /// 冷启动：取走分享面板直达的待处理图片路径。
   Future<void> _consumePendingSharedImages() async {
     final paths = await SharedImageReceiver.takePending();
     if (paths.isEmpty) return;
-    // 首帧后 Navigator 才可用（OCR 进度窗 / 预览对话框 / push 编辑页都需要）。
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
     await _handleSharedImages(paths);
   }
 
-  /// 分享图片直达：逐张 OCR → 弹可编辑预览 → 确认后新建报销单并进入编辑页。
+  Future<void> _consumePendingEntryActions() async {
+    await _initFuture;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    for (final action in EntryActionReceiver.takePending()) {
+      if (!mounted) return;
+      await _dispatchEntryAction(action);
+    }
+  }
+
+  Future<void> _dispatchEntryAction(EntryAction action) async {
+    switch (action.kind) {
+      case EntryActionKind.openMine:
+        final shell = _shellKey.currentState;
+        if (shell != null) {
+          shell.selectTab(kTabIndexMine);
+        } else if (mounted && _initialTab != kTabIndexMine) {
+          setState(() => _initialTab = kTabIndexMine);
+        }
+      case EntryActionKind.newClaim:
+        final now = DateTime.now();
+        await _pushEditor(
+          Claim(
+            id: '${now.microsecondsSinceEpoch}',
+            name: '',
+            startDate: now,
+            endDate: now,
+            records: const [],
+            savedAt: now,
+          ),
+        );
+      case EntryActionKind.editClaim:
+        final claim = _claims.where((c) => c.id == action.claimId).firstOrNull;
+        if (claim == null) {
+          await WidgetsBinding.instance.endOfFrame;
+          if (!mounted || _navKey.currentContext == null) return;
+          showAppSnack(_navKey.currentContext!, '报销单不存在');
+          return;
+        }
+        await _pushEditor(claim);
+    }
+  }
+
+  Future<void> _pushEditor(Claim claim) async {
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || _navKey.currentState == null) return;
+    _navKey.currentState!.push(
+      MaterialPageRoute(
+        builder: (_) => EditorPage(claim: claim, onSave: _saveClaim),
+      ),
+    );
+  }
+
   Future<void> _handleSharedImages(List<String> paths) async {
     final context = _navKey.currentContext;
     if (context == null) return;
     for (final path in paths) {
-      // context 来自全局 Navigator，须用 context.mounted 而非 State.mounted
-      // 守卫（循环跨 await 后再次使用，lint 要求同 context 的检查）。
       if (!context.mounted) return;
       final result = await recognizeImageFile(context, path);
       if (!context.mounted) return;
@@ -194,7 +254,6 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
         builder: (_) => OcrPreviewDialog(initial: result.records),
       );
       if (!context.mounted || added == null || added.isEmpty) continue;
-      // 以识别明细新建一张报销单并进入编辑页，用户可继续完善后保存。
       final now = DateTime.now();
       final claim = Claim(
         id: '${now.microsecondsSinceEpoch}',
@@ -209,7 +268,6 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
           builder: (_) => EditorPage(
             claim: claim,
             onSave: _saveClaim,
-            // 明细尚未持久化：返回时必须弹保存确认，防止静默丢弃。
             promptSaveOnExit: true,
           ),
         ),
@@ -226,13 +284,11 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
       themeMode: _themeMode,
-      // 深浅色切换平滑过渡（避免亮度骤变），AnimatedTheme 驱动。
       themeAnimationDuration: const Duration(milliseconds: 300),
       themeAnimationCurve: Curves.easeOutCubic,
       locale: const Locale('zh', 'CN'),
       supportedLocales: const [
         Locale('zh', 'CN'),
-        Locale('en', 'US'),
       ],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -242,6 +298,7 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
       home: _loading
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : MainShell(
+              key: _shellKey,
               claims: _claims,
               onSaveClaim: _saveClaim,
               onArchiveClaim: _archiveClaim,
@@ -250,6 +307,7 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
               onDataRestored: _reloadClaims,
               themeMode: _themeMode,
               onChangeThemeMode: _setThemeMode,
+              initialTab: _initialTab,
             ),
     );
   }

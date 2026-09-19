@@ -14,3 +14,11 @@
 
 # 保留 ML Kit 主体类，避免混淆导致运行时问题。
 -keep class com.google.mlkit.** { *; }
+
+# 桌面小组件 Provider 必须保留原始类名：Manifest 引用 + home_widget 按类名刷新。
+# R8 裁剪/改名会导致 MIUI「载入窗口小部件时出现问题」。
+-keep class cn.sanxiaoxing.snap_claim.OwedWidgetProvider { *; }
+-keep class cn.sanxiaoxing.snap_claim.QuickActionsWidgetProvider { *; }
+-keep class cn.sanxiaoxing.snap_claim.MainActivity { *; }
+-keep class es.antonborri.home_widget.** { *; }
+

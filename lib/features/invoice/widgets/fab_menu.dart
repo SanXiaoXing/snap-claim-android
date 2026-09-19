@@ -17,14 +17,10 @@ class FabMenu extends StatefulWidget {
   final List<FabMenuItem> items;
   final ValueChanged<String> onAction;
 
-  /// 主按钮（+）的定位键，供首次引导（tutorial_coach_mark）聚焦用。
-  final Key? mainButtonKey;
-
   const FabMenu({
     super.key,
     required this.items,
     required this.onAction,
-    this.mainButtonKey,
   });
 
   @override
@@ -176,7 +172,6 @@ class _FabMenuState extends State<FabMenu> with SingleTickerProviderStateMixin {
           right: _fabRight,
           bottom: fabBottom,
           child: GestureDetector(
-            key: widget.mainButtonKey,
             onTap: _toggle,
             child: AnimatedBuilder(
               animation: _ctrl,

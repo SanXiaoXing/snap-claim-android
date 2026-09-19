@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SnapClaim</string>
+    <string name="owed_widget_label">公司欠我</string>
+    <string name="owed_widget_title">公司欠我</string>
+    <string name="owed_widget_desc">未归档报销单退补金额合计，点击打开「我的」</string>
+    <string name="owed_brand_initial">S</string>
+    <string name="quick_widget_label">快捷操作</string>
+    <string name="quick_widget_title">快捷操作</string>
+    <string name="quick_widget_desc">最近报销单与新建入口，与长按图标菜单一致</string>
+</resources>
