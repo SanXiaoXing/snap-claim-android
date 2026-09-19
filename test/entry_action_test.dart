@@ -28,6 +28,26 @@ void main() {
     });
   });
 
+  group('entryActionDedupeKey', () {
+    test('与协议字符串一致，便于短窗去重', () {
+      expect(
+        entryActionDedupeKey(const EntryAction(EntryActionKind.openMine)),
+        kOpenMineAction,
+      );
+      expect(
+        entryActionDedupeKey(const EntryAction(EntryActionKind.newClaim)),
+        kNewClaimAction,
+      );
+      expect(
+        entryActionDedupeKey(
+          const EntryAction(EntryActionKind.editClaim, claimId: 'abc-123'),
+        ),
+        'edit_claim:abc-123',
+      );
+      expect(kEntryActionDedupeWindow, const Duration(milliseconds: 800));
+    });
+  });
+
   group('EntryActionReceiver', () {
     setUp(EntryActionReceiver.takePending);
 

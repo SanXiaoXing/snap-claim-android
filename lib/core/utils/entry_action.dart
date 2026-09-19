@@ -12,6 +12,16 @@ const String kOpenMineAction = 'open_mine';
 const String kNewClaimAction = 'new_claim';
 const String kEditClaimPrefix = 'edit_claim:';
 
+/// 同一入口 action 的去重时间窗：拦住 quick_actions 冷启动双投递。
+const Duration kEntryActionDedupeWindow = Duration(milliseconds: 800);
+
+/// 入口 action 去重键（分发层用）。
+String entryActionDedupeKey(EntryAction action) => switch (action.kind) {
+      EntryActionKind.openMine => kOpenMineAction,
+      EntryActionKind.newClaim => kNewClaimAction,
+      EntryActionKind.editClaim => '$kEditClaimPrefix${action.claimId}',
+    };
+
 /// 入口动作种类；`editClaim` 时用 [EntryAction.claimId]。
 enum EntryActionKind { openMine, newClaim, editClaim }
 

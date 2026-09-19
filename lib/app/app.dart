@@ -39,12 +39,20 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
   List<Claim> _claims = [];
   bool _loading = true;
 
+  /// 最近一次已处理的入口 action 键，用于吞掉插件冷启动双投递。
+  String? _lastEntryKey;
+  DateTime? _lastEntryAt;
+
   @override
   void initState() {
     super.initState();
     SharedImageReceiver.init();
     // 先监听入口 action，再 bind 快捷方式 / 桌面小组件：冷启动点击回调不丢。
-    _entrySub = EntryActionReceiver.onAction.listen(_dispatchEntryAction);
+    // 分发统一走 _dispatchEntryAction，内部会等 _init 完成，避免内存列表尚空。
+    _entrySub = EntryActionReceiver.onAction.listen((action) {
+      // ignore: discarded_futures
+      _dispatchEntryAction(action);
+    });
     AppShortcuts.bind();
     HomeWidgets.bindEntryActions();
     _initFuture = _init();
@@ -191,7 +199,22 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
     }
   }
 
+  /// 入口 action 分发：先等数据就绪，再按短窗去重，避免冷启动双投递。
   Future<void> _dispatchEntryAction(EntryAction action) async {
+    await _initFuture;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+
+    final key = entryActionDedupeKey(action);
+    final now = DateTime.now();
+    if (_lastEntryKey == key &&
+        _lastEntryAt != null &&
+        now.difference(_lastEntryAt!) < kEntryActionDedupeWindow) {
+      return;
+    }
+    _lastEntryKey = key;
+    _lastEntryAt = now;
+
     switch (action.kind) {
       case EntryActionKind.openMine:
         final shell = _shellKey.currentState;
@@ -213,7 +236,21 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
           ),
         );
       case EntryActionKind.editClaim:
-        final claim = _claims.where((c) => c.id == action.claimId).firstOrNull;
+        var claim = _claims.where((c) => c.id == action.claimId).firstOrNull;
+        if (claim == null) {
+          // 内存列表可能尚未同步（或被清空）：回源数据库再查一次。
+          try {
+            final all = await AppDatabase.instance.getAllClaims();
+            claim = all.where((c) => c.id == action.claimId).firstOrNull;
+            if (mounted) {
+              setState(() => _claims = all);
+              await AppShortcuts.refresh(all);
+              await HomeWidgets.refreshAll(all);
+            }
+          } catch (e) {
+            debugPrint('入口打开报销单时回源数据库失败: $e');
+          }
+        }
         if (claim == null) {
           await WidgetsBinding.instance.endOfFrame;
           if (!mounted || _navKey.currentContext == null) return;
