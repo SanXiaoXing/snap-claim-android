@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 快捷操作 · 2×2：参考 iOS 卡片——最多 2 条目（row0 最近单据 + row2 新建），
+     每条目两行文本（第一行名称、第二行金额），左侧 26dp 圆形徽标；
+     row2「新建报销单」整体绿色强调；两行用 weight 均分卡片高度。
+     注意：row1 已按「最多显示两个」需求移除，容器 ID 保持 row0/row2 与 Provider 对齐。 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/quick_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/quick_widget_bg"
+    android:orientation="vertical"
+    android:paddingLeft="18dp"
+    android:paddingRight="18dp"
+    android:paddingTop="14dp"
+    android:paddingBottom="12dp">
+
+    <TextView
+        android:id="@+id/quick_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="4dp"
+        android:text="@string/quick_widget_title"
+        android:textColor="@color/quick_title_fg"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:maxLines="1" />
+
+    <!-- row0：最近报销单——第一行名称、第二行金额，公文包徽标。 -->
+    <LinearLayout
+        android:id="@+id/quick_row0"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/quick_ic_claim" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/quick_row0_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/quick_title_fg"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                tools:text="上海出差" />
+
+            <TextView
+                android:id="@+id/quick_row0_amount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/quick_amount_fg"
+                android:textSize="12sp"
+                tools:text="¥1,866" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/quick_divider" />
+
+    <!-- row2：新建报销单——绿色加号徽标 + 绿色强调文字，无金额行。 -->
+    <LinearLayout
+        android:id="@+id/quick_row2"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/quick_ic_new" />
+
+        <TextView
+            android:id="@+id/quick_row2_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/quick_accent_fg"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            tools:text="新建报销单" />
+
+        <TextView
+            android:id="@+id/quick_row2_amount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:maxLines="1"
+            android:textColor="@color/quick_amount_fg"
+            android:textSize="12sp"
+            android:visibility="gone"
+            tools:text="¥320" />
+    </LinearLayout>
+</LinearLayout>

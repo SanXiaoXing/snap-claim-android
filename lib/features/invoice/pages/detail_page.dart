@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
-import '../../../core/utils/app_tutorial.dart';
 import '../../../core/utils/format.dart';
 import '../models/claim.dart';
 import '../widgets/app_top_bar.dart';
@@ -24,21 +23,6 @@ class DetailPage extends StatefulWidget {
 }
 
 class _DetailPageState extends State<DetailPage> {
-  /// 编辑按钮的定位键，供首次引导聚焦。
-  final GlobalKey _editKey = GlobalKey();
-
-  @override
-  void initState() {
-    super.initState();
-    // 首帧渲染完成后弹首次引导（需要目标控件已挂载并完成布局）；
-    // 仅存在编辑入口（onSave 非空）时才引导「修改」。
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.onSave != null) {
-        AppTutorial.maybeShowDetail(context, _editKey);
-      }
-    });
-  }
-
   /// 进入编辑页；仅当编辑页确实保存了修改时才关闭详情页回到列表
   /// （避免展示过期数据），未修改直接返回则留在详情页。
   Future<void> _edit(BuildContext context) async {
@@ -81,7 +65,6 @@ class _DetailPageState extends State<DetailPage> {
               children: [
                 if (widget.onSave != null) ...[
                   AppIconButton(
-                    key: _editKey,
                     icon: Icons.edit_outlined,
                     size: 18,
                     onTap: () => _edit(context),

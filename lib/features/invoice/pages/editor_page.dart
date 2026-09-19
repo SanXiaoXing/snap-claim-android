@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 
 import '../../../app/theme.dart';
-import '../../../core/utils/app_tutorial.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/ocr.dart';
 import '../../../core/utils/qr_parser.dart';
@@ -54,11 +53,6 @@ class _EditorPageState extends State<EditorPage> {
   // 显式跳过后续 Pop 拦截（保存 / 丢弃路径），避免保存后又被回弹拦下。
   bool _skipPopGuard = false;
 
-  // 首次引导定位键：右下角 + 号（扫码/图片/手动添加）、「左滑删除」提示与「保存」。
-  final GlobalKey _fabKey = GlobalKey();
-  final GlobalKey _swipeHintKey = GlobalKey();
-  final GlobalKey _saveKey = GlobalKey();
-
   @override
   void initState() {
     super.initState();
@@ -76,10 +70,6 @@ class _EditorPageState extends State<EditorPage> {
     _nameCtrl = TextEditingController(text: _initialName);
     // 超标金额初值：既有报销单已填则沿用，否则为 0。
     _excess = widget.claim.excessAmount;
-    // 首帧渲染完成后弹首次引导（需要目标控件已挂载并完成布局）。
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      AppTutorial.maybeShowEditor(context, _fabKey, _swipeHintKey, _saveKey);
-    });
   }
 
   /// 名称的日期范围格式：起始日期-结束日期。
@@ -318,7 +308,6 @@ class _EditorPageState extends State<EditorPage> {
                   ),
                   title: '报销单',
                   trailing: TextButton(
-                    key: _saveKey,
                     onPressed: _save,
                     style: TextButton.styleFrom(
                       foregroundColor: c.accent,
@@ -402,7 +391,6 @@ class _EditorPageState extends State<EditorPage> {
                           const Spacer(),
                           Text(
                             '左滑删除',
-                            key: _swipeHintKey,
                             style: TextStyle(fontSize: 10, color: c.fgSoft),
                           ),
                         ],
@@ -451,7 +439,6 @@ class _EditorPageState extends State<EditorPage> {
             ],
           ),
           FabMenu(
-            mainButtonKey: _fabKey,
             items: const [
               FabMenuItem(icon: Icons.qr_code_scanner, label: '扫码添加'),
               FabMenuItem(icon: Icons.image_outlined, label: '上传图片'),

@@ -83,7 +83,7 @@ void main() {
       final claim = _mixedClaim();
       final b = StatsBreakdown.compute([claim]);
 
-      expect(b.balance.gross, 798.0);
+      expect(b.balance.denominator, 798.0);
       expect(b.balance.deduction, 100.0);
       expect(b.balance.hasDeduction, isTrue);
       expect(b.balance.net, claim.balanceAmount);
@@ -103,7 +103,7 @@ void main() {
       final b = StatsBreakdown.compute([claim]);
 
       expect(b.balance.hasDeduction, isFalse);
-      expect(b.balance.net, b.balance.gross);
+      expect(b.balance.net, b.balance.denominator);
     });
   });
 

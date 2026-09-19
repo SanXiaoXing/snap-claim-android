@@ -37,10 +37,13 @@ dependencies:
   # 本地键值存储（持久化主题模式等偏好设置）。
   shared_preferences: ^2.5.3
   file_picker: 10.3.10
-  tutorial_coach_mark: ^1.3.3
   url_launcher: ^6.3.2
   # AI 情况说明：访问智谱 OpenAI 兼容 chat/completions（SSE 流式）。
   http: ^1.2.2
+  # 长按应用图标动态快捷方式（桌面入口 #8）。
+  quick_actions: ^1.1.1
+  # 桌面小组件基座（桌面入口 #9/#10）：金额卡 / 快捷操作卡。
+  home_widget: ^0.10.0
 
 dev_dependencies:
   flutter_test:

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 快捷操作 2×2：方形预览 + 等宽高。启动器格子非正方形导致 2×2 是长方形，
+     放开 resizeMode 允许用户长按拖拽成任意比例（含正方形）。 -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:initialLayout="@layout/quick_actions_widget"
+    android:minWidth="146dp"
+    android:minHeight="146dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    android:previewImage="@drawable/quick_widget_preview"
+    android:description="@string/quick_widget_desc"
+    android:label="@string/quick_widget_label" />

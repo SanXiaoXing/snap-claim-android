@@ -14,8 +14,8 @@ const String kAiModelCustomId = '__custom__';
 
 /// (模型 id, 说明)。
 const List<(String, String)> _kModelPresets = [
-  ('glm-4.7-flash', '默认 · 推荐'),
-  ('glm-4-flash-250414', '更快 · 更省额度'),
+  ('glm-4-flash-250414', '默认 · 推荐'),
+  ('glm-4.7-flash', '4.7 系列'),
 ];
 
 class AiSettingsPage extends StatefulWidget {

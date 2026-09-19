@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 桌面金额小组件：与 OwedCard 品牌色一致，文字压在渐变底上。 -->
+    <color name="owed_positive_start">#EF4444</color>
+    <color name="owed_positive_end">#DC2626</color>
+    <color name="owed_settled_start">#10B981</color>
+    <color name="owed_settled_end">#059669</color>
+    <color name="owed_text_primary">#FFFFFF</color>
+    <color name="owed_text_secondary">#D9FFFFFF</color>
+    <color name="owed_brand_badge">#40FFFFFF</color>
+
+    <!-- 快捷操作小组件：浅色卡片底 + 深色文字。 -->
+    <color name="quick_card_bg">#FFF8FAFC</color>
+    <color name="quick_card_border">#FFE2E8F0</color>
+    <color name="quick_title_fg">#FF0F172A</color>
+    <color name="quick_amount_fg">#FF64748B</color>
+    <color name="quick_accent_fg">#FF0F766E</color>
+    <color name="quick_divider">#FFE2E8F0</color>
+    <color name="quick_dot">#FFCBD5E1</color>
+    <color name="quick_dot_accent">#FF10B981</color>
+    <color name="quick_icon_bg">#FF1E293B</color>
+    <color name="quick_icon_fg">#FFFFFFFF</color>
+</resources>

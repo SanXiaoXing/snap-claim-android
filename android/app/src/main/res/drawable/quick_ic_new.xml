@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 快捷操作 row2：品牌绿圆底 + 白色加号（新建报销单）。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="22dp"
+    android:height="22dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@color/quick_dot_accent"
+        android:pathData="M12,1 C18.08,1 23,5.92 23,12 C23,18.08 18.08,23 12,23 C5.92,23 1,18.08 1,12 C1,5.92 5.92,1 12,1 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@color/quick_icon_fg"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M12,8.6 V15.4 M8.6,12 H15.4" />
+</vector>

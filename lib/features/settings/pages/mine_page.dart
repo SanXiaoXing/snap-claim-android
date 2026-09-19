@@ -208,7 +208,10 @@ class _MinePageState extends State<MinePage> {
                   decoration: cardDecoration(c),
                   child: Column(
                     children: [
-                      MineRow(icon: Icons.tune, title: '偏好设置'),
+                      MineRow(
+                        icon: Icons.tune,
+                        title: '偏好设置',
+                      ),
                       MineDivider(),
                       MineRow(
                         icon: Icons.image_outlined,

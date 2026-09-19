@@ -14,17 +14,8 @@ import '../widgets/sliding_pill.dart';
 import 'history_page.dart';
 import 'home_page.dart';
 
-/// 底部导航菜单项数据。
-class MenuItemSpec {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  const MenuItemSpec({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-  });
-}
+/// 底部导航菜单项：图标 + 选中态图标 + 文案。
+typedef _TabItem = ({IconData icon, IconData activeIcon, String label});
 
 class MainShell extends StatefulWidget {
   final List<Claim> claims;
@@ -38,6 +29,9 @@ class MainShell extends StatefulWidget {
   /// 备份导入替换数据库后，重新从数据库加载报销单。
   final Future<void> Function() onDataRestored;
 
+  /// 初始 tab（0 首页 / 1 历史 / 2 我的）；冷启动入口可在外壳挂载前指定。
+  final int initialTab;
+
   const MainShell({
     super.key,
     required this.claims,
@@ -48,14 +42,28 @@ class MainShell extends StatefulWidget {
     required this.themeMode,
     required this.onChangeThemeMode,
     required this.onDataRestored,
+    this.initialTab = 0,
   });
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  State<MainShell> createState() => MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
-  int _index = 0;
+class MainShellState extends State<MainShell> {
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    _index = widget.initialTab.clamp(0, 2);
+  }
+
+  /// 外部（入口 action 分发）切换 tab；越界值忽略。
+  void selectTab(int index) {
+    if (index < 0 || index > 2) return;
+    if (_index == index) return;
+    setState(() => _index = index);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -153,18 +161,18 @@ class _GlassTabBar extends StatelessWidget {
     this.onAiTap,
   });
 
-  static const _items = [
-    MenuItemSpec(
+  static const _items = <_TabItem>[
+    (
       icon: Icons.home_outlined,
       activeIcon: Icons.home_rounded,
       label: '首页',
     ),
-    MenuItemSpec(
+    (
       icon: Icons.archive_outlined,
       activeIcon: Icons.archive_rounded,
       label: '历史',
     ),
-    MenuItemSpec(
+    (
       icon: Icons.person_outline,
       activeIcon: Icons.person_rounded,
       label: '我的',
@@ -248,7 +256,9 @@ class _GlassTabBar extends StatelessWidget {
                                 children: [
                                   for (var i = 0; i < _items.length; i++)
                                     _GlassTab(
-                                      spec: _items[i],
+                                      icon: _items[i].icon,
+                                      activeIcon: _items[i].activeIcon,
+                                      label: _items[i].label,
                                       position: i,
                                       selectedIndex: index,
                                       onTap: () => onChanged(i),
@@ -276,13 +286,17 @@ class _GlassTabBar extends StatelessWidget {
 
 /// 单个菜单项：图标 + 文字上下排列。选中态切换实心图标 + 文字反色为白。
 class _GlassTab extends StatelessWidget {
-  final MenuItemSpec spec;
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
   final int position;
   final int selectedIndex;
   final VoidCallback onTap;
 
   const _GlassTab({
-    required this.spec,
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
     required this.position,
     required this.selectedIndex,
     required this.onTap,
@@ -294,6 +308,7 @@ class _GlassTab extends StatelessWidget {
     final selected = position == selectedIndex;
     // 选中态文字 / 图标反色为白，未选中保持 muted 灰。
     final fgColor = selected ? Colors.white : c.fgMuted;
+    final iconData = selected ? activeIcon : icon;
     return Expanded(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -312,7 +327,7 @@ class _GlassTab extends StatelessWidget {
                   child: ScaleTransition(scale: anim, child: child),
                 ),
                 child: Icon(
-                  selected ? spec.activeIcon : spec.icon,
+                  iconData,
                   key: ValueKey(selected),
                   size: 22,
                   color: fgColor,
@@ -328,7 +343,7 @@ class _GlassTab extends StatelessWidget {
                   color: fgColor,
                   letterSpacing: 0.1,
                 ),
-                child: Text(spec.label),
+                child: Text(label),
               ),
             ],
           ),

@@ -6,8 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 const String kAiDefaultBaseUrl =
     'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 
-/// 默认 / 示例模型。
-const String kAiDefaultModel = 'glm-4.7-flash';
+/// 默认 / 示例模型（智谱 GLM-4 Flash 官方快照 id）。
+const String kAiDefaultModel = 'glm-4-flash-250414';
 
 const String _kBaseUrl = 'ai_base_url';
 const String _kModel = 'ai_model';

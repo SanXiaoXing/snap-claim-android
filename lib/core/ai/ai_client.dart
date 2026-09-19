@@ -1,5 +1,5 @@
 // 智谱 GLM / OpenAI 兼容 chat/completions 的 SSE 流式客户端。
-// 对齐官方文档：https://docs.bigmodel.cn/cn/guide/models/free/glm-4.7-flash
+// 对齐官方文档：https://docs.bigmodel.cn/cn/guide/models/free/glm-4-flash-250414
 import 'dart:async';
 import 'dart:convert';
 

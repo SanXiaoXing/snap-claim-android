@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 2×2 方形请求：等宽高 + 方形 previewImage。注意启动器格子本身不是正方形
+     （MIUI 默认 4×6 网格格子偏高），2×2 格必然是长方形；
+     因此放开 resizeMode 允许用户长按拖拽成任意比例（含正方形）。 -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:initialLayout="@layout/owed_widget"
+    android:minWidth="146dp"
+    android:minHeight="146dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    android:previewImage="@drawable/owed_widget_preview"
+    android:description="@string/owed_widget_desc"
+    android:label="@string/owed_widget_label" />
