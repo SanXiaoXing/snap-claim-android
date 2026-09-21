@@ -318,6 +318,68 @@ html[data-theme="dark"] .icon-sun {
   display: none;
 }
 
+/* 主题切换：径向揭示（radial reveal）
+   优先 View Transitions：截取新旧主题快照，对 ::view-transition-new(root)
+   做 clip-path:circle()，从切换按钮圆心向外扩散。
+   无 VT / 减少动态时：veil 光晕 fallback 或直接切换。 */
+:root {
+  --ease-theme-reveal: cubic-bezier(0.23, 1, 0.32, 1);
+  --theme-reveal-duration: 600ms;
+}
+
+/* 快照层：关掉默认交叉淡入，揭示完全交给 JS 的 clip-path 动画 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* group 寿命必须与揭示动画对齐；默认 ~250ms 会提前收束并打断 clip-path。
+   keepalive 动画自身不改变视觉，只把快照层撑到完整时长。 */
+::view-transition-group(root) {
+  animation-name: theme-reveal-keepalive;
+  animation-duration: var(--theme-reveal-duration, 600ms);
+  animation-timing-function: var(--ease-theme-reveal, cubic-bezier(0.23, 1, 0.32, 1));
+}
+
+@keyframes theme-reveal-keepalive {
+  from,
+  to {
+    opacity: 1;
+  }
+}
+
+::view-transition-image-pair(root) {
+  isolation: isolate;
+}
+
+::view-transition {
+  background: transparent;
+}
+
+/* 揭示进行中压掉页面自身的颜色 transition，避免二次淡入 */
+html:active-view-transition *,
+html.is-theme-revealing * {
+  transition: none !important;
+}
+
+/* Fallback veil：新主题底色的圆形光晕，从按钮圆心盖向全屏 */
+.theme-reveal-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  will-change: clip-path;
+  /* background / clip-path 由 JS 按切换中心写入 */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
 .nav__cta {
   flex: none;
 }
@@ -1444,58 +1506,343 @@ td.num {
   margin-top: 4px;
 }
 
-/* ============================== 页脚 ============================== */
+/* ============================== 页脚（page-blend） ==============================
+   无边框：footer 就是页面背景的延续。
+   背景大字两层 HTML 文本（清晰 + 模糊）+ mask 渐隐；内容浮在上层，链接保持可点。 */
 
-.footer {
-  border-top: 1px solid var(--border);
-  padding: 40px 0 34px;
-  background: var(--bg-2);
+:root {
+  --footer-fade-color: var(--fg);
+  --footer-fade-sharp-opacity: 0.12;
+  --footer-fade-blur-opacity: 0.1;
+  --footer-accent: var(--accent);
+  --footer-muted: var(--fg-muted);
+  --footer-copy: var(--fg-soft);
 }
 
-.footer__grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 26px 40px;
-  align-items: flex-start;
-  justify-content: space-between;
+html[data-theme="dark"] {
+  --footer-fade-color: #e8eef7;
+  --footer-fade-sharp-opacity: 0.14;
+  --footer-fade-blur-opacity: 0.12;
 }
 
-.footer__brand {
-  max-width: 30rem;
+.hover-footer {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
 }
 
-.footer__brand p {
+.hover-footer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--accent) 3%, transparent) 60%,
+    color-mix(in srgb, var(--accent) 6%, transparent) 100%
+  );
+}
+
+.hover-footer__effect {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 320px;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-footer.is-visible .hover-footer__effect {
+  opacity: 1;
+}
+
+.footer-fade-text {
+  position: absolute;
+  left: 50%;
+  bottom: -24px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font);
+  font-size: clamp(100px, 15vw, 240px);
+  font-weight: 700;
+  line-height: 0.8;
+  letter-spacing: -0.06em;
+  color: var(--footer-fade-color);
+  pointer-events: none;
+  user-select: none;
+}
+
+.footer-fade-text--sharp {
+  opacity: var(--footer-fade-sharp-opacity);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    black 30%,
+    rgba(0, 0, 0, 0.6) 55%,
+    transparent 82%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    black 30%,
+    rgba(0, 0, 0, 0.6) 55%,
+    transparent 82%
+  );
+}
+
+.footer-fade-text--blur {
+  opacity: var(--footer-fade-blur-opacity);
+  filter: blur(10px);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 15%,
+    rgba(0, 0, 0, 0.15) 35%,
+    rgba(0, 0, 0, 0.5) 55%,
+    black 75%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 15%,
+    rgba(0, 0, 0, 0.15) 35%,
+    rgba(0, 0, 0, 0.5) 55%,
+    black 75%,
+    transparent 100%
+  );
+}
+
+.hover-footer__content {
+  position: relative;
+  z-index: 2;
+  width: min(1080px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 96px 0 40px;
+  background: transparent;
+}
+
+.hover-footer__grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1.2fr;
+  gap: 40px 32px;
+  padding-bottom: 48px;
+}
+
+.hover-footer__brand {
+  max-width: 28rem;
+}
+
+.hover-footer__brand-row {
+  margin-right: 0;
+}
+
+.hover-footer__brand p {
   font-size: 13px;
-  color: var(--fg-muted);
-  margin-top: 10px;
+  color: var(--footer-muted);
+  margin-top: 12px;
+  line-height: 1.7;
 }
 
-.footer__links {
+.hover-footer__col h3 {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--fg);
+  margin: 0 0 14px;
+}
+
+.hover-footer__col ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 22px;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hover-footer__col a {
+  color: var(--footer-muted);
+  text-decoration: none;
   font-size: 13.5px;
 }
 
-.footer__links a {
-  color: var(--fg-muted);
+.hover-footer__col a:hover {
+  color: var(--footer-accent);
+}
+
+.hover-footer__contact a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hover-footer__contact a span:last-child {
+  min-width: 0;
+}
+
+.hover-footer__divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 0 22px;
+}
+
+.hover-footer__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: clamp(100px, 16vw, 180px);
+}
+
+.hover-footer__copy-block {
+  text-align: right;
+}
+
+.hover-footer__copy {
+  font-size: 12.5px;
+  color: var(--footer-copy);
+}
+
+.hover-footer__note {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--footer-copy);
+  opacity: 0.85;
+}
+
+.hover-footer__social {
+  display: flex;
+  gap: 8px;
+}
+
+.hover-footer__social a {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  z-index: 5;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--footer-muted);
   text-decoration: none;
 }
 
-.footer__links a:hover {
-  color: var(--accent);
+.hover-footer__social a:hover {
+  color: var(--footer-accent);
+  border-color: var(--accent-ring);
 }
 
-.footer__legal {
-  margin-top: 26px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
-  font-size: 12.5px;
-  color: var(--fg-soft);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-  justify-content: space-between;
+.hover-footer__social a svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Tablet ≤960：品牌通栏；产品/资源并排；联系通栏 */
+@media (max-width: 960px) {
+  .hover-footer__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px 24px;
+  }
+
+  .hover-footer__brand,
+  .hover-footer__col--contact {
+    grid-column: 1 / -1;
+  }
+
+  ul.hover-footer__contact {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 20px;
+  }
+
+  .footer-fade-text {
+    font-size: clamp(64px, 12vw, 140px);
+  }
+
+  .hover-footer__effect {
+    height: 220px;
+  }
+}
+
+/* Phone ≤640：品牌通栏；产品/资源仍 2 列；联系通栏 + 省略号 */
+@media (max-width: 640px) {
+  .hover-footer__content {
+    width: calc(100% - 32px);
+    padding: 40px 0 24px;
+  }
+
+  .hover-footer__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 22px 16px;
+  }
+
+  .hover-footer__brand,
+  .hover-footer__col--contact {
+    grid-column: 1 / -1;
+  }
+
+  .hover-footer__col a,
+  .hover-footer__contact a {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+  }
+
+  .hover-footer__contact a span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hover-footer__bottom {
+    flex-direction: column;
+    align-items: stretch;
+    padding-bottom: 72px;
+  }
+
+  .hover-footer__copy-block {
+    text-align: left;
+    order: -1;
+  }
+
+  .hover-footer__social a {
+    width: 44px;
+    height: 44px;
+  }
+
+  .hover-footer__effect {
+    height: 120px;
+  }
+
+  .footer-fade-text {
+    font-size: clamp(40px, 12vw, 72px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-footer__effect {
+    opacity: 1;
+    transition: none;
+  }
+
+  .footer-fade-text--blur {
+    filter: none;
+  }
 }
 
 /* ============================== 回到顶部 ============================== */

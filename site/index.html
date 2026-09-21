@@ -304,27 +304,72 @@
   </section>
 </main>
 
-<!-- ============================== 页脚 ============================== -->
-<footer class="footer">
-  <div class="container">
-    <div class="footer__grid">
-      <div class="footer__brand">
-        <a class="brand" href="#top" style="margin:0">
+<!-- ============================== 页脚 ==============================
+     page-blend：无边框页脚，品牌大字作为背景层（上清晰 → 模糊 → 溶解） -->
+<footer class="hover-footer" data-hover-footer>
+  <div class="hover-footer__effect" aria-hidden="true">
+    <div class="footer-fade-text footer-fade-text--sharp">SnapClaim</div>
+    <div class="footer-fade-text footer-fade-text--blur">SnapClaim</div>
+  </div>
+
+  <div class="hover-footer__content">
+    <div class="hover-footer__grid">
+      <div class="hover-footer__brand">
+        <a class="brand hover-footer__brand-row" href="#top">
           <img class="brand__tile" src="assets/logo-192.png" alt="" width="34" height="34">
           <span>SnapClaim</span>
         </a>
         <p>Flutter + Rust 做的本地报销记账应用，大部分代码由 AI 生成，人类负责提需求、编译报错和收拾「惊喜」。</p>
       </div>
-      <nav class="footer__links" aria-label="相关链接">
-        <a href="https://github.com/SanXiaoXing/snap-claim-android" target="_blank" rel="noopener">GitHub 仓库</a>
-        <a href="https://github.com/SanXiaoXing/snap-claim-android/releases" target="_blank" rel="noopener">全部版本</a>
-        <a href="https://github.com/SanXiaoXing/snap-claim-android/blob/main/RELEASELOG.md" target="_blank" rel="noopener">完整更新日志</a>
-        <a href="https://github.com/SanXiaoXing/snap-claim-android/issues/new" target="_blank" rel="noopener">反馈问题</a>
-      </nav>
+
+      <div class="hover-footer__col">
+        <h3>产品</h3>
+        <ul>
+          <li><a href="#features">功能</a></li>
+          <li><a href="#money">报销规则</a></li>
+          <li><a href="#changelog">更新日志</a></li>
+          <li><a href="#faq">常见问题</a></li>
+        </ul>
+      </div>
+
+      <div class="hover-footer__col">
+        <h3>资源</h3>
+        <ul>
+          <li><a href="https://github.com/SanXiaoXing/snap-claim-android" target="_blank" rel="noopener">GitHub 仓库</a></li>
+          <li><a href="https://github.com/SanXiaoXing/snap-claim-android/releases" target="_blank" rel="noopener">全部版本</a></li>
+          <li><a href="https://github.com/SanXiaoXing/snap-claim-android/blob/main/RELEASELOG.md" target="_blank" rel="noopener">完整更新日志</a></li>
+        </ul>
+      </div>
+
+      <div class="hover-footer__col hover-footer__col--contact">
+        <h3>联系</h3>
+        <ul class="hover-footer__contact">
+          <li>
+            <a href="https://github.com/SanXiaoXing/snap-claim-android" target="_blank" rel="noopener">
+              <span>SanXiaoXing/snap-claim-android</span>
+            </a>
+          </li>
+          <li>
+            <a href="https://github.com/SanXiaoXing/snap-claim-android/issues/new" target="_blank" rel="noopener">
+              <span>反馈问题</span>
+            </a>
+          </li>
+        </ul>
+      </div>
     </div>
-    <div class="footer__legal">
-      <span>作者 SanXiaoXing · 版权所有 © 2026，保留所有权利。</span>
-      <span>本页是纯静态页面，不埋点、不收集访问数据；版本信息来自 GitHub 公开接口。</span>
+
+    <div class="hover-footer__divider" aria-hidden="true"></div>
+
+    <div class="hover-footer__bottom">
+      <div class="hover-footer__social">
+        <a href="https://github.com/SanXiaoXing/snap-claim-android" target="_blank" rel="noopener" aria-label="GitHub">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2Z"/></svg>
+        </a>
+      </div>
+      <div class="hover-footer__copy-block">
+        <p class="hover-footer__copy">作者 SanXiaoXing · 版权所有 © <span data-footer-year></span>，保留所有权利。</p>
+        <p class="hover-footer__note">本页是纯静态页面，不埋点、不收集访问数据；版本信息来自 GitHub 公开接口。</p>
+      </div>
     </div>
   </div>
 </footer>

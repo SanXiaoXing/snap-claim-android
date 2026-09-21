@@ -234,6 +234,106 @@
 
   /* ------------------------------- 主题 ------------------------------- */
 
+  /* 主题径向揭示：新主题从切换按钮圆心向外扩散。
+     1. View Transitions：新旧快照叠放，对新主题快照做 clip-path:circle()。
+     2. 无 VT：新主题底色光晕（veil）圆形盖满视口，再提交主题。
+     3. prefers-reduced-motion：直接切换。 */
+
+  var THEME_SURFACE = { light: '#ffffff', dark: '#141210' };
+  var THEME_META = { light: '#ffffff', dark: '#141210' };
+
+  var themeRevealVt = null;
+  var themeRevealVeil = null;
+  var themeRevealVeilAnim = null;
+  var themeRevealClipAnim = null;
+  var themeRevealUnlockTimer = null;
+  /** 目标主题：动画尚未 applyTheme 时，连点以意图而非 DOM 为准 */
+  var themeIntent = null;
+
+  function themeRevealTokens() {
+    var cs = getComputedStyle(document.documentElement);
+    var raw = (cs.getPropertyValue('--theme-reveal-duration') || '').trim();
+    var ms = parseFloat(raw);
+    if (!isFinite(ms) || ms <= 0) ms = 600;
+    // "600ms" / "0.6s" 都要落到毫秒
+    if (/s$/i.test(raw) && !/ms$/i.test(raw)) ms = ms * 1000;
+    var easing = (cs.getPropertyValue('--ease-theme-reveal') || '').trim();
+    return {
+      duration: ms,
+      easing: easing || 'cubic-bezier(0.23, 1, 0.32, 1)',
+    };
+  }
+
+  function prefersReducedThemeMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  function themeRevealCenter(el) {
+    var rect = el.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+  }
+
+  function themeRevealRadius(x, y) {
+    var maxX = Math.max(x, window.innerWidth - x);
+    var maxY = Math.max(y, window.innerHeight - y);
+    // 对角覆盖：无论按钮在角落还是中间，圆形都能盖满视口
+    return Math.hypot(maxX, maxY);
+  }
+
+  function themeRevealClip(x, y, radius) {
+    return 'circle(' + radius + 'px at ' + x + 'px ' + y + 'px)';
+  }
+
+  function saveTheme(theme) {
+    try {
+      localStorage.setItem('snapclaim:theme', theme);
+    } catch (e) {
+      /* 存不了就只在本次会话生效 */
+    }
+  }
+
+  function stopThemeReveal(options) {
+    var applyPending = !!(options && options.applyPending);
+    window.clearTimeout(themeRevealUnlockTimer);
+    themeRevealUnlockTimer = null;
+    if (themeRevealVt) {
+      try {
+        themeRevealVt.skipTransition();
+      } catch (e) {
+        /* ignore */
+      }
+      themeRevealVt = null;
+    }
+    if (themeRevealClipAnim) {
+      try {
+        themeRevealClipAnim.cancel();
+      } catch (e) {
+        /* ignore */
+      }
+      themeRevealClipAnim = null;
+    }
+    if (themeRevealVeilAnim) {
+      try {
+        themeRevealVeilAnim.cancel();
+      } catch (e) {
+        /* ignore */
+      }
+      themeRevealVeilAnim = null;
+    }
+    if (themeRevealVeil) {
+      themeRevealVeil.remove();
+      themeRevealVeil = null;
+    }
+    document.documentElement.classList.remove('is-theme-revealing');
+    if (applyPending && themeIntent) {
+      applyTheme(themeIntent);
+    }
+    themeIntent = null;
+  }
+
   function initTheme() {
     var saved = null;
     try {
@@ -243,27 +343,161 @@
     }
     var prefersDark =
       window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // 首屏直接应用，不做揭示动画
     applyTheme(saved || (prefersDark ? 'dark' : 'light'));
 
     var toggle = $('#theme-toggle');
-    if (toggle) {
-      toggle.addEventListener('click', function () {
-        var next =
-          document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        applyTheme(next);
-        try {
-          localStorage.setItem('snapclaim:theme', next);
-        } catch (e) {
-          /* 存不了就只在本次会话生效 */
-        }
-      });
+    if (!toggle) return;
+
+    toggle.addEventListener('click', function () {
+      // 以「目标态」取反：动画中途连点也能正确 light↔dark
+      var domTheme = document.documentElement.getAttribute('data-theme');
+      var base = themeIntent || domTheme || 'light';
+      var next = base === 'dark' ? 'light' : 'dark';
+      themeIntent = next;
+      saveTheme(next);
+      revealTheme(next, toggle);
+    });
+  }
+
+  function revealTheme(next, originEl) {
+    var center = themeRevealCenter(originEl);
+    var endRadius = themeRevealRadius(center.x, center.y);
+    var tokens = themeRevealTokens();
+
+    // 中断上一次揭示；veil 路径会先把未提交的主题落盘，避免状态悬空
+    if (themeRevealVt || themeRevealVeil) {
+      stopThemeReveal({ applyPending: true });
+      themeIntent = next;
     }
+
+    if (prefersReducedThemeMotion()) {
+      applyTheme(next);
+      themeIntent = null;
+      return;
+    }
+
+    // —— 路径 1：View Transitions 快照径向揭示 ——
+    if (typeof document.startViewTransition === 'function') {
+      var circleFrom = themeRevealClip(center.x, center.y, 0);
+      var circleTo = themeRevealClip(center.x, center.y, endRadius);
+
+      var vt;
+      try {
+        vt = document.startViewTransition(function () {
+          applyTheme(next);
+        });
+      } catch (e) {
+        revealThemeVeil(next, center, endRadius, tokens);
+        return;
+      }
+      themeRevealVt = vt;
+      document.documentElement.classList.add('is-theme-revealing');
+
+      vt.ready
+        .then(function () {
+          // 新主题快照：从按钮圆心长到覆盖全屏；旧快照垫底，圆内圆外自然交叠
+          var clipAnim = document.documentElement.animate(
+            { clipPath: [circleFrom, circleTo] },
+            {
+              duration: tokens.duration,
+              easing: tokens.easing,
+              pseudoElement: '::view-transition-new(root)',
+            }
+          );
+          themeRevealClipAnim = clipAnim;
+          clipAnim.finished
+            .catch(function () {})
+            .then(function () {
+              if (themeRevealClipAnim === clipAnim) themeRevealClipAnim = null;
+            });
+        })
+        .catch(function () {
+          /* transition 被跳过或中断 */
+        });
+
+      vt.finished
+        .catch(function () {
+          /* 中断时也进入清理 */
+        })
+        .then(function () {
+          if (themeRevealVt === vt) {
+            themeRevealVt = null;
+          }
+          themeRevealClipAnim = null;
+          document.documentElement.classList.remove('is-theme-revealing');
+          if (themeIntent === next) themeIntent = null;
+        });
+
+      // 兜底：即使 finished 迟到/丢失，也不让 is-theme-revealing 卡住页面 transition
+      window.clearTimeout(themeRevealUnlockTimer);
+      themeRevealUnlockTimer = window.setTimeout(function () {
+        document.documentElement.classList.remove('is-theme-revealing');
+      }, tokens.duration + 120);
+      return;
+    }
+
+    // —— 路径 2：无 View Transitions —— veil 光晕径向扩散 ——
+    revealThemeVeil(next, center, endRadius, tokens);
+  }
+
+  /**
+   * 新主题底色从按钮圆心铺满视口；覆盖完成后再提交主题并揭开，
+   * 底色与新主题 --bg 一致，因此揭开瞬间不会闪色。
+   */
+  function revealThemeVeil(next, center, endRadius, tokens) {
+    var veil = document.createElement('div');
+    veil.className = 'theme-reveal-veil';
+    veil.setAttribute('aria-hidden', 'true');
+    veil.style.background = THEME_SURFACE[next] || '#ffffff';
+    veil.style.clipPath = themeRevealClip(center.x, center.y, 0);
+    veil.style.webkitClipPath = veil.style.clipPath;
+    document.body.appendChild(veil);
+
+    themeRevealVeil = veil;
+    document.documentElement.classList.add('is-theme-revealing');
+
+    var anim;
+    try {
+      anim = veil.animate(
+        [
+          { clipPath: themeRevealClip(center.x, center.y, 0) },
+          { clipPath: themeRevealClip(center.x, center.y, endRadius) },
+        ],
+        {
+          duration: tokens.duration,
+          easing: tokens.easing,
+          fill: 'forwards',
+        }
+      );
+    } catch (e) {
+      applyTheme(next);
+      stopThemeReveal();
+      return;
+    }
+    themeRevealVeilAnim = anim;
+
+    anim.finished
+      .catch(function () {
+        /* 取消 / 中断 */
+      })
+      .then(function () {
+        if (themeRevealVeil !== veil) return;
+        applyTheme(next);
+        themeRevealVeilAnim = null;
+        themeRevealVeil = null;
+        veil.remove();
+        window.clearTimeout(themeRevealUnlockTimer);
+        themeRevealUnlockTimer = null;
+        document.documentElement.classList.remove('is-theme-revealing');
+        if (themeIntent === next) themeIntent = null;
+      });
   }
 
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', theme === 'dark' ? '#141210' : '#ffffff');
+    if (meta) meta.setAttribute('content', THEME_META[theme] || THEME_META.light);
   }
 
   /* ------------------------------ 导航交互 ------------------------------ */
@@ -1029,12 +1263,49 @@
     renderChangelog(data);
   }
 
+  /** page-blend 页脚：版权年份 + 进入视口时显现背景大字 */
+  function initPageBlendFooter() {
+    var footer = document.querySelector('[data-hover-footer]');
+    if (!footer) return;
+
+    var year = footer.querySelector('[data-footer-year]');
+    if (year) year.textContent = String(new Date().getFullYear());
+
+    var show = function () {
+      footer.classList.add('is-visible');
+    };
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      show();
+      return;
+    }
+
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(
+        function (entries) {
+          for (var i = 0; i < entries.length; i++) {
+            if (!entries[i].isIntersecting) continue;
+            show();
+            io.disconnect();
+            return;
+          }
+        },
+        { threshold: 0.2 }
+      );
+      io.observe(footer);
+      return;
+    }
+
+    show();
+  }
+
   function init() {
     pickSavedSource();
     initTheme();
     initNav();
     initReveal();
     initDownloadMenu();
+    initPageBlendFooter();
 
     loadReleases().then(function (data) {
       boot(data);
