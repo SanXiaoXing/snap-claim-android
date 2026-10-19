@@ -180,11 +180,11 @@ Container(padding:16, cardDecoration) ─ Column
 - `body: Stack(fit:expand)` 同时放三个页面，非选中页 `IgnorePointer` + `AnimatedOpacity(0)` + `AnimatedSlide`（切换 320ms `easeOutCubic`，减少动态时 `Duration.zero`）。
 - 底栏 `_GlassTabBar`：
   - 外层 `SafeArea(top:false)`，高度 `64 + 16`，`Padding.fromLTRB(20,0,20,16)`。
-  - **布局**：`Row` = 主菜单胶囊 `Expanded` + 间距 `12` + 独立 AI 圆钮 `AiBallButton`（`64px`，与主胶囊同高）。小球不并入主胶囊（对齐 askAI blobOnly / 参考图分隔形态）。
+  - **布局**：`Row` = 主菜单胶囊 `Expanded` + 间距 `12` + 独立 AI 圆钮 `AiBallButton`（`58px`，在 `64px` 高的菜单行中垂直居中）。小球不并入主胶囊（对齐 askAI blobOnly / 参考图分隔形态）。
   - 胶囊 `ClipRRect(32)` + `BackdropFilter(blur 28)` + 半透明底色（亮色 `F8FAFC@0.92`、暗色 `2A2722@0.78`）+ `1px` 描边 + 投影。
-  - 选中胶囊 `SlidingPill`（`widgets/sliding_pill.dart`，由原 `_SelectedPill` 提取为公共组件）：用 `LayoutBuilder` 算每格宽，**临界阻尼弹簧**（stiffness 246 / damping 31.4 ≈ 0.4s）滑动，从当前屏幕值出发可被打断重定向；`animate:false` 时直接跟随目标值（供历史页分段 tab 拖拽跟手复用）。
+  - 选中胶囊 `SlidingPill`（`widgets/sliding_pill.dart`，由原 `_SelectedPill` 提取为公共组件）：与外壳内壁四周各留 `2px`；用 `LayoutBuilder` 算每格宽，**临界阻尼弹簧**（stiffness 246 / damping 31.4 ≈ 0.4s）滑动，从当前屏幕值出发可被打断重定向；底栏和历史页分段 tab 拖动时都用 `animate:false` 实时跟手，松手按半格位移或 300px/s 甩动速度切到相邻项，否则弹回；减少动态时直接切换。
   - 菜单项 `_GlassTab`：`Expanded` + `Column` 图标(`22`)+文字(`10.5`)，选中 `Colors.white`、未选 `c.fgMuted`，图标 `AnimatedSwitcher` 在实心/描边间淡入缩放切换。
-  - AI 小球 `AiBallButton`（`widgets/ai_mascot.dart`）：玻璃圆壳 **64px 与主胶囊同高** + 内嵌 `AIMascot`（约 40px accent blob + 双眼；形变**始终近圆**的软有机呼吸——轻花/叶/水滴，比例约 0.44–0.56，无尖角；眨眼周期 **4.5s**；减少动态时停动画）。点击弹出「AI 情况说明」占位底部弹层。
+  - AI 小球 `AiBallButton`（`widgets/ai_mascot.dart`）：玻璃圆壳 **58px，垂直居中** + 内嵌 `AIMascot`（约 38px accent blob + 双眼；水滴、叶片轮廓每 **9s** 缓慢循环，眼睛随轮廓左右转向并在转向时眨眼；按压左/右半边会朝触点转向并眨一次眼；减少动态时固定为静态造型）。点击弹出「AI 情况说明」占位底部弹层。
   - **生成中 / 生成完成动效**（参考 grok-icon-study）：AI 弹层头部 `AIMascot` 用 `phase` 驱动——`generating` → **searching**（左右搜寻摆动 + 眼睛扫视）；`success` → **celebrate**（spinBounce 一圈 360° + 弹跳回弹，约 900ms，随后持续轻跳）。切入 celebrate 时自动播转圈；`disableAnimations` 时全部跳过。
 
 ---

@@ -116,7 +116,8 @@ class MainShellState extends State<MainShell> {
   /// 带切换动画的页面：当前页淡入原位，其余页淡出并朝切换方向微移。
   Widget _buildPage(int i, Widget page) {
     final selected = i == _index;
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final offset = selected
         ? Offset.zero
         : Offset(_index < i ? 0.06 : -0.06, 0);
@@ -125,11 +126,15 @@ class MainShellState extends State<MainShell> {
       child: AnimatedOpacity(
         opacity: selected ? 1 : 0,
         // 减少动态：仅保留瞬时切换，不做位移动画。
-        duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 320),
+        duration: reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 320),
         curve: Curves.easeOutCubic,
         child: AnimatedSlide(
           offset: reduceMotion ? Offset.zero : offset,
-          duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 320),
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 320),
           curve: Curves.easeOutCubic,
           child: page,
         ),
@@ -146,11 +151,11 @@ class MainShellState extends State<MainShell> {
 /// 底部悬浮菜单栏：左侧 Liquid Glass 主胶囊 + 右侧独立 AI 小球。
 /// - 主胶囊：圆角 32px 全胶囊外壳（高度 64）+ 高光描边 + 柔和投影。
 /// - BackdropFilter 模糊下方内容，营造真正悬浮在内容之上的玻璃质感。
-/// - 选中态浮动胶囊用 accent 填充，与外壳内壁仅留 2px（左右）/ 4px（上下）缝隙。
-/// - AI 小球：与主胶囊留 12px 缝隙的独立圆钮（64px，与主胶囊同高），
-///   玻璃壳 + askAI blob（花/叶/三角/菱形形变）。
+/// - 选中态浮动胶囊用 accent 填充，与外壳内壁四周留 2px 缝隙。
+/// - AI 小球：与主胶囊留 12px 缝隙的独立圆钮（58px，垂直居中），
+///   玻璃壳 + 水滴/叶片形变的 askAI blob。
 /// - 选中项图标实心 / 文字反色为白；未选中保持 muted 灰。
-class _GlassTabBar extends StatelessWidget {
+class _GlassTabBar extends StatefulWidget {
   final int index;
   final ValueChanged<int> onChanged;
   final VoidCallback? onAiTap;
@@ -162,22 +167,63 @@ class _GlassTabBar extends StatelessWidget {
   });
 
   static const _items = <_TabItem>[
-    (
-      icon: Icons.home_outlined,
-      activeIcon: Icons.home_rounded,
-      label: '首页',
-    ),
+    (icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: '首页'),
     (
       icon: Icons.archive_outlined,
       activeIcon: Icons.archive_rounded,
       label: '历史',
     ),
-    (
-      icon: Icons.person_outline,
-      activeIcon: Icons.person_rounded,
-      label: '我的',
-    ),
+    (icon: Icons.person_outline, activeIcon: Icons.person_rounded, label: '我的'),
   ];
+
+  @override
+  State<_GlassTabBar> createState() => _GlassTabBarState();
+}
+
+class _GlassTabBarState extends State<_GlassTabBar> {
+  // 与历史记录分段栏使用相同的位移和甩动判定。
+  static const _flingVelocity = 300.0;
+
+  bool _dragging = false;
+  double _dragDx = 0;
+
+  void _onTap(int index) {
+    if (index == widget.index) return;
+    widget.onChanged(index);
+  }
+
+  void _onDragStart() {
+    setState(() {
+      _dragging = true;
+      _dragDx = 0;
+    });
+  }
+
+  void _onDragUpdate(double dx) {
+    setState(() => _dragDx += dx);
+  }
+
+  void _onDragCancel() {
+    setState(() {
+      _dragging = false;
+      _dragDx = 0;
+    });
+  }
+
+  void _onDragEnd(DragEndDetails details, double slot) {
+    final velocity = details.velocity.pixelsPerSecond.dx;
+    var target = widget.index;
+    if (_dragDx.abs() > slot / 2) {
+      target += _dragDx > 0 ? 1 : -1;
+    } else if (velocity.abs() > _flingVelocity) {
+      target += velocity > 0 ? 1 : -1;
+    }
+    target = target.clamp(0, _GlassTabBar._items.length - 1);
+    _onDragCancel();
+    if (target != widget.index) {
+      widget.onChanged(target);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -188,7 +234,7 @@ class _GlassTabBar extends StatelessWidget {
         // 固定高度 = 胶囊 / 圆钮 + 底部留白：与内容对齐，避免贴死手势区。
         height: 64 + 16,
         child: Padding(
-          // 左右收进 20：左侧主胶囊可伸缩，右侧固定 AI 圆钮（56）+ 12 缝隙。
+          // 左右收进 20：左侧主胶囊可伸缩，右侧固定 AI 圆钮（58）+ 12 缝隙。
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
           child: Row(
             children: [
@@ -201,7 +247,6 @@ class _GlassTabBar extends StatelessWidget {
                     filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
                     child: Container(
                       height: 64,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
                         // 液态玻璃：单一半透明纯色，按明暗自适应表面色 + 不透明度。
                         // - 亮色模式：c.bgSecondary（slate-50，#F8FAFC）+ 0.92 alpha。
@@ -217,14 +262,14 @@ class _GlassTabBar extends StatelessWidget {
                         border: Border.all(
                           color: isDark
                               ? Colors.white.withValues(alpha: 0.10)
-                              : const Color(0xFFCBD5E1)
-                                  .withValues(alpha: 0.6),
+                              : const Color(0xFFCBD5E1).withValues(alpha: 0.6),
                           width: 1.0,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black
-                                .withValues(alpha: isDark ? 0.55 : 0.22),
+                            color: Colors.black.withValues(
+                              alpha: isDark ? 0.55 : 0.22,
+                            ),
                             blurRadius: 28,
                             offset: const Offset(0, 12),
                           ),
@@ -236,36 +281,61 @@ class _GlassTabBar extends StatelessWidget {
                       // 会失去 StackParentData 报错。
                       child: LayoutBuilder(
                         builder: (context, constraints) {
-                          // 每格宽度 = 容器宽 / itemCount（已扣 horizontal padding 8）。
-                          final slot = constraints.maxWidth / _items.length;
-                          // 胶囊与外壳内壁只留 2px 缝隙（原 4px），选中态更饱满贴边。
+                          // 每格宽度 = 容器内宽 / itemCount。
+                          final slot =
+                              constraints.maxWidth / _GlassTabBar._items.length;
+                          // 胶囊左右各内缩 2px，与上下留白一致。
                           final pillWidth = slot - 4;
-                          return Stack(
-                            children: [
-                              // 选中态浮动胶囊：在内容之上覆盖，跟随选中项平滑滑动。
-                              SlidingPill(
-                                // LayoutBuilder 坐标系已从容器内边距之后开始，
-                                // 不能再加 padding 4，否则胶囊会整体右偏、盖不准。
-                                left: index * slot + 2,
-                                width: pillWidth,
-                              ),
-                              // 三个菜单项（图标 + 文字上下排列）。
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  for (var i = 0; i < _items.length; i++)
-                                    _GlassTab(
-                                      icon: _items[i].icon,
-                                      activeIcon: _items[i].activeIcon,
-                                      label: _items[i].label,
-                                      position: i,
-                                      selectedIndex: index,
-                                      onTap: () => onChanged(i),
-                                    ),
-                                ],
-                              ),
-                            ],
+                          final reduceMotion =
+                              MediaQuery.maybeOf(context)?.disableAnimations ??
+                              false;
+                          final restLeft = widget.index * slot + 2;
+                          final pillLeft = _dragging && !reduceMotion
+                              ? (restLeft + _dragDx)
+                                    .clamp(2.0, constraints.maxWidth - slot + 2)
+                                    .toDouble()
+                              : restLeft;
+                          return GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onHorizontalDragStart: (_) => _onDragStart(),
+                            onHorizontalDragUpdate: (d) =>
+                                _onDragUpdate(d.delta.dx),
+                            onHorizontalDragEnd: (d) => _onDragEnd(d, slot),
+                            onHorizontalDragCancel: _onDragCancel,
+                            child: Stack(
+                              children: [
+                                // 选中态浮动胶囊：在内容之上覆盖，跟随选中项平滑滑动。
+                                SlidingPill(
+                                  left: pillLeft,
+                                  width: pillWidth,
+                                  top: 2,
+                                  bottom: 2,
+                                  // 拖动时直接跟手，松手后复用历史记录的弹簧。
+                                  animate: !_dragging && !reduceMotion,
+                                ),
+                                // 三个菜单项（图标 + 文字上下排列）。
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    for (
+                                      var i = 0;
+                                      i < _GlassTabBar._items.length;
+                                      i++
+                                    )
+                                      _GlassTab(
+                                        icon: _GlassTabBar._items[i].icon,
+                                        activeIcon:
+                                            _GlassTabBar._items[i].activeIcon,
+                                        label: _GlassTabBar._items[i].label,
+                                        position: i,
+                                        selectedIndex: widget.index,
+                                        onTap: () => _onTap(i),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           );
                         },
                       ),
@@ -275,7 +345,7 @@ class _GlassTabBar extends StatelessWidget {
               ),
               // 与主胶囊明确分隔（对齐参考图中「圆钮独立在外」）。
               const SizedBox(width: 12),
-              AiBallButton(onTap: onAiTap),
+              AiBallButton(onTap: widget.onAiTap),
             ],
           ),
         ),

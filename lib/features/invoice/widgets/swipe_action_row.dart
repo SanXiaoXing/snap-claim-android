@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 
 import 'swipe_background.dart';
 
@@ -63,6 +64,24 @@ class _SwipeActionRowState extends State<SwipeActionRow>
   double _width = 0;
   double _exitProgress = 0;
   bool _busy = false;
+  bool _thresholdFeedbackSent = false;
+  double _feedbackSide = 0;
+
+  double get _commitThreshold =>
+      (_width / 2).clamp(_revealThreshold, double.infinity);
+
+  void _updateHaptics(double offset) {
+    final distance = offset.abs();
+    if (offset.sign != _feedbackSide || distance < _commitThreshold - 12) {
+      // 明确回拖后才允许重新提醒，避免临界点附近抖动造成连续震动。
+      _thresholdFeedbackSent = false;
+    }
+    _feedbackSide = offset.sign;
+    if (distance >= _commitThreshold && !_thresholdFeedbackSent) {
+      _thresholdFeedbackSent = true;
+      HapticFeedback.mediumImpact();
+    }
+  }
 
   bool get _reduceMotion =>
       MediaQuery.maybeOf(context)?.disableAnimations ?? false;
@@ -124,6 +143,8 @@ class _SwipeActionRowState extends State<SwipeActionRow>
   void _dragStart(DragStartDetails details) {
     if (_busy) return;
     _controller.stop();
+    _thresholdFeedbackSent = _offset.abs() >= _commitThreshold;
+    _feedbackSide = _offset.sign;
   }
 
   void _dragUpdate(DragUpdateDetails details) {
@@ -133,6 +154,7 @@ class _SwipeActionRowState extends State<SwipeActionRow>
         (next < 0 && widget.rightAction == null)) {
       return;
     }
+    _updateHaptics(next);
     setState(() => _offset = next);
   }
 
@@ -142,7 +164,7 @@ class _SwipeActionRowState extends State<SwipeActionRow>
     final action = _offset > 0 ? widget.leftAction : widget.rightAction;
     if (action == null || distance < _revealThreshold) {
       _animateTo(0);
-    } else if (distance >= _width / 2) {
+    } else if (distance >= _commitThreshold) {
       _trigger(action, _offset.sign);
     } else {
       _animateTo(_offset.sign * _buttonWidth.clamp(0, _width));
@@ -192,7 +214,10 @@ class _SwipeActionRowState extends State<SwipeActionRow>
                           onHorizontalDragStart: _dragStart,
                           onHorizontalDragUpdate: _dragUpdate,
                           onHorizontalDragEnd: _dragEnd,
-                          onHorizontalDragCancel: () => _animateTo(0),
+                          onHorizontalDragCancel: () {
+                            if (_busy) return;
+                            _animateTo(0);
+                          },
                           child: widget.child,
                         ),
                       ),

@@ -1,19 +1,10 @@
-// 历史记录页：把原「归档页」并入本页，用滑动分段 tab 切换「未报销 / 已报销」。
+// 历史记录页：把原「归档页」并入本页，点按 tab 切换「未报销 / 已报销」。
 //
 // 结构：
 //   AppTopBar('历史记录')    —— 无返回、无右上角操作（归档入口已并入 tab）
-//   SlidingSegmentedTabs     —— 「未报销 / 已报销」+ 数量，支持点按与拖拽
-//   PageView                 —— 两个按月分组的列表，onPageChanged 反向同步 tab
-//
-// ⚠️ 手势竞技场约束：
-//   手指落在卡片上横滑时，卡片滑动手势优先，外层 PageView
-//   完全拿不到手势（左滑、右滑、小幅拖动后回拖都一样）；只有落在非卡片区域
-//   （卡片间距 / 月份标题 / 列表外空白）横滑时，PageView 才能翻页。
-//   滑动切 tab 由 tab 栏自身支持拖拽（见 SlidingSegmentedTabs）。
-//   PageView 仍保留，用于在非卡片区域翻页，
-//   并通过 onPageChanged 把下标反向同步回 tab 栏。
+//   SlidingSegmentedTabs     —— 「未报销 / 已报销」+ 数量，仅支持点按
+//   PageView                 —— 两个按月分组的列表，仅由 tab 点按控制
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show HapticFeedback;
 
 import '../../../app/theme.dart';
 import '../models/claim.dart';
@@ -100,8 +91,7 @@ class _HistoryPageState extends State<HistoryPage> {
         Expanded(
           child: PageView(
             controller: _ctrl,
-            // 内容区（非卡片处）横滑翻页 → 反向同步 tab 高亮。
-            onPageChanged: (i) => setState(() => _index = i),
+            physics: const NeverScrollableScrollPhysics(),
             children: [
               _buildList(context, unarchived, archived: false),
               _buildList(context, archived, archived: true),
@@ -170,7 +160,6 @@ class _HistoryPageState extends State<HistoryPage> {
         from: RecordCategory.car.base,
         to: Color.lerp(RecordCategory.car.base, c.card, 0.35)!,
         onTriggered: () {
-          HapticFeedback.mediumImpact();
           widget.onArchiveClaim(claim);
         },
       ),
@@ -186,11 +175,10 @@ class _HistoryPageState extends State<HistoryPage> {
       bottomSpacing: 12,
       leftAction: SwipeAction(
         icon: Icons.undo,
-        label: '撤销',
+        label: '撤销报销',
         from: RecordCategory.car.base,
         to: Color.lerp(RecordCategory.car.base, c.card, 0.35)!,
         onTriggered: () {
-          HapticFeedback.mediumImpact();
           widget.onRestoreClaim(claim);
         },
       ),
@@ -201,7 +189,6 @@ class _HistoryPageState extends State<HistoryPage> {
         to: Color.lerp(c.danger, c.dangerBg, 0.3)!,
         confirm: () => _confirmDelete(context, claim),
         onTriggered: () {
-          HapticFeedback.lightImpact();
           widget.onDeleteClaim(claim);
         },
       ),

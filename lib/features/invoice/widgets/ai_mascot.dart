@@ -1,5 +1,5 @@
 // AI 小球：askAI 风格 AIMascot 形象。
-// 视觉：主色 blob + 两颗竖椭圆眼；blob 圆角缓慢形变，眼睛周期性眨眼。
+// 视觉：主色 blob + 两颗竖椭圆眼；轮廓在水滴、叶片间缓慢形变，眼睛周期性眨眼。
 // phase：generating→searching 摆动；success→celebrate 转圈 + 轻跳。
 import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
@@ -38,15 +38,18 @@ class _AIMascotState extends State<AIMascot>
     with TickerProviderStateMixin {
   late final AnimationController _blobCtrl;
   late final AnimationController _spinCtrl;
+  late final AnimationController _attentionCtrl;
+  late final AnimationController _tapBlinkCtrl;
   MascotPhase _phase = MascotPhase.idle;
 
-  // 近圆软 blob 关键帧 [tlx,tly,trx,try,brx,bry,blx,bly]
+  // 四角椭圆半径 [tlx,tly,trx,try,brx,bry,blx,bly]。
+  // 每条边相邻半径之和不超过 1，避免 Flutter 自动缩放圆角后抹平形变。
   static const _blobFrames = <List<double>>[
-    [0.52, 0.50, 0.48, 0.52, 0.50, 0.48, 0.50, 0.50],
-    [0.54, 0.46, 0.46, 0.54, 0.54, 0.46, 0.46, 0.54],
-    [0.56, 0.48, 0.44, 0.56, 0.52, 0.44, 0.48, 0.52],
-    [0.46, 0.54, 0.54, 0.46, 0.48, 0.54, 0.52, 0.46],
-    [0.50, 0.52, 0.50, 0.48, 0.54, 0.50, 0.46, 0.50],
+    [0.52, 0.48, 0.48, 0.52, 0.52, 0.48, 0.48, 0.52],
+    [0.68, 0.38, 0.32, 0.62, 0.63, 0.38, 0.37, 0.62],
+    [0.36, 0.34, 0.64, 0.38, 0.66, 0.62, 0.34, 0.66],
+    [0.60, 0.62, 0.40, 0.38, 0.30, 0.62, 0.70, 0.38],
+    [0.30, 0.66, 0.70, 0.34, 0.38, 0.66, 0.62, 0.34],
   ];
 
   @override
@@ -54,11 +57,20 @@ class _AIMascotState extends State<AIMascot>
     super.initState();
     _blobCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 7200),
+      duration: const Duration(milliseconds: 9000),
     );
     _spinCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
+    );
+    _attentionCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
+      reverseDuration: const Duration(milliseconds: 240),
+    )..value = widget.awake ? 1 : 0;
+    _tapBlinkCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
     );
     _phase = widget.phase;
   }
@@ -73,6 +85,14 @@ class _AIMascotState extends State<AIMascot>
   void didUpdateWidget(covariant AIMascot oldWidget) {
     super.didUpdateWidget(oldWidget);
     _syncMotion();
+    if (widget.awake != oldWidget.awake && !_reduce) {
+      if (widget.awake) {
+        _attentionCtrl.forward();
+        _tapBlinkCtrl.forward(from: 0);
+      } else {
+        _attentionCtrl.reverse();
+      }
+    }
     if (widget.phase != _phase) {
       final enteringCelebrate = widget.phase == MascotPhase.celebrate;
       _phase = widget.phase;
@@ -87,6 +107,12 @@ class _AIMascotState extends State<AIMascot>
     if (_reduce) {
       _blobCtrl.stop();
       _blobCtrl.value = 0.35;
+      _attentionCtrl.stop();
+      _attentionCtrl.value = 0;
+      _tapBlinkCtrl.stop();
+      _tapBlinkCtrl.value = 0;
+      _spinCtrl.stop();
+      _spinCtrl.value = 0;
     } else if (!_blobCtrl.isAnimating) {
       _blobCtrl.repeat();
     }
@@ -96,6 +122,8 @@ class _AIMascotState extends State<AIMascot>
   void dispose() {
     _blobCtrl.dispose();
     _spinCtrl.dispose();
+    _attentionCtrl.dispose();
+    _tapBlinkCtrl.dispose();
     super.dispose();
   }
 
@@ -158,12 +186,6 @@ class _AIMascotState extends State<AIMascot>
     }
   }
 
-  Offset get _baseEyeShift => !widget.awake
-      ? const Offset(0.5, -0.5)
-      : widget.lookLeft
-          ? const Offset(-2, -0.5)
-          : const Offset(0.5, -2);
-
   double _blink(double seconds, double period, double a, double b, double depth) {
     final p = (seconds % period) / period;
     if (p < a || p > b) return 1;
@@ -171,9 +193,19 @@ class _AIMascotState extends State<AIMascot>
     return 1 - depth * (t < 0.5 ? t * 2 : (1 - t) * 2);
   }
 
-  double _blinkScale(double seconds) => widget.phase == MascotPhase.searching
-      ? _blink(seconds, 6.2, 0.55, 0.58, 0.75)
-      : _blink(seconds, 4.5, 0.38, 0.42, 0.90);
+  double _blinkScale(double seconds) {
+    final idleBlink = widget.phase == MascotPhase.idle
+        ? math.min(
+            _blink(_blobCtrl.value, 1, 0.22, 0.255, 0.90),
+            _blink(_blobCtrl.value, 1, 0.72, 0.755, 0.90),
+          )
+        : widget.phase == MascotPhase.searching
+            ? _blink(seconds, 6.2, 0.55, 0.58, 0.75)
+            : _blink(seconds, 4.5, 0.38, 0.42, 0.90);
+    // 按下时眨一次眼；独立于呼吸循环，松手后也能自然睁开。
+    final tapBlink = 1 - 0.93 * math.sin(_tapBlinkCtrl.value * math.pi);
+    return math.min(idleBlink, tapBlink);
+  }
 
   BorderRadius _blobRadius(double t) {
     final s = widget.size;
@@ -186,7 +218,11 @@ class _AIMascotState extends State<AIMascot>
     final frames = [for (final f in _blobFrames) br(f), br(_blobFrames.first)];
     final seg = t * (frames.length - 1);
     final i = seg.floor().clamp(0, frames.length - 2);
-    return BorderRadius.lerp(frames[i], frames[i + 1], seg - i)!;
+    return BorderRadius.lerp(
+      frames[i],
+      frames[i + 1],
+      Curves.easeInOutCubic.transform(seg - i),
+    )!;
   }
 
   Widget _ball({required double ball, required double eyeW, required double eyeH, required double eyeGap}) {
@@ -196,7 +232,7 @@ class _AIMascotState extends State<AIMascot>
       height: ball,
       decoration: BoxDecoration(
         color: c.accent,
-        borderRadius: BorderRadius.circular(ball * 0.48),
+        borderRadius: _blobRadius(0.35),
       ),
       child: Center(
         child: Row(
@@ -221,16 +257,37 @@ class _AIMascotState extends State<AIMascot>
 
     return RepaintBoundary(
       child: AnimatedBuilder(
-        animation: Listenable.merge([_blobCtrl, _spinCtrl]),
+        animation: Listenable.merge([
+          _blobCtrl,
+          _spinCtrl,
+          _attentionCtrl,
+          _tapBlinkCtrl,
+        ]),
         builder: (context, _) {
           if (reduce) return _ball(ball: ball, eyeW: eyeW, eyeH: eyeH, eyeGap: eyeGap);
 
           final seconds = DateTime.now().millisecondsSinceEpoch / 1000;
           final spin = _spinPose();
           final phase = _phasePose(seconds);
-          final rotate = (widget.awake ? 6 : -7) * math.pi / 180 + spin.angle + phase.angle;
-          final shift = phase.eyeShift == Offset.zero ? _baseEyeShift : phase.eyeShift;
-          final scale = (widget.awake ? 1.05 : 1.0) * spin.scale;
+          final idleSway = widget.phase == MascotPhase.idle
+              ? math.sin(_blobCtrl.value * math.pi * 2)
+              : 0.0;
+          final attention = Curves.easeOutCubic.transform(_attentionCtrl.value);
+          final turn = widget.lookLeft ? -1.0 : 1.0;
+          final rotate = (-7 + idleSway * 4 + attention * turn * 6) *
+                  math.pi /
+                  180 +
+              spin.angle +
+              phase.angle;
+          final idleEyes = Offset(0.5 + idleSway * 1.3, -0.5);
+          final shift = phase.eyeShift == Offset.zero
+              ? Offset.lerp(
+                  idleEyes,
+                  Offset(turn * 2.2, -0.5),
+                  attention,
+                )!
+              : phase.eyeShift;
+          final scale = (1 + attention * 0.04) * spin.scale;
           final blink = _blinkScale(seconds) * spin.eyeBoost * phase.eyeBoost;
           final c = context.colors;
 
@@ -294,18 +351,23 @@ class AiBallButton extends StatefulWidget {
 
 class _AiBallButtonState extends State<AiBallButton> {
   bool _awake = false;
+  bool _lookLeft = true;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const size = 64.0;
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    const size = 58.0;
 
     return Semantics(
       button: true,
       label: 'AI 情况说明',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => setState(() => _awake = true),
+        onTapDown: (details) => setState(() {
+          _awake = true;
+          _lookLeft = details.localPosition.dx < size / 2;
+        }),
         onTapCancel: () => setState(() => _awake = false),
         onTap: () {
           setState(() => _awake = false);
@@ -313,7 +375,9 @@ class _AiBallButtonState extends State<AiBallButton> {
         },
         child: AnimatedScale(
           scale: _awake ? 0.96 : 1.0,
-          duration: const Duration(milliseconds: 120),
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 120),
           curve: Curves.easeOutCubic,
           child: ClipOval(
             child: BackdropFilter(
@@ -344,8 +408,8 @@ class _AiBallButtonState extends State<AiBallButton> {
                 child: Center(
                   child: AIMascot(
                     awake: _awake,
-                    lookLeft: true,
-                    size: 40,
+                    lookLeft: _lookLeft,
+                    size: 38,
                   ),
                 ),
               ),

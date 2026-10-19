@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snap_claim_android/features/invoice/widgets/swipe_action_row.dart';
 import 'package:snap_claim_android/features/invoice/widgets/swipe_background.dart';
@@ -7,6 +8,88 @@ import 'package:snap_claim_android/features/invoice/models/record.dart';
 import 'package:snap_claim_android/app/theme.dart';
 
 void main() {
+  for (final direction in [-1.0, 1.0]) {
+    testWidgets('方向 $direction：临界值即时震动，防抖且松手不重复震动', (tester) async {
+      final haptics = <Object?>[];
+      var triggered = 0;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'HapticFeedback.vibrate') {
+            haptics.add(call.arguments);
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      final action = SwipeAction(
+        icon: Icons.swap_horiz,
+        label: '切换类型',
+        from: Colors.green,
+        to: Colors.green,
+        removesRow: false,
+        onTriggered: () => triggered++,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 400,
+                child: SwipeActionRow(
+                  leftAction: action,
+                  rightAction: action,
+                  child: Container(
+                    height: 60,
+                    color: Colors.white,
+                    child: const Center(child: Text('手势行')),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final row = find.text('手势行');
+      final initialX = tester.getCenter(row).dx;
+      final gesture = await tester.startGesture(tester.getCenter(row));
+      await gesture.moveBy(Offset(direction * 20, 0));
+      await tester.pump();
+      Future<void> moveTo(double distance) async {
+        final current = tester.getCenter(row).dx - initialX;
+        await gesture.moveBy(Offset(direction * distance - current, 0));
+        await tester.pump();
+      }
+
+      await moveTo(60);
+      expect(haptics, isEmpty);
+      await moveTo(90);
+      expect(haptics, isEmpty);
+      expect(find.text('松开切换类型'), findsNothing);
+      await moveTo(210);
+      expect(haptics, ['HapticFeedbackType.mediumImpact']);
+      expect(find.text('松开切换类型'), findsNothing);
+      expect(find.text('切换类型'), findsOneWidget);
+      expect(triggered, 0);
+      await moveTo(199);
+      expect(find.text('松开切换类型'), findsNothing);
+      await moveTo(205);
+      expect(haptics.length, 1);
+      await moveTo(170);
+      await moveTo(210);
+      expect(haptics.length, 2);
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(triggered, 1);
+      expect(haptics.length, 2);
+    });
+  }
+
   testWidgets('两侧跟手、80px 吸附和按钮点击', (tester) async {
     final calls = <String>[];
     await tester.pumpWidget(

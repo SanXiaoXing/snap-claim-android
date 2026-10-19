@@ -1,6 +1,5 @@
 // 明细记录行；编辑页支持左右滑动操作。
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show HapticFeedback;
 
 import '../../../app/theme.dart';
 import '../../../core/utils/format.dart';
@@ -185,7 +184,6 @@ class _DismissibleRecordRowState extends State<DismissibleRecordRow> {
               to: Color.lerp(RecordCategory.car.base, c.card, 0.35)!,
               removesRow: false,
               onTriggered: () {
-                HapticFeedback.lightImpact();
                 widget.onTripTypeChanged?.call(swapTarget);
               },
             )
