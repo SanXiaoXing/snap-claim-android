@@ -406,18 +406,21 @@ class _EditorPageState extends State<EditorPage> {
                       else
                         Column(
                           children: [
-                            for (var i = 0; i < _records.length; i++) ...[
+                            for (final record in _records)
                               DismissibleRecordRow(
-                                record: _records[i],
-                                dismissKey: ValueKey(_records[i].id),
+                                key: ValueKey(record.id),
+                                record: record,
+                                dismissKey: ValueKey(record.id),
                                 onDismissed: () => setState(() => _records
-                                    .removeWhere((e) => e.id == _records[i].id)),
-                                // 仅用车记录支持右滑切换市内/往返交通。
+                                    .removeWhere((e) => e.id == record.id)),
                                 onTripTypeChanged:
-                                    _records[i].category == RecordCategory.car
+                                    record.category == RecordCategory.car
                                         ? (t) => setState(() {
-                                              final r = _records[i];
-                                              _records[i] = Record(
+                                              final index = _records.indexWhere(
+                                                  (e) => e.id == record.id);
+                                              if (index < 0) return;
+                                              final r = _records[index];
+                                              _records[index] = Record(
                                                 id: r.id,
                                                 category: r.category,
                                                 title: r.title,
@@ -428,8 +431,6 @@ class _EditorPageState extends State<EditorPage> {
                                             })
                                         : null,
                               ),
-                              const SizedBox(height: 10),
-                            ],
                           ],
                         ),
                     ],

@@ -1,4 +1,4 @@
-// 明细记录行；编辑页用 Dismissible 包裹以支持左滑删除（滑出后弹确认框）。
+// 明细记录行；编辑页支持左右滑动操作。
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 
@@ -6,7 +6,7 @@ import '../../../app/theme.dart';
 import '../../../core/utils/format.dart';
 import '../models/record.dart';
 import 'chips.dart';
-import 'swipe_background.dart';
+import 'swipe_action_row.dart';
 
 class RecordRow extends StatelessWidget {
   final Record record;
@@ -59,8 +59,7 @@ class RecordRow extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 // 用车记录无备注时，展示「市内交通 / 往返交通」类型标记。
-                record.subtitle.isEmpty &&
-                        record.category == RecordCategory.car
+                record.subtitle.isEmpty && record.category == RecordCategory.car
                     ? (record.carTripType?.label ?? '')
                     : record.subtitle,
                 maxLines: 1,
@@ -111,9 +110,8 @@ class RecordRow extends StatelessWidget {
 
 /// 可左滑删除 /（用车）右滑切换类型的明细行，对应原型中的 swipe-row。
 ///
-/// 左滑越过阈值后滑出，弹确认框删除；用车记录右滑越过阈值直接切换
-/// 市内交通 ↔ 往返交通（行保留回弹）。仅 [onTripTypeChanged] 非空时启用右滑。
-/// 滑动背景样式与归档 / 归档删除保持一致：图标 + 文字，无缩放放大动效。
+/// 左滑删除；用车记录右滑切换市内交通 ↔ 往返交通。
+/// 轻滑露出按钮，超过半行宽直接执行。仅 [onTripTypeChanged] 非空时启用右滑。
 class DismissibleRecordRow extends StatefulWidget {
   final Record record;
   final VoidCallback onDismissed;
@@ -142,7 +140,11 @@ class _DismissibleRecordRowState extends State<DismissibleRecordRow> {
         title: '删除明细',
         content: Text(
           '确定删除「${widget.record.title}」吗？此操作不可恢复。',
-          style: TextStyle(fontSize: 14, color: ctx.colors.fgMuted, height: 1.5),
+          style: TextStyle(
+            fontSize: 14,
+            color: ctx.colors.fgMuted,
+            height: 1.5,
+          ),
         ),
         actions: [
           appDialogButton(ctx, onPressed: () => Navigator.of(ctx).pop(false)),
@@ -166,62 +168,37 @@ class _DismissibleRecordRowState extends State<DismissibleRecordRow> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    // 仅用车记录启用右滑切换；右滑目标为当前类型的反向。
-    final canSwapTrip = widget.record.category == RecordCategory.car &&
+    final canSwapTrip =
+        widget.record.category == RecordCategory.car &&
         widget.onTripTypeChanged != null;
     final swapTarget = widget.record.isRoundTripCar
         ? CarTripType.city
         : CarTripType.roundTrip;
-    return Dismissible(
+    return SwipeActionRow(
       key: widget.dismissKey,
-      direction: canSwapTrip
-          ? DismissDirection.horizontal
-          : DismissDirection.endToStart,
-      dismissThresholds: const {
-        DismissDirection.endToStart: 0.35,
-        // 右滑切换只需轻滑即可触发，避免拖过半个屏幕。
-        DismissDirection.startToEnd: 0.25,
-      },
-      movementDuration: reduceMotion
-          ? Duration.zero
-          : const Duration(milliseconds: 160),
-      resizeDuration: reduceMotion
-          ? Duration.zero
-          : const Duration(milliseconds: 220),
-      confirmDismiss: (direction) async {
-        // 右滑：切换市内/往返，行保留回弹；左滑：走删除确认。
-        if (direction == DismissDirection.startToEnd) {
-          // 切换行程类型时给轻微震动反馈，让用户感知切换已生效。
-          HapticFeedback.lightImpact();
-          widget.onTripTypeChanged?.call(swapTarget);
-          return false;
-        }
-        return _confirmDelete();
-      },
-      onDismissed: (_) => widget.onDismissed(),
-      background: canSwapTrip
-          ? SwipeBackground(
+      bottomSpacing: 10,
+      leftAction: canSwapTrip
+          ? SwipeAction(
               icon: Icons.swap_horiz,
               label: '切换为${swapTarget.label}',
               from: RecordCategory.car.base,
               to: Color.lerp(RecordCategory.car.base, c.card, 0.35)!,
-              alignment: Alignment.centerLeft,
+              removesRow: false,
+              onTriggered: () {
+                HapticFeedback.lightImpact();
+                widget.onTripTypeChanged?.call(swapTarget);
+              },
             )
-          : _deleteBackground(c),
-      secondaryBackground: canSwapTrip ? _deleteBackground(c) : null,
+          : null,
+      rightAction: SwipeAction(
+        icon: Icons.delete_outline,
+        label: '删除',
+        from: c.danger,
+        to: Color.lerp(c.danger, c.dangerBg, 0.3)!,
+        confirm: _confirmDelete,
+        onTriggered: widget.onDismissed,
+      ),
       child: RecordRow(record: widget.record),
-    );
-  }
-
-  /// 左滑删除背景（红色，右侧），与历史页「已报销」tab 的删除效果保持一致。
-  Widget _deleteBackground(AppColorScheme c) {
-    return SwipeBackground(
-      icon: Icons.delete_outline,
-      label: '删除',
-      from: c.danger,
-      to: Color.lerp(c.danger, c.dangerBg, 0.3)!,
-      alignment: Alignment.centerRight,
     );
   }
 }

@@ -5,13 +5,12 @@
 //   SlidingSegmentedTabs     —— 「未报销 / 已报销」+ 数量，支持点按与拖拽
 //   PageView                 —— 两个按月分组的列表，onPageChanged 反向同步 tab
 //
-// ⚠️ 手势竞技场约束（本机实测，确定性行为）：
-//   手指落在卡片（Dismissible）上横滑时，**Dismissible 必定赢**，外层 PageView
+// ⚠️ 手势竞技场约束：
+//   手指落在卡片上横滑时，卡片滑动手势优先，外层 PageView
 //   完全拿不到手势（左滑、右滑、小幅拖动后回拖都一样）；只有落在非卡片区域
 //   （卡片间距 / 月份标题 / 列表外空白）横滑时，PageView 才能翻页。
-//   因此这里**不**为了「内容区横滑切 tab」去改动卡片的 Dismissible——那会破坏
-//   归档 / 撤销归档的既有手感。滑动切 tab 的体验改由 **tab 栏自身支持拖拽**来
-//   保证（见 SlidingSegmentedTabs）。PageView 仍保留，用于在非卡片区域翻页，
+//   滑动切 tab 由 tab 栏自身支持拖拽（见 SlidingSegmentedTabs）。
+//   PageView 仍保留，用于在非卡片区域翻页，
 //   并通过 onPageChanged 把下标反向同步回 tab 栏。
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
@@ -23,7 +22,7 @@ import '../widgets/app_top_bar.dart';
 import '../widgets/claim_card.dart';
 import '../widgets/empty_hint.dart';
 import '../widgets/sliding_segmented_tabs.dart';
-import '../widgets/swipe_background.dart';
+import '../widgets/swipe_action_row.dart';
 import 'detail_page.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -63,7 +62,8 @@ class _HistoryPageState extends State<HistoryPage> {
     if (i == _index) return;
     setState(() => _index = i);
     if (!_ctrl.hasClients) return;
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     if (reduceMotion) {
       // 减少动态：不做翻页动画，直接跳转。
       _ctrl.jumpToPage(i);
@@ -151,7 +151,6 @@ class _HistoryPageState extends State<HistoryPage> {
                     archived
                         ? _buildRestoreDismissible(context, claim)
                         : _buildArchiveDismissible(context, claim),
-                    const SizedBox(height: 12),
                   ],
                 ],
               ],
@@ -159,79 +158,54 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-  /// 未报销 tab：左滑归档（无需二次确认，保持合并前手感）。
+  /// 未报销 tab：左滑归档。
   Widget _buildArchiveDismissible(BuildContext context, Claim claim) {
     final c = context.colors;
-    return Dismissible(
+    return SwipeActionRow(
       key: ValueKey('archive-${claim.id}'),
-      direction: DismissDirection.endToStart,
-      dismissThresholds: const {
-        DismissDirection.endToStart: 0.35,
-      },
-      onDismissed: (_) {
-        // 滑动归档是明确的「提交」动作：行滑出与触感同帧。
-        HapticFeedback.mediumImpact();
-        widget.onArchiveClaim(claim);
-      },
-      background: SwipeBackground(
+      bottomSpacing: 12,
+      rightAction: SwipeAction(
         icon: Icons.archive_outlined,
         label: '完成报销',
         from: RecordCategory.car.base,
         to: Color.lerp(RecordCategory.car.base, c.card, 0.35)!,
-        alignment: Alignment.centerRight,
+        onTriggered: () {
+          HapticFeedback.mediumImpact();
+          widget.onArchiveClaim(claim);
+        },
       ),
-      child: ClaimCard(
-        claim: claim,
-        onTap: () => _openDetail(context, claim),
-      ),
+      child: ClaimCard(claim: claim, onTap: () => _openDetail(context, claim)),
     );
   }
 
-  /// 已报销 tab：右滑撤销归档（无确认）/ 左滑删除（二次确认）；
-  /// 结构与文案从原 archive_page.dart 原样搬来。
+  /// 已报销 tab：右滑撤销归档，左滑删除。
   Widget _buildRestoreDismissible(BuildContext context, Claim claim) {
     final c = context.colors;
-    return Dismissible(
+    return SwipeActionRow(
       key: ValueKey('restore-${claim.id}'),
-      direction: DismissDirection.horizontal,
-      dismissThresholds: const {
-        DismissDirection.startToEnd: 0.3,
-        DismissDirection.endToStart: 0.35,
-      },
-      confirmDismiss: (direction) async {
-        // 右滑撤销归档：无需确认；左滑删除：二次确认。
-        if (direction == DismissDirection.startToEnd) return true;
-        return _confirmDelete(context, claim);
-      },
-      onDismissed: (direction) {
-        if (direction == DismissDirection.startToEnd) {
-          // 滑动撤销是明确的「提交」动作：行滑出与触感同帧。
-          HapticFeedback.mediumImpact();
-          widget.onRestoreClaim(claim);
-        } else {
-          // 删除已弹确认框，触感轻反馈即可，避免过度打扰。
-          HapticFeedback.lightImpact();
-          widget.onDeleteClaim(claim);
-        }
-      },
-      background: SwipeBackground(
+      bottomSpacing: 12,
+      leftAction: SwipeAction(
         icon: Icons.undo,
         label: '撤销',
         from: RecordCategory.car.base,
         to: Color.lerp(RecordCategory.car.base, c.card, 0.35)!,
-        alignment: Alignment.centerLeft,
+        onTriggered: () {
+          HapticFeedback.mediumImpact();
+          widget.onRestoreClaim(claim);
+        },
       ),
-      secondaryBackground: SwipeBackground(
+      rightAction: SwipeAction(
         icon: Icons.delete_outline,
         label: '删除',
         from: c.danger,
         to: Color.lerp(c.danger, c.dangerBg, 0.3)!,
-        alignment: Alignment.centerRight,
+        confirm: () => _confirmDelete(context, claim),
+        onTriggered: () {
+          HapticFeedback.lightImpact();
+          widget.onDeleteClaim(claim);
+        },
       ),
-      child: ClaimCard(
-        claim: claim,
-        onTap: () => _openDetail(context, claim),
-      ),
+      child: ClaimCard(claim: claim, onTap: () => _openDetail(context, claim)),
     );
   }
 
@@ -251,7 +225,11 @@ class _HistoryPageState extends State<HistoryPage> {
         title: '删除报销单',
         content: Text(
           '确定删除「${claim.name}」吗？将同时删除其全部明细，此操作不可恢复。',
-          style: TextStyle(fontSize: 14, color: ctx.colors.fgMuted, height: 1.5),
+          style: TextStyle(
+            fontSize: 14,
+            color: ctx.colors.fgMuted,
+            height: 1.5,
+          ),
         ),
         actions: [
           appDialogButton(ctx, onPressed: () => Navigator.of(ctx).pop(false)),
