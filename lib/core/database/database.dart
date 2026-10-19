@@ -10,7 +10,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   /// 当前数据库 schema 版本，备份校验与 openDatabase 共用同一来源。
-  static const int schemaVersion = 3;
+  static const int schemaVersion = 4;
 
   Database? _db;
 
@@ -47,7 +47,8 @@ class AppDatabase {
         saved_at      INTEGER NOT NULL,
         allowance     REAL NOT NULL DEFAULT 0,
         excess_amount REAL NOT NULL DEFAULT 0,
-        archived      INTEGER NOT NULL DEFAULT 0
+        archived      INTEGER NOT NULL DEFAULT 0,
+        submitted_to_finance INTEGER NOT NULL DEFAULT 0
       )
     ''');
     await db.execute('''
@@ -79,6 +80,12 @@ class AppDatabase {
     if (oldVersion < 3 && !await _hasColumn(db, 'claims', 'excess_amount')) {
       await db.execute(
         'ALTER TABLE claims ADD COLUMN excess_amount REAL NOT NULL DEFAULT 0',
+      );
+    }
+    if (oldVersion < 4 &&
+        !await _hasColumn(db, 'claims', 'submitted_to_finance')) {
+      await db.execute(
+        'ALTER TABLE claims ADD COLUMN submitted_to_finance INTEGER NOT NULL DEFAULT 0',
       );
     }
   }
@@ -116,20 +123,17 @@ class AppDatabase {
     final db = await _database();
     await db.transaction((txn) async {
       await txn.delete('records', where: 'claim_id = ?', whereArgs: [claim.id]);
-      await txn.insert(
-        'claims',
-        {
-          'id': claim.id,
-          'name': claim.name,
-          'start_date': claim.startDate.millisecondsSinceEpoch,
-          'end_date': claim.endDate.millisecondsSinceEpoch,
-          'saved_at': claim.savedAt.millisecondsSinceEpoch,
-          'allowance': claim.allowance,
-          'excess_amount': claim.excessAmount,
-          'archived': claim.archived ? 1 : 0,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      await txn.insert('claims', {
+        'id': claim.id,
+        'name': claim.name,
+        'start_date': claim.startDate.millisecondsSinceEpoch,
+        'end_date': claim.endDate.millisecondsSinceEpoch,
+        'saved_at': claim.savedAt.millisecondsSinceEpoch,
+        'allowance': claim.allowance,
+        'excess_amount': claim.excessAmount,
+        'archived': claim.archived ? 1 : 0,
+        'submitted_to_finance': claim.submittedToFinance ? 1 : 0,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
       for (var i = 0; i < claim.records.length; i++) {
         final r = claim.records[i];
         await txn.insert('records', {
@@ -174,20 +178,17 @@ class AppDatabase {
             whereArgs: [id],
             orderBy: 'sort_order ASC',
           );
-          await txn.insert(
-            'claims',
-            {
-              'id': id,
-              'name': row['name'] as String? ?? '',
-              'start_date': row['start_date'] as int? ?? 0,
-              'end_date': row['end_date'] as int? ?? 0,
-              'saved_at': row['saved_at'] as int? ?? 0,
-              'allowance': (row['allowance'] as num?)?.toDouble() ?? 0,
-              'excess_amount': (row['excess_amount'] as num?)?.toDouble() ?? 0,
-              'archived': (row['archived'] as int?) ?? 0,
-            },
-            conflictAlgorithm: ConflictAlgorithm.ignore,
-          );
+          await txn.insert('claims', {
+            'id': id,
+            'name': row['name'] as String? ?? '',
+            'start_date': row['start_date'] as int? ?? 0,
+            'end_date': row['end_date'] as int? ?? 0,
+            'saved_at': row['saved_at'] as int? ?? 0,
+            'allowance': (row['allowance'] as num?)?.toDouble() ?? 0,
+            'excess_amount': (row['excess_amount'] as num?)?.toDouble() ?? 0,
+            'archived': (row['archived'] as int?) ?? 0,
+            'submitted_to_finance': (row['submitted_to_finance'] as int?) ?? 0,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
           for (final record in recordRows) {
             await txn.insert('records', {
               'id': record['id'] as String,
@@ -223,7 +224,10 @@ class AppDatabase {
     _db = null;
   }
 
-  Claim _claimFromRow(Map<String, Object?> row, List<Map<String, Object?>> recordRows) {
+  Claim _claimFromRow(
+    Map<String, Object?> row,
+    List<Map<String, Object?>> recordRows,
+  ) {
     return Claim(
       id: row['id'] as String,
       name: row['name'] as String,
@@ -233,6 +237,7 @@ class AppDatabase {
       allowance: (row['allowance'] as num?)?.toDouble() ?? 0,
       excessAmount: (row['excess_amount'] as num?)?.toDouble() ?? 0,
       archived: (row['archived'] as int? ?? 0) != 0,
+      submittedToFinance: (row['submitted_to_finance'] as int? ?? 0) != 0,
       records: recordRows.map(_recordFromRow).toList(),
     );
   }

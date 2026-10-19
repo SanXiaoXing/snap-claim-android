@@ -65,11 +65,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Center(
-                  child: CreateCta(
-                    onTap: () => _openEditor(context),
-                  ),
-                ),
+                Center(child: CreateCta(onTap: () => _openEditor(context))),
                 const SizedBox(height: 24),
                 Row(
                   children: [
@@ -105,6 +101,7 @@ class _HomePageState extends State<HomePage> {
                         ClaimCard(
                           claim: claim,
                           onTap: () => _openDetail(context, claim),
+                          onSaveClaim: widget.onSaveClaim,
                         ),
                         const SizedBox(height: 12),
                       ],

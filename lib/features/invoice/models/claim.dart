@@ -12,11 +12,17 @@ final summaryRowStyles = <String, ({IconData icon, Color color})>{
   '酒店': (icon: RecordCategory.hotel.icon, color: RecordCategory.hotel.base),
   '市内交通': (icon: RecordCategory.car.icon, color: RecordCategory.car.base),
   '往返交通': (icon: Icons.sync_alt, color: Color(0xFF14B8A6)),
-  '高速费': (icon: RecordCategory.highway.icon, color: RecordCategory.highway.base),
+  '高速费': (
+    icon: RecordCategory.highway.icon,
+    color: RecordCategory.highway.base,
+  ),
   '地铁费': (icon: RecordCategory.subway.icon, color: RecordCategory.subway.base),
   '差补': (icon: Icons.payments_outlined, color: Color(0xFF6366F1)),
   '超标金额': (icon: Icons.warning_amber_outlined, color: Color(0xFFEF4444)),
-  '预借金额': (icon: Icons.account_balance_wallet_outlined, color: Color(0xFF06B6D4)),
+  '预借金额': (
+    icon: Icons.account_balance_wallet_outlined,
+    color: Color(0xFF06B6D4),
+  ),
   '退补金额': (icon: Icons.currency_exchange, color: Color(0xFFF97316)),
 };
 
@@ -46,6 +52,9 @@ class Claim {
   /// 是否已归档（归档 = 已报销）。
   final bool archived;
 
+  /// 签字流程已完成并提交财务，尚待打款。归档仍表示钱已到账。
+  final bool submittedToFinance;
+
   const Claim({
     required this.id,
     required this.name,
@@ -56,10 +65,10 @@ class Claim {
     this.allowance = 0,
     this.excessAmount = 0,
     this.archived = false,
+    this.submittedToFinance = false,
   });
 
-  double get recordsTotal =>
-      records.fold(0.0, (s, r) => s + r.amount);
+  double get recordsTotal => records.fold(0.0, (s, r) => s + r.amount);
 
   /// 出差天数与差补金额现由 Rust 核心库计算（见 core/utils/allowance.dart），
   /// 报销单只持有编辑页算好并存入的 [allowance] 字段。
@@ -100,7 +109,7 @@ class Claim {
   /// 差补 / 超标金额 / 预借金额 / 退补金额）；金额为 0 的行不展示（没有对应内容就不显示标签）。
   /// 每行直接携带图标与品牌色（取自 [summaryRowStyles]），渲染层不再按行名查样式。
   List<({String label, double amount, IconData icon, Color color})>
-      get summaryRows {
+  get summaryRows {
     final totals = categoryTotals;
     final roundTrip = roundTripTotal;
     final rows = <({String label, double amount})>[
@@ -117,7 +126,8 @@ class Claim {
       // 预借金额 = 飞机 + 酒店 + 用车。
       (
         label: '预借金额',
-        amount: (totals[RecordCategory.flight] ?? 0) +
+        amount:
+            (totals[RecordCategory.flight] ?? 0) +
             (totals[RecordCategory.hotel] ?? 0) +
             (totals[RecordCategory.car] ?? 0),
       ),
@@ -146,6 +156,7 @@ class Claim {
     double? allowance,
     double? excessAmount,
     bool? archived,
+    bool? submittedToFinance,
   }) {
     return Claim(
       id: id,
@@ -157,6 +168,7 @@ class Claim {
       allowance: allowance ?? this.allowance,
       excessAmount: excessAmount ?? this.excessAmount,
       archived: archived ?? this.archived,
+      submittedToFinance: submittedToFinance ?? this.submittedToFinance,
     );
   }
 }

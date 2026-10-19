@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/database/database.dart';
 import '../core/utils/app_shortcuts.dart';
+import '../core/utils/claim_reminders.dart';
 import '../core/utils/entry_action.dart';
 import '../core/utils/home_widgets.dart';
 import '../core/utils/ocr.dart';
@@ -25,11 +26,14 @@ class SnapClaimApp extends StatefulWidget {
   State<SnapClaimApp> createState() => _SnapClaimAppState();
 }
 
-class _SnapClaimAppState extends State<SnapClaimApp> {
+class _SnapClaimAppState extends State<SnapClaimApp>
+    with WidgetsBindingObserver {
   final _navKey = GlobalKey<NavigatorState>();
   final _shellKey = GlobalKey<MainShellState>();
   StreamSubscription<List<String>>? _sharedSub;
   StreamSubscription<EntryAction>? _entrySub;
+  StreamSubscription<void>? _reminderSub;
+  Timer? _dateTick;
   Future<void>? _initFuture;
   int _initialTab = kTabIndexHome;
 
@@ -46,6 +50,7 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     SharedImageReceiver.init();
     // 先监听入口 action，再 bind 快捷方式 / 桌面小组件：冷启动点击回调不丢。
     // 分发统一走 _dispatchEntryAction，内部会等 _init 完成，避免内存列表尚空。
@@ -53,13 +58,14 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
       // ignore: discarded_futures
       _dispatchEntryAction(action);
     });
+    _reminderSub = ClaimReminders.onChanged.listen((_) => _reloadClaims());
+    _scheduleDateTick();
     AppShortcuts.bind();
     HomeWidgets.bindEntryActions();
     _initFuture = _init();
     _consumePendingSharedImages();
     _consumePendingEntryActions();
-    _sharedSub =
-        SharedImageReceiver.onSharedImages.listen(_handleSharedImages);
+    _sharedSub = SharedImageReceiver.onSharedImages.listen(_handleSharedImages);
   }
 
   Future<void> _init() async {
@@ -85,6 +91,7 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
     });
     await AppShortcuts.refresh(claims);
     await HomeWidgets.refreshAll(claims);
+    await ClaimReminders.sync();
   }
 
   void _setThemeMode(ThemeMode mode) {
@@ -101,8 +108,34 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
   @override
   void dispose() {
     _entrySub?.cancel();
+    _reminderSub?.cancel();
+    _dateTick?.cancel();
     _sharedSub?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_loading) {
+      _scheduleDateTick();
+      // 通知快捷操作在原生接收器中直接更新 SQLite；回到前台后刷新卡片。
+      _reloadClaims();
+    }
+  }
+
+  void _scheduleDateTick() {
+    _dateTick?.cancel();
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    _dateTick = Timer(
+      tomorrow.difference(now) + const Duration(seconds: 1),
+      () {
+        if (!mounted) return;
+        setState(() {}); // 日期变化时刷新剩余天数与卡片警告色。
+        _scheduleDateTick();
+      },
+    );
   }
 
   void _afterClaimsChanged() {
@@ -122,7 +155,10 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
       }
     });
     _afterClaimsChanged();
-    _persist(() => AppDatabase.instance.upsertClaim(claim), '保存报销单');
+    _persist(() async {
+      await AppDatabase.instance.upsertClaim(claim);
+      await ClaimReminders.sync();
+    }, '保存报销单');
   }
 
   void _archiveClaim(Claim claim) {
@@ -136,7 +172,10 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
       }
     });
     _afterClaimsChanged();
-    _persist(() => AppDatabase.instance.upsertClaim(archived), '归档报销单');
+    _persist(() async {
+      await AppDatabase.instance.upsertClaim(archived);
+      await ClaimReminders.sync();
+    }, '归档报销单');
   }
 
   void _restoreClaim(Claim claim) {
@@ -150,7 +189,10 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
       }
     });
     _afterClaimsChanged();
-    _persist(() => AppDatabase.instance.upsertClaim(restored), '撤销归档');
+    _persist(() async {
+      await AppDatabase.instance.upsertClaim(restored);
+      await ClaimReminders.sync();
+    }, '撤销归档');
   }
 
   void _deleteClaim(Claim claim) {
@@ -158,7 +200,10 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
       _claims = _claims.where((e) => e.id != claim.id).toList();
     });
     _afterClaimsChanged();
-    _persist(() => AppDatabase.instance.deleteClaim(claim.id), '删除报销单');
+    _persist(() async {
+      await AppDatabase.instance.deleteClaim(claim.id);
+      await ClaimReminders.sync();
+    }, '删除报销单');
   }
 
   Future<void> _reloadClaims() async {
@@ -173,6 +218,7 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
     setState(() => _claims = claims);
     await AppShortcuts.refresh(claims);
     await HomeWidgets.refreshAll(claims);
+    await ClaimReminders.sync();
   }
 
   void _persist(Future<void> Function() op, String what) {
@@ -324,9 +370,7 @@ class _SnapClaimAppState extends State<SnapClaimApp> {
       themeAnimationDuration: const Duration(milliseconds: 300),
       themeAnimationCurve: Curves.easeOutCubic,
       locale: const Locale('zh', 'CN'),
-      supportedLocales: const [
-        Locale('zh', 'CN'),
-      ],
+      supportedLocales: const [Locale('zh', 'CN')],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

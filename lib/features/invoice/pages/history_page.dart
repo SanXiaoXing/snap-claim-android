@@ -163,7 +163,11 @@ class _HistoryPageState extends State<HistoryPage> {
           widget.onArchiveClaim(claim);
         },
       ),
-      child: ClaimCard(claim: claim, onTap: () => _openDetail(context, claim)),
+      child: ClaimCard(
+        claim: claim,
+        onTap: () => _openDetail(context, claim),
+        onSaveClaim: widget.onSaveClaim,
+      ),
     );
   }
 

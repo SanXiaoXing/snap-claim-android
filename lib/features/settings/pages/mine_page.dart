@@ -7,6 +7,7 @@ import '../../../core/ai/ai_settings.dart';
 import '../../../core/backup/backup.dart';
 import '../../../core/backup/backup_service.dart';
 import '../../../core/utils/cache.dart';
+import '../../../core/utils/claim_reminders.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/ocr.dart';
 import '../../../core/utils/qr_parser.dart';
@@ -18,6 +19,7 @@ import '../widgets/mine_owed_card.dart';
 import '../widgets/mine_result_line.dart';
 import '../widgets/mine_row.dart';
 import '../widgets/mine_stat_cell.dart';
+import '../widgets/wheel_time_picker.dart';
 import 'about_page.dart';
 import 'ai_settings_page.dart';
 import 'stats_page.dart';
@@ -46,6 +48,7 @@ class _MinePageState extends State<MinePage> {
   // 数据管理卡片展示的信息：数据库大小与最后备份日期（异步加载）。
   String _dbSize = '计算中…';
   String _lastBackup = '从未备份';
+  TimeOfDay _reminderTime = const TimeOfDay(hour: 10, minute: 0);
 
   // 清除缓存后自增，通过 ValueKey 强制 CacheTrailing 重新计算大小。
   int _cacheRefreshTick = 0;
@@ -54,6 +57,30 @@ class _MinePageState extends State<MinePage> {
   void initState() {
     super.initState();
     _refreshBackupInfo();
+    _loadReminderTime();
+  }
+
+  Future<void> _loadReminderTime() async {
+    final time = await ClaimReminders.getTime();
+    if (mounted) {
+      setState(
+        () => _reminderTime = TimeOfDay(hour: time.hour, minute: time.minute),
+      );
+    }
+  }
+
+  Future<void> _pickReminderTime() async {
+    final picked = await showWheelTimePicker(
+      context,
+      initialTime: _reminderTime,
+    );
+    if (picked == null || !mounted) return;
+    try {
+      await ClaimReminders.setTime(picked.hour, picked.minute);
+      if (mounted) setState(() => _reminderTime = picked);
+    } catch (_) {
+      if (mounted) _snack('保存提醒时间失败');
+    }
   }
 
   /// 异步刷新数据库大小与最后备份日期。
@@ -84,19 +111,20 @@ class _MinePageState extends State<MinePage> {
     // 从真实数据计算统计。
     final now = DateTime.now();
     final monthClaims = widget.claims
-        .where((cl) =>
-            cl.startDate.year == now.year && cl.startDate.month == now.month)
+        .where(
+          (cl) =>
+              cl.startDate.year == now.year && cl.startDate.month == now.month,
+        )
         .toList();
     // 本月报销 = 本月报销单的退补金额之和（退补金额 = 火车 + 高速费 + 地铁费 + 差补）。
-    final monthBalance =
-        monthClaims.fold(0.0, (s, cl) => s + cl.balanceAmount);
-    final monthRecords =
-        monthClaims.fold(0, (s, cl) => s + cl.records.length);
+    final monthBalance = monthClaims.fold(0.0, (s, cl) => s + cl.balanceAmount);
+    final monthRecords = monthClaims.fold(0, (s, cl) => s + cl.records.length);
     // 累计报销 = 全部报销单的退补金额之和。
-    final totalBalance =
-        widget.claims.fold(0.0, (s, cl) => s + cl.balanceAmount);
-    final allRecords =
-        widget.claims.fold(0, (s, cl) => s + cl.records.length);
+    final totalBalance = widget.claims.fold(
+      0.0,
+      (s, cl) => s + cl.balanceAmount,
+    );
+    final allRecords = widget.claims.fold(0, (s, cl) => s + cl.records.length);
 
     // 公司欠款 = 未报销（未归档）报销单的退补金额之和（退补金额 = 火车 + 高速费 + 地铁费 + 差补）。
     final owedTotal = widget.claims
@@ -184,7 +212,11 @@ class _MinePageState extends State<MinePage> {
                         icon: Icons.pie_chart_outline,
                         title: '报销统计',
                         subtitle: '查看月度/年度汇总',
-                        trailing: Icon(Icons.chevron_right, size: 18, color: c.fgSoft),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: c.fgSoft,
+                        ),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => StatsPage(claims: widget.claims),
@@ -196,7 +228,11 @@ class _MinePageState extends State<MinePage> {
                         icon: Icons.brightness_6_outlined,
                         title: '外观模式',
                         subtitle: _themeModeLabel(widget.themeMode),
-                        trailing: Icon(Icons.chevron_right, size: 18, color: c.fgSoft),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: c.fgSoft,
+                        ),
                         onTap: _pickThemeMode,
                       ),
                     ],
@@ -208,16 +244,30 @@ class _MinePageState extends State<MinePage> {
                   decoration: cardDecoration(c),
                   child: Column(
                     children: [
+                      MineRow(icon: Icons.tune, title: '偏好设置'),
+                      MineDivider(),
                       MineRow(
-                        icon: Icons.tune,
-                        title: '偏好设置',
+                        icon: Icons.notifications_active_outlined,
+                        title: '报销提醒时间',
+                        subtitle:
+                            '${_reminderTime.hour.toString().padLeft(2, '0')}:${_reminderTime.minute.toString().padLeft(2, '0')}',
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: c.fgSoft,
+                        ),
+                        onTap: _pickReminderTime,
                       ),
                       MineDivider(),
                       MineRow(
                         icon: Icons.image_outlined,
                         title: '发票识别',
                         subtitle: '拍照 / 相册识别票据',
-                        trailing: Icon(Icons.chevron_right, size: 18, color: c.fgSoft),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: c.fgSoft,
+                        ),
                         onTap: _ocrRecognize,
                       ),
                       MineDivider(),
@@ -225,7 +275,11 @@ class _MinePageState extends State<MinePage> {
                         icon: Icons.qr_code_scanner,
                         title: '二维码扫描',
                         subtitle: '扫码快速录入票据',
-                        trailing: Icon(Icons.chevron_right, size: 18, color: c.fgSoft),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: c.fgSoft,
+                        ),
                         onTap: _scanQr,
                       ),
                       MineDivider(),
@@ -233,7 +287,11 @@ class _MinePageState extends State<MinePage> {
                         icon: Icons.auto_awesome_outlined,
                         title: 'AI 设置',
                         subtitle: '配置 API Key 与模型',
-                        trailing: Icon(Icons.chevron_right, size: 18, color: c.fgSoft),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: c.fgSoft,
+                        ),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => const AiSettingsPage(),
@@ -245,7 +303,9 @@ class _MinePageState extends State<MinePage> {
                         icon: Icons.delete_outline,
                         title: '清除缓存',
                         subtitle: '释放本地存储空间',
-                        trailing: CacheTrailing(key: ValueKey(_cacheRefreshTick)),
+                        trailing: CacheTrailing(
+                          key: ValueKey(_cacheRefreshTick),
+                        ),
                         onTap: () => _showClearCacheDialog(context),
                       ),
                     ],
@@ -263,8 +323,11 @@ class _MinePageState extends State<MinePage> {
                         icon: Icons.file_upload_outlined,
                         title: '导出数据',
                         subtitle: '备份你的报销记录',
-                        trailing:
-                            Icon(Icons.chevron_right, size: 18, color: c.fgSoft),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: c.fgSoft,
+                        ),
                         onTap: _exportData,
                       ),
                       MineDivider(),
@@ -272,8 +335,11 @@ class _MinePageState extends State<MinePage> {
                         icon: Icons.file_download_outlined,
                         title: '导入数据',
                         subtitle: '恢复之前的数据',
-                        trailing:
-                            Icon(Icons.chevron_right, size: 18, color: c.fgSoft),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: c.fgSoft,
+                        ),
                         onTap: _importData,
                       ),
                       MineDivider(),
@@ -327,11 +393,16 @@ class _MinePageState extends State<MinePage> {
                               Text(
                                 'v$kAppVersion',
                                 style: TextStyle(
-                                    fontSize: 12, color: c.fgMuted),
+                                  fontSize: 12,
+                                  color: c.fgMuted,
+                                ),
                               ),
                               const SizedBox(width: 4),
-                              Icon(Icons.chevron_right,
-                                  size: 18, color: c.fgSoft),
+                              Icon(
+                                Icons.chevron_right,
+                                size: 18,
+                                color: c.fgSoft,
+                              ),
                             ],
                           ),
                         ],
@@ -447,8 +518,11 @@ class _MinePageState extends State<MinePage> {
 
     final freed = await clearCache();
     if (!context.mounted) return;
-    showAppSnack(context, '已清除缓存，释放 ${formatBytes(freed)}',
-        background: c.accent);
+    showAppSnack(
+      context,
+      '已清除缓存，释放 ${formatBytes(freed)}',
+      background: c.accent,
+    );
     setState(() => _cacheRefreshTick++); // 强制刷新 CacheTrailing 显示
   }
 
@@ -557,26 +631,16 @@ class _MinePageState extends State<MinePage> {
                   ],
                 ],
               ),
-        actions: [
-          appDialogButton(ctx, label: '关闭'),
-        ],
+        actions: [appDialogButton(ctx, label: '关闭')],
       ),
     );
   }
 
   void _showOcrResult(OcrResult result) {
-    _showRecordResultDialog(
-      '识别结果（${result.records.length} 条）',
-      [
-        for (final r in result.records)
-          [
-            ('类别', r.category.label),
-            ('名称', r.title),
-            ('金额', fmtMoney(r.amount)),
-          ],
-      ],
-      raw: result.raw,
-    );
+    _showRecordResultDialog('识别结果（${result.records.length} 条）', [
+      for (final r in result.records)
+        [('类别', r.category.label), ('名称', r.title), ('金额', fmtMoney(r.amount))],
+    ], raw: result.raw);
   }
 
   void _showScanResult(List<QrParseResult> results) {
@@ -632,10 +696,7 @@ class _ThemeOptionRow extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(fontSize: 14, color: c.fg),
-              ),
+              child: Text(label, style: TextStyle(fontSize: 14, color: c.fg)),
             ),
             Icon(
               selected ? Icons.check_circle : Icons.circle_outlined,

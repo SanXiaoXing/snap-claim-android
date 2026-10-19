@@ -1,6 +1,9 @@
 package cn.sanxiaoxing.snap_claim
 
 import android.content.Intent
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -12,6 +15,12 @@ import java.io.File
 class MainActivity : FlutterActivity() {
     companion object {
         private const val CHANNEL = "snap_claim/shared_images"
+        private const val REMINDER_CHANNEL = "snap_claim/reminders"
+        @Volatile private var activeReminderChannel: MethodChannel? = null
+
+        fun notifyReminderChanged() {
+            activeReminderChannel?.invokeMethod("changed", null)
+        }
         private const val TAG = "SnapClaim"
 
         /// 冷启动时 Flutter 尚未就绪，分享图片路径先暂存于此，待 Dart 侧取走。
@@ -39,6 +48,45 @@ class MainActivity : FlutterActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+        val reminderChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, REMINDER_CHANNEL)
+        activeReminderChannel = reminderChannel
+        reminderChannel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "sync" -> {
+                    ReminderNotifications.sync(this)
+                    if (Build.VERSION.SDK_INT >= 33 &&
+                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+                        ReminderNotifications.pendingCount(this) > 0) {
+                        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 4107)
+                    }
+                    result.success(null)
+                }
+                "getTime" -> result.success(mapOf("hour" to ReminderNotifications.hour(this), "minute" to ReminderNotifications.minute(this)))
+                "setTime" -> {
+                    val hour = call.argument<Int>("hour")
+                    val minute = call.argument<Int>("minute")
+                    if (hour == null || minute == null || hour !in 0..23 || minute !in 0..59) {
+                        result.error("invalid_time", "提醒时间无效", null)
+                    } else {
+                        ReminderNotifications.setTime(this, hour, minute)
+                        result.success(null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        activeReminderChannel = null
+        super.onDestroy()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 4107 && grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+            ReminderNotifications.sync(this)
         }
     }
 

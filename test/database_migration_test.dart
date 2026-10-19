@@ -133,6 +133,7 @@ void main() {
     expect(claims.first['allowance'], 200.0);
     // 新列由迁移补默认值，老数据不丢。
     expect(claims.first['archived'], 0);
+    expect(claims.first['submitted_to_finance'], 0);
     expect(claims.first['excess_amount'], 0);
 
     final recs = await db.query(
