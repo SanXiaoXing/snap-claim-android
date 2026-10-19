@@ -8,7 +8,6 @@ import 'package:snap_claim_android/app/theme.dart';
 import 'package:snap_claim_android/features/invoice/models/claim.dart';
 import 'package:snap_claim_android/features/invoice/pages/detail_page.dart';
 import 'package:snap_claim_android/features/invoice/pages/editor_page.dart';
-import 'package:snap_claim_android/src/rust/frb_generated.dart';
 
 /// 入口页：模拟列表页，push 详情页后形成「列表 → 详情 → 编辑」导航栈。
 class _Launcher extends StatelessWidget {
@@ -33,17 +32,20 @@ class _Launcher extends StatelessWidget {
 }
 
 Claim _claim() => Claim(
-      id: 'c1',
-      name: '测试报销单',
-      startDate: DateTime(2026, 7, 1),
-      endDate: DateTime(2026, 7, 3),
-      records: const [],
-      savedAt: DateTime(2026, 7, 3),
-    );
+  id: 'c1',
+  name: '测试报销单',
+  startDate: DateTime(2026, 7, 1),
+  endDate: DateTime(2026, 7, 3),
+  records: const [],
+  savedAt: DateTime(2026, 7, 3),
+);
 
 Future<void> _pumpToEditor(WidgetTester tester) async {
   await tester.pumpWidget(
-    MaterialApp(theme: buildLightTheme(), home: _Launcher(claim: _claim())),
+    MaterialApp(
+      theme: buildLightTheme(),
+      home: _Launcher(claim: _claim()),
+    ),
   );
   await tester.tap(find.text('打开详情'));
   await tester.pumpAndSettle();
@@ -54,8 +56,6 @@ Future<void> _pumpToEditor(WidgetTester tester) async {
 }
 
 void main() {
-  setUpAll(() async => await RustLib.init());
-
   testWidgets('无改动从编辑页返回时留在详情页，不跳两级', (tester) async {
     await _pumpToEditor(tester);
 

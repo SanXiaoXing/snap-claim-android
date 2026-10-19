@@ -18,9 +18,6 @@ dependencies:
   mobile_scanner: ^7.4.0
   # 相册选图（配合 mobile_scanner.analyzeImage 识别本地图片中的二维码）。
   image_picker: ^1.1.2
-  snap_claim_core:
-    path: rust_builder
-  flutter_rust_bridge: 2.12.0
   google_mlkit_text_recognition: ^0.16.0
   # 本地 SQLite 持久化（报销单 + 明细）。
   sqflite: ^2.4.1
@@ -35,9 +32,7 @@ dependencies:
   # AI 情况说明：访问智谱 OpenAI 兼容 chat/completions（SSE 流式）。
   http: ^1.2.2
   # 长按应用图标动态快捷方式（桌面入口 #8）。
-  quick_actions: ^1.1.1
   # 桌面小组件基座（桌面入口 #9/#10）：金额卡 / 快捷操作卡。
-  home_widget: ^0.10.0
 
 dev_dependencies:
   flutter_test:

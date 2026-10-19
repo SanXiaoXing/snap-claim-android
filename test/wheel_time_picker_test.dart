@@ -42,17 +42,15 @@ void main() {
     return picked;
   }
 
-  testWidgets('分钟步进和键盘上下键可组合使用', (tester) async {
+  testWidgets('键盘上下键可调整小时', (tester) async {
     final picked = await openPicker(
       tester,
       interact: () async {
-        await tester.tap(find.text('5 分'));
-        await tester.pumpAndSettle();
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
         await tester.pumpAndSettle();
       },
     );
-    expect(picked, const TimeOfDay(hour: 11, minute: 15));
+    expect(picked, const TimeOfDay(hour: 11, minute: 17));
   });
 
   testWidgets('点击可见行跳转，减少动态时也能选择', (tester) async {
@@ -82,19 +80,16 @@ void main() {
     expect(picked?.hour, isNot(10));
   });
 
-  testWidgets('十五分钟步进跨小时取最近刻度，小时可循环', (tester) async {
+  testWidgets('小时从零点向上可循环到 23 点', (tester) async {
     final picked = await openPicker(
       tester,
-      initial: const TimeOfDay(hour: 23, minute: 58),
+      initial: const TimeOfDay(hour: 0, minute: 58),
       interact: () async {
-        await tester.tap(find.text('15 分'));
-        await tester.pumpAndSettle();
-        expect(find.text('00'), findsWidgets);
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
         await tester.pumpAndSettle();
       },
     );
-    expect(picked, const TimeOfDay(hour: 23, minute: 0));
+    expect(picked, const TimeOfDay(hour: 23, minute: 58));
   });
 
   testWidgets('鼠标滚轮能改变小时', (tester) async {

@@ -16,6 +16,7 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val CHANNEL = "snap_claim/shared_images"
         private const val REMINDER_CHANNEL = "snap_claim/reminders"
+        private const val LAUNCHER_CHANNEL = "snap_claim/launcher"
         @Volatile private var activeReminderChannel: MethodChannel? = null
 
         fun notifyReminderChanged() {
@@ -26,19 +27,48 @@ class MainActivity : FlutterActivity() {
         /// 冷启动时 Flutter 尚未就绪，分享图片路径先暂存于此，待 Dart 侧取走。
         @Volatile
         private var pendingImagePaths: List<String> = emptyList()
+        private val pendingEntryUris = mutableListOf<String>()
 
-        /// 快捷方式图标：仅被 Dart 以字符串名引用，Android 资源收缩看不见它们，
-        /// 这里占位引用一次，避免 release 包裁掉后长按菜单回退成系统占位图。
-        @Suppress("unused")
-        private val shortcutIconKeep = intArrayOf(
-            R.mipmap.ic_launcher,
-            R.mipmap.ic_shortcut_claim,
-            R.mipmap.ic_shortcut_new,
-        )
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        val launcherChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LAUNCHER_CHANNEL)
+        launcherChannel.setMethodCallHandler { call, result ->
+            try {
+                when (call.method) {
+                    "takePendingEntries" -> {
+                        result.success(pendingEntryUris.toList())
+                        pendingEntryUris.clear()
+                    }
+                    "updateOwedWidget" -> {
+                        LauncherIntegration.updateOwed(
+                            this,
+                            call.argument<String>("amount") ?: "¥0.00",
+                            call.argument<Boolean>("positive") ?: false,
+                        )
+                        result.success(null)
+                    }
+                    "updateQuickWidget" -> {
+                        LauncherIntegration.updateQuick(
+                            this,
+                            call.argument<List<Map<String, Any?>>>("items") ?: emptyList(),
+                        )
+                        result.success(null)
+                    }
+                    "setShortcuts" -> {
+                        LauncherIntegration.setShortcuts(
+                            this,
+                            call.argument<List<Map<String, Any?>>>("items") ?: emptyList(),
+                        )
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            } catch (e: Exception) {
+                result.error("launcher_error", e.message, null)
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 // Dart 启动时取走待处理的分享图片路径（取走即清空，避免重复处理）。
@@ -91,6 +121,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        collectEntryAction(intent)
         super.onCreate(savedInstanceState)
         // 冷启动：分享 intent 在 onCreate 里即可取得。
         collectSharedImages(intent)
@@ -99,6 +130,10 @@ class MainActivity : FlutterActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        collectEntryAction(intent)
+        flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
+            MethodChannel(messenger, LAUNCHER_CHANNEL).invokeMethod("entriesChanged", null)
+        }
         // 热启动：应用已在运行（launchMode=singleTop），走 onNewIntent。
         collectSharedImages(intent)
         // 引擎已就绪，直接推送给 Dart（takePendingImages 仅用于冷启动兜底）。
@@ -108,6 +143,13 @@ class MainActivity : FlutterActivity() {
             flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
                 MethodChannel(messenger, CHANNEL).invokeMethod("onSharedImages", copied)
             }
+        }
+    }
+
+    private fun collectEntryAction(intent: Intent?) {
+        val uri = intent?.data ?: return
+        if (uri.scheme == "snapclaim" && uri.host == "entry") {
+            pendingEntryUris.add(uri.toString())
         }
     }
 

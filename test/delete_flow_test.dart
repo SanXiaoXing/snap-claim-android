@@ -10,7 +10,6 @@ import 'package:snap_claim_android/features/invoice/models/claim.dart';
 import 'package:snap_claim_android/features/invoice/models/record.dart';
 import 'package:snap_claim_android/features/invoice/pages/editor_page.dart';
 import 'package:snap_claim_android/features/invoice/pages/history_page.dart';
-import 'package:snap_claim_android/src/rust/frb_generated.dart';
 
 Record _record(String id, {RecordCategory category = RecordCategory.train}) =>
     Record(
@@ -49,22 +48,11 @@ Future<void> _swipeAndConfirm(WidgetTester tester, Finder item) async {
 }
 
 void main() {
-  setUpAll(() async => await RustLib.init());
-
   testWidgets('编辑页左滑删除明细后行消失且不卡死', (tester) async {
     final deleted = <String>[];
-    final claim = _claim('c1', records: [
-      _record('r1'),
-      _record('r2'),
-    ]);
+    final claim = _claim('c1', records: [_record('r1'), _record('r2')]);
     var saved = false;
-    await _pump(
-      tester,
-      EditorPage(
-        claim: claim,
-        onSave: (_) => saved = true,
-      ),
-    );
+    await _pump(tester, EditorPage(claim: claim, onSave: (_) => saved = true));
 
     expect(find.text('明细r1'), findsOneWidget);
     expect(find.text('明细r2'), findsOneWidget);
@@ -99,7 +87,8 @@ void main() {
     await tester.drag(find.text('报销单h1'), const Offset(-600, 0));
     await tester.pumpAndSettle();
 
-    expect(find.text('报销单h1'), findsNothing);
+    // 回调只记录归档事件；父组件没有传入更新后的 claims，行仍在树中但已折叠。
+    expect(tester.getSize(find.byKey(const ValueKey('archive-h1'))).height, 0);
     expect(find.text('报销单h2'), findsOneWidget);
     expect(archived, ['h1']);
   });

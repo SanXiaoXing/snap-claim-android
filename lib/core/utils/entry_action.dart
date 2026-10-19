@@ -19,15 +19,15 @@ const String kEditClaimPrefix = 'edit_claim_';
 /// 兼容旧协议（小组件 URI / 历史数据）中的冒号形式。
 const String kEditClaimPrefixLegacy = 'edit_claim:';
 
-/// 同一入口 action 的去重时间窗：拦住 quick_actions 冷启动双投递。
+/// 同一入口 action 的去重时间窗：拦住冷启动重复投递。
 const Duration kEntryActionDedupeWindow = Duration(milliseconds: 800);
 
 /// 入口 action 去重键（分发层用）。
 String entryActionDedupeKey(EntryAction action) => switch (action.kind) {
-      EntryActionKind.openMine => kOpenMineAction,
-      EntryActionKind.newClaim => kNewClaimAction,
-      EntryActionKind.editClaim => '$kEditClaimPrefix${action.claimId}',
-    };
+  EntryActionKind.openMine => kOpenMineAction,
+  EntryActionKind.newClaim => kNewClaimAction,
+  EntryActionKind.editClaim => '$kEditClaimPrefix${action.claimId}',
+};
 
 /// 入口动作种类；`editClaim` 时用 [EntryAction.claimId]。
 enum EntryActionKind { openMine, newClaim, editClaim }
@@ -54,11 +54,15 @@ EntryAction? parseEntryAction(String raw) {
   }
   if (action.startsWith(kEditClaimPrefix)) {
     final id = action.substring(kEditClaimPrefix.length);
-    if (id.isNotEmpty) return EntryAction(EntryActionKind.editClaim, claimId: id);
+    if (id.isNotEmpty) {
+      return EntryAction(EntryActionKind.editClaim, claimId: id);
+    }
   }
   if (action.startsWith(kEditClaimPrefixLegacy)) {
     final id = action.substring(kEditClaimPrefixLegacy.length);
-    if (id.isNotEmpty) return EntryAction(EntryActionKind.editClaim, claimId: id);
+    if (id.isNotEmpty) {
+      return EntryAction(EntryActionKind.editClaim, claimId: id);
+    }
   }
   return null;
 }

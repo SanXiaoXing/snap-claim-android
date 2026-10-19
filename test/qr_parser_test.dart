@@ -1,18 +1,16 @@
 // 二维码解析器单元测试：覆盖携程 etrip 格式与失败回退。
-// 解析逻辑由 Rust 核心库 (snap_claim_core) 完成，Dart 侧通过桥异步调用。
+// 解析逻辑在 Dart 侧完成。
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:snap_claim_android/core/utils/qr_parser.dart';
 import 'package:snap_claim_android/features/invoice/models/record.dart';
-import 'package:snap_claim_android/src/rust/frb_generated.dart';
 
 void main() {
-  // 加载 Rust 核心库（rust/target/release/snap_claim_core.dll）。
-  setUpAll(() async => await RustLib.init());
-
   group('etrip 规则', () {
     test('etripHotel 解析为酒店，末尾为金额', () async {
-      final r = await parseQrContent('etripHotel://870667,闫兴,2485235576652567552,3261.0');
+      final r = await parseQrContent(
+        'etripHotel://870667,闫兴,2485235576652567552,3261.0',
+      );
       expect(r.record, isNotNull);
       expect(r.record!.category, RecordCategory.hotel);
       expect(r.record!.title, '闫兴');
@@ -30,7 +28,9 @@ void main() {
     });
 
     test('etripCar 解析为用车', () async {
-      final r = await parseQrContent('etripCar://870667,闫兴,2485235576652567552,86.0');
+      final r = await parseQrContent(
+        'etripCar://870667,闫兴,2485235576652567552,86.0',
+      );
       expect(r.record, isNotNull);
       expect(r.record!.category, RecordCategory.car);
       expect(r.record!.amount, 86.0);

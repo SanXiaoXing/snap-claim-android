@@ -47,10 +47,6 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="image/*"/>
             </intent-filter>
-            <!-- 桌面小组件点击拉起应用（home_widget HomeWidgetLaunchIntent）。 -->
-            <intent-filter>
-                <action android:name="es.antonborri.home_widget.action.LAUNCH" />
-            </intent-filter>
         </activity>
         <receiver android:name=".ReminderReceiver" android:exported="false" />
         <receiver android:name=".ReminderBootReceiver" android:exported="false">

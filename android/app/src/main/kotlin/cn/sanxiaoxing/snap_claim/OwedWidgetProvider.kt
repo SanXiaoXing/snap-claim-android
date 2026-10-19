@@ -1,23 +1,20 @@
 package cn.sanxiaoxing.snap_claim
 
 import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
 import android.content.Context
-import android.content.SharedPreferences
-import android.net.Uri
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
-import es.antonborri.home_widget.HomeWidgetLaunchIntent
-import es.antonborri.home_widget.HomeWidgetProvider
 
 /// 公司欠我金额小组件 2×2。键名与 Dart 侧 HomeWidgets 字面量一致。
-class OwedWidgetProvider : HomeWidgetProvider() {
+class OwedWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
-        widgetData: SharedPreferences,
     ) {
+        val widgetData = LauncherIntegration.widgetData(context)
         val amountText = widgetData.getString("owed_amount_text", null) ?: "¥0.00"
         val isPositive = widgetData.getBoolean("owed_is_positive", true)
 
@@ -35,11 +32,7 @@ class OwedWidgetProvider : HomeWidgetProvider() {
                         if (isPositive) View.GONE else View.VISIBLE,
                     )
                     setTextViewText(R.id.owed_status, "已结清")
-                    val launch = HomeWidgetLaunchIntent.getActivity(
-                        context,
-                        MainActivity::class.java,
-                        Uri.parse("snapclaim://entry/open_mine"),
-                    )
+                    val launch = LauncherIntegration.launchIntent(context, "open_mine")
                     setOnClickPendingIntent(R.id.owed_container, launch)
                 }
                 appWidgetManager.updateAppWidget(widgetId, views)

@@ -43,7 +43,7 @@ class _SnapClaimAppState extends State<SnapClaimApp>
   List<Claim> _claims = [];
   bool _loading = true;
 
-  /// 最近一次已处理的入口 action 键，用于吞掉插件冷启动双投递。
+  /// 最近一次已处理的入口 action 键，用于吞掉冷启动重复投递。
   String? _lastEntryKey;
   DateTime? _lastEntryAt;
 
@@ -52,7 +52,7 @@ class _SnapClaimAppState extends State<SnapClaimApp>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     SharedImageReceiver.init();
-    // 先监听入口 action，再 bind 快捷方式 / 桌面小组件：冷启动点击回调不丢。
+    // 先监听入口 action，再绑定桌面入口：冷启动点击回调不丢。
     // 分发统一走 _dispatchEntryAction，内部会等 _init 完成，避免内存列表尚空。
     _entrySub = EntryActionReceiver.onAction.listen((action) {
       // ignore: discarded_futures
@@ -61,7 +61,6 @@ class _SnapClaimAppState extends State<SnapClaimApp>
     _reminderSub = ClaimReminders.onChanged.listen((_) => _reloadClaims());
     _scheduleDateTick();
     AppShortcuts.bind();
-    HomeWidgets.bindEntryActions();
     _initFuture = _init();
     _consumePendingSharedImages();
     _consumePendingEntryActions();

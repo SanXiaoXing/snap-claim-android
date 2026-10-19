@@ -1,4 +1,4 @@
-// OCR 识别服务：拍照 / 相册选图 → ML Kit 文字识别 → Rust 结构化解析为明细候选。
+// OCR 识别服务：拍照 / 相册选图 → ML Kit 文字识别 → 结构化解析为明细候选。
 // 仅 Android 目标；ML Kit 首次识别某语言脚本时会自动下载对应模型（需联网一次）。
 import 'dart:io';
 
@@ -9,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../app/theme.dart';
 import '../../features/invoice/models/record.dart';
 import '../../features/invoice/widgets/scan_line.dart';
-import '../../src/rust/api/ocr.dart' as rust;
+import 'ocr_parser.dart' as parser;
 
 /// OCR 识别结果。
 class OcrResult {
@@ -89,7 +89,7 @@ Future<OcrResult> _runRecognition(String path) async {
   // 未命中订单号再走单张票据的启发式解析。
   List<Record> records;
   try {
-    final hints = await rust.extractAllOrderHints(text: text);
+    final hints = parser.extractAllOrderHints(text);
     records = hints.isNotEmpty
         ? [for (final h in hints) ?_recordFromHint(h)]
         : [?await _recordFromOcrText(text)];
@@ -99,7 +99,9 @@ Future<OcrResult> _runRecognition(String path) async {
   }
   // 调试：打印解析出的明细，便于核对识别与解析结果。
   if (records.isNotEmpty) {
-    debugPrint('OCR 解析明细: ${records.map((r) => '${r.category.label} ${r.title} ¥${r.amount}').join(' | ')}');
+    debugPrint(
+      'OCR 解析明细: ${records.map((r) => '${r.category.label} ${r.title} ¥${r.amount}').join(' | ')}',
+    );
   } else {
     debugPrint('OCR 未解析出明细（原文见上方识别文本）');
   }
@@ -107,7 +109,7 @@ Future<OcrResult> _runRecognition(String path) async {
 }
 
 /// 订单截图 → Record（title=订单号，subtitle=类型标签）。
-Record? _recordFromHint(rust.ImageHint hint) {
+Record? _recordFromHint(parser.ImageHint hint) {
   final cat = _categoryMap[hint.orderType];
   if (cat == null) return null;
   return Record(
@@ -119,9 +121,9 @@ Record? _recordFromHint(rust.ImageHint hint) {
   );
 }
 
-/// 单张票据文本 → Record（复用 Rust 启发式解析）。
+/// 单张票据文本 → Record（启发式解析）。
 Future<Record?> _recordFromOcrText(String text) async {
-  final parsed = await rust.parseOcrText(text: text);
+  final parsed = parser.parseOcrText(text);
   final cat = parsed.category == null ? null : _categoryMap[parsed.category!];
   if (!parsed.ok || cat == null || parsed.title == null) return null;
   return Record(
@@ -158,14 +160,26 @@ Future<ImageSource?> _pickSource(BuildContext context) async {
           const SizedBox(height: 8),
           ListTile(
             leading: Icon(Icons.photo_camera_outlined, color: c.fg),
-            title: Text('拍照识别',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.fg)),
+            title: Text(
+              '拍照识别',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: c.fg,
+              ),
+            ),
             onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
           ),
           ListTile(
             leading: Icon(Icons.photo_library_outlined, color: c.fg),
-            title: Text('从相册选择',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.fg)),
+            title: Text(
+              '从相册选择',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: c.fg,
+              ),
+            ),
             onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
           ),
           const SizedBox(height: 8),
@@ -205,8 +219,10 @@ class _OcrLoadingDialog extends StatefulWidget {
 class _OcrLoadingDialogState extends State<_OcrLoadingDialog>
     with SingleTickerProviderStateMixin {
   /// 扫描线循环动画。
-  late final AnimationController _scan =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+  late final AnimationController _scan = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1500),
+  );
 
   @override
   void initState() {
@@ -218,7 +234,8 @@ class _OcrLoadingDialogState extends State<_OcrLoadingDialog>
     super.didChangeDependencies();
     // 减少动态：扫描线静置，不做循环扫描动画。
     // 需在依赖就绪后读取 MediaQuery（initState 内不允许查询）。
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     if (reduceMotion) {
       _scan.stop();
       _scan.value = 0.5;
@@ -371,9 +388,9 @@ String reorderOcrText(RecognizedText result) {
         elements.isEmpty
             ? lines[li].text
             : elements
-                .map((e) => e.text.trim())
-                .where((s) => s.isNotEmpty)
-                .join(' '),
+                  .map((e) => e.text.trim())
+                  .where((s) => s.isNotEmpty)
+                  .join(' '),
       );
       if (li < lines.length - 1) buffer.write('\n');
     }

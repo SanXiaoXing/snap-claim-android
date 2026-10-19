@@ -1,23 +1,22 @@
 package cn.sanxiaoxing.snap_claim
 
 import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
-import es.antonborri.home_widget.HomeWidgetLaunchIntent
-import es.antonborri.home_widget.HomeWidgetProvider
 
 /// 快捷操作小组件 2×2：prefs 索引 0 → row0 最近单据，索引 1 → row2 新建。
-class QuickActionsWidgetProvider : HomeWidgetProvider() {
+class QuickActionsWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
-        widgetData: SharedPreferences,
     ) {
+        val widgetData = LauncherIntegration.widgetData(context)
         appWidgetIds.forEach { widgetId ->
             try {
                 val views = RemoteViews(context.packageName, R.layout.quick_actions_widget).apply {
@@ -92,7 +91,7 @@ class QuickActionsWidgetProvider : HomeWidgetProvider() {
         } else {
             Uri.parse("snapclaim://entry/$action")
         }
-        val launch = HomeWidgetLaunchIntent.getActivity(context, MainActivity::class.java, uri)
+        val launch = LauncherIntegration.launchIntent(context, uri.toString())
         setOnClickPendingIntent(containerId, launch)
     }
 
@@ -102,11 +101,7 @@ class QuickActionsWidgetProvider : HomeWidgetProvider() {
             setViewVisibility(R.id.quick_row2, View.VISIBLE)
             setTextViewText(R.id.quick_row2_title, "新建报销单")
             setViewVisibility(R.id.quick_row2_amount, View.GONE)
-            val launch = HomeWidgetLaunchIntent.getActivity(
-                context,
-                MainActivity::class.java,
-                Uri.parse("snapclaim://entry/new_claim"),
-            )
+            val launch = LauncherIntegration.launchIntent(context, "new_claim")
             setOnClickPendingIntent(R.id.quick_row2, launch)
         }
     }

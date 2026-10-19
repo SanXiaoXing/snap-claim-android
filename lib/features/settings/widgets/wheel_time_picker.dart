@@ -8,7 +8,7 @@ import '../../../app/theme.dart';
 const double _rowHeight = 48;
 const double _wheelHeight = _rowHeight * 5;
 
-/// 24 小时制提醒时间选择器。小时和分钟独立循环，分钟可临时切换步进。
+/// 24 小时制提醒时间选择器。小时和分钟独立循环。
 Future<TimeOfDay?> showWheelTimePicker(
   BuildContext context, {
   required TimeOfDay initialTime,
@@ -36,27 +36,12 @@ class _WheelTimePickerSheet extends StatefulWidget {
 class _WheelTimePickerSheetState extends State<_WheelTimePickerSheet> {
   late int _hour = widget.initialTime.hour;
   late int _minute = widget.initialTime.minute;
-  int _minuteStep = 1;
-
-  void _setMinuteStep(int step) {
-    if (step == _minuteStep) return;
-    final rounded = (_minute / step).round() * step;
-    setState(() {
-      _minuteStep = step;
-      if (rounded == 60) {
-        _hour = (_hour + 1) % 24;
-        _minute = 0;
-      } else {
-        _minute = rounded;
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final reducedMotion = MediaQuery.of(context).disableAnimations;
-    final minutes = [for (var m = 0; m < 60; m += _minuteStep) m];
+    final minutes = [for (var m = 0; m < 60; m++) m];
     return SafeArea(
       top: false,
       child: Center(
@@ -196,7 +181,6 @@ class _WheelTimePickerSheetState extends State<_WheelTimePickerSheet> {
                                   ),
                                   Expanded(
                                     child: _WheelColumn(
-                                      key: ValueKey('minute-step-$_minuteStep'),
                                       label: '分钟',
                                       values: minutes,
                                       selected: _minute,
@@ -213,36 +197,6 @@ class _WheelTimePickerSheetState extends State<_WheelTimePickerSheet> {
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Text(
-                      '分钟步进',
-                      style: TextStyle(fontSize: 12, color: c.fgMuted),
-                    ),
-                    const Spacer(),
-                    for (final step in const [1, 5, 15]) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: ChoiceChip(
-                          label: Text('$step 分'),
-                          selected: _minuteStep == step,
-                          onSelected: (_) => _setMinuteStep(step),
-                          selectedColor: c.accentBg,
-                          side: BorderSide(
-                            color: _minuteStep == step ? c.accent : c.border,
-                          ),
-                          labelStyle: TextStyle(
-                            color: _minuteStep == step ? c.accent : c.fgMuted,
-                            fontWeight: _minuteStep == step
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -275,7 +229,6 @@ class _WheelTimePickerSheetState extends State<_WheelTimePickerSheet> {
 
 class _WheelColumn extends StatefulWidget {
   const _WheelColumn({
-    super.key,
     required this.label,
     required this.values,
     required this.selected,

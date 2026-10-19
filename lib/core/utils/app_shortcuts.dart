@@ -2,11 +2,12 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:quick_actions/quick_actions.dart';
+import 'package:flutter/services.dart';
 
 import '../../features/invoice/models/claim.dart';
 import 'entry_action.dart';
 import 'format.dart';
+import 'owed_widget.dart';
 
 /// 「打开报销单」图标：mipmap adaptive（中性深底 + 单据字形）。
 const String kShortcutIconClaim = 'ic_shortcut_claim';
@@ -55,7 +56,10 @@ const int kMaxClaimShortcuts = 2;
 const int kQuickWidgetMaxClaims = 1;
 
 /// 最近保存的未归档报销单（savedAt 降序）。
-List<Claim> recentUnarchivedClaims(List<Claim> claims, {int limit = kMaxClaimShortcuts}) {
+List<Claim> recentUnarchivedClaims(
+  List<Claim> claims, {
+  int limit = kMaxClaimShortcuts,
+}) {
   final unarchived = claims.where((c) => !c.archived).toList()
     ..sort((a, b) => b.savedAt.compareTo(a.savedAt));
   return unarchived.take(limit).toList();
@@ -87,11 +91,11 @@ List<EntryItem> buildEntryItems(
   ];
 }
 
-/// 长按动态快捷方式：封装 `quick_actions`。
+/// Android 长按动态快捷方式及桌面小组件的统一入口。
 class AppShortcuts {
   AppShortcuts._();
 
-  static const _plugin = QuickActions();
+  static const _channel = MethodChannel('snap_claim/launcher');
   static bool _bound = false;
 
   static Timer? _refreshDebounce;
@@ -101,10 +105,23 @@ class AppShortcuts {
   static Future<void> bind() async {
     if (_bound) return;
     _bound = true;
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'entriesChanged') await _takePendingEntries();
+    });
+    await _takePendingEntries();
+  }
+
+  static Future<void> _takePendingEntries() async {
     try {
-      await _plugin.initialize(EntryActionReceiver.emit);
+      final entries = await _channel.invokeListMethod<String>(
+        'takePendingEntries',
+      );
+      for (final entry in entries ?? const <String>[]) {
+        final action = parseHomeWidgetEntryUri(Uri.tryParse(entry));
+        if (action != null) EntryActionReceiver.emit(action);
+      }
     } catch (e) {
-      debugPrint('初始化长按快捷方式失败: $e');
+      debugPrint('读取桌面入口失败: $e');
     }
   }
 
@@ -130,8 +147,9 @@ class AppShortcuts {
     final oneClaim = buildEntryItems(claims, maxClaims: 1, withIcons: true);
     final onlyNew = buildEntryItems(const [], withIcons: true);
     List<EntryItem> withIcon(List<EntryItem> items, String icon) => [
-          for (final s in items) EntryItem(action: s.action, title: s.title, icon: icon),
-        ];
+      for (final s in items)
+        EntryItem(action: s.action, title: s.title, icon: icon),
+    ];
 
     final candidates = <List<EntryItem>>[
       full,
@@ -143,14 +161,16 @@ class AppShortcuts {
     for (var i = 0; i < candidates.length; i++) {
       final items = candidates[i];
       try {
-        await _plugin.setShortcutItems([
-          for (final s in items)
-            ShortcutItem(
-              type: s.action,
-              localizedTitle: s.title,
-              icon: s.icon ?? kShortcutIconClaim,
-            ),
-        ]);
+        await _channel.invokeMethod<void>('setShortcuts', {
+          'items': [
+            for (final s in items)
+              {
+                'action': s.action,
+                'title': s.title,
+                'icon': s.icon ?? kShortcutIconClaim,
+              },
+          ],
+        });
         return;
       } catch (e) {
         debugPrint('更新长按快捷方式失败（尝试 ${i + 1}/${candidates.length}）: $e');

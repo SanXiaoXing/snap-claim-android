@@ -177,8 +177,7 @@ A：没有。仓库只维护 **Android** 工程。
 | 层 | 技术 | 职责 |
 |---|---|---|
 | UI | Flutter (Material 3) | Android 界面、动效与交互 |
-| 核心 | Rust（`snap_claim_core`） | 票据文字的结构化解析、二维码内容解析 |
-| 桥接 | flutter_rust_bridge 2.12.0 | Dart ↔ Rust 绑定 |
+| 解析 | Dart | 票据文字的结构化解析、二维码内容解析 |
 | 存储 | sqflite（SQLite，schema v3） | 报销单与明细本地持久化 |
 | 识别 | google_mlkit_text_recognition | 图片文字识别 |
 | 扫码 | mobile_scanner + image_picker | 相机 / 相册二维码识别 |
@@ -189,7 +188,7 @@ A：没有。仓库只维护 **Android** 工程。
 - **无第三方状态库**：根 `SnapClaimApp` 是唯一可信数据源；数据向下用构造参数，变更向上用回调冒泡，`setState` 触发重建
 - **颜色只走 `context.colors`**：色板是挂在 `ThemeData` 上的 `ThemeExtension`，禁止硬编码颜色
 - **模型 `@immutable` + `copyWith`**：刷新一律生成新对象，列表用 `[...list]` 展开
-- **Rust 调用收口**在 `lib/core/utils/`，页面不直接 import 生成代码
+- **文本解析收口**在 `lib/core/utils/`，页面不直接实现解析规则
 - **异步三段式**：`await` → `if (!mounted) return;` → `setState`
 - **导航**：不用路由框架，全部 `MaterialPageRoute` 命令式 push
 
@@ -212,10 +211,7 @@ snap-claim-android/
 │   │   ├── backup/                             # .snapbackup 编解码与导入导出
 │   │   ├── database/                           # sqflite schema、迁移、CRUD
 │   │   └── utils/                              # 格式化 / OCR / 二维码 / 缓存 / 引导
-│   └── src/rust/                               # flutter_rust_bridge 生成代码
 │
-├── rust/src/api/                               # ocr.rs（票据文字）/ qr.rs（二维码）
-├── rust_builder/                               # Rust 构建插件壳（Android FFI）
 ├── site/                                       # 静态下载页
 ├── test/                                       # 单元 / 组件测试
 └── tool/                                       # 图标生成与校验脚本
@@ -230,19 +226,10 @@ flutter run                                   # 连接真机 / 模拟器
 flutter build apk --release                   # 单 APK
 flutter build apk --release --split-per-abi   # 按 ABI 拆分（推荐）
 
-cargo build --manifest-path rust/Cargo.toml   # 宿主机 Rust 动态库（跑桥接测试前）
 flutter test                                  # Flutter 测试
-# 含 RustLib.init 的测试需指定宿主动态库目录：
-# FRB_DART_LOAD_EXTERNAL_LIBRARY_NATIVE_LIB_DIR=$PWD/rust/target/debug flutter test
-
-cargo test --manifest-path rust/Cargo.toml    # Rust 解析逻辑测试
-
-flutter_rust_bridge_codegen generate          # 改过 Rust 接口后重新生成桥接
 ```
 
-- 需要 Flutter SDK（Dart `^3.12.2`）、Rust toolchain、Android SDK + NDK
-- 首次构建会编译 Rust 静态库，耗时较长属正常
-- `pubspec.yaml` 已配置 `sqlite3` 使用系统自带库，避免网络不可达时构建失败
+- 需要 Flutter SDK（Dart `^3.12.2`）、Android SDK + NDK
 
 ### 备份文件格式
 

@@ -70,7 +70,7 @@ class Claim {
 
   double get recordsTotal => records.fold(0.0, (s, r) => s + r.amount);
 
-  /// 出差天数与差补金额现由 Rust 核心库计算（见 core/utils/allowance.dart），
+  /// 出差天数与差补金额由下方 getter 计算，
   /// 报销单只持有编辑页算好并存入的 [allowance] 字段。
 
   /// 总金额 = 明细总额 + 差补 + 超标金额。
