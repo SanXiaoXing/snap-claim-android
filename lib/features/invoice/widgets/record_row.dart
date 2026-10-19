@@ -22,6 +22,12 @@ class RecordRow extends StatelessWidget {
     final b = Theme.of(context).brightness;
     final iconBox = compact ? 28.0 : 40.0;
     final iconSize = compact ? 14.0 : 18.0;
+    final subtitle = record.category == RecordCategory.car
+        ? [
+            record.carTripType?.label ?? CarTripType.city.label,
+            if (record.subtitle.isNotEmpty) record.subtitle,
+          ].join(' · ')
+        : record.subtitle;
     final row = Row(
       children: [
         Container(
@@ -57,10 +63,7 @@ class RecordRow extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                // 用车记录无备注时，展示「市内交通 / 往返交通」类型标记。
-                record.subtitle.isEmpty && record.category == RecordCategory.car
-                    ? (record.carTripType?.label ?? '')
-                    : record.subtitle,
+                subtitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -114,6 +117,7 @@ class RecordRow extends StatelessWidget {
 class DismissibleRecordRow extends StatefulWidget {
   final Record record;
   final VoidCallback onDismissed;
+  final VoidCallback? onEdit;
   final Key dismissKey;
 
   /// 切换用车行程类型（市内/往返）；仅用车记录传入，非空时启用右滑。
@@ -124,6 +128,7 @@ class DismissibleRecordRow extends StatefulWidget {
     required this.record,
     required this.onDismissed,
     required this.dismissKey,
+    this.onEdit,
     this.onTripTypeChanged,
   });
 
@@ -196,7 +201,15 @@ class _DismissibleRecordRowState extends State<DismissibleRecordRow> {
         confirm: _confirmDelete,
         onTriggered: widget.onDismissed,
       ),
-      child: RecordRow(record: widget.record),
+      child: Semantics(
+        button: widget.onEdit != null,
+        label: widget.onEdit == null ? null : '编辑${widget.record.title}',
+        child: InkWell(
+          onTap: widget.onEdit,
+          borderRadius: BorderRadius.circular(12),
+          child: RecordRow(record: widget.record),
+        ),
+      ),
     );
   }
 }

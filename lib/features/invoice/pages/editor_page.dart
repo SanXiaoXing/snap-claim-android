@@ -1,4 +1,4 @@
-// 报销单编辑页：表单 + 汇总 + 明细（左滑删除）+ 追加记录 FAB。
+// 报销单编辑页：表单 + 汇总 + 明细编辑/删除 + 追加记录 FAB。
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 
@@ -82,21 +82,22 @@ class _EditorPageState extends State<EditorPage> {
   }
 
   Claim _buildCurrent() => widget.claim.copyWith(
-        name: _nameCtrl.text.trim().isEmpty
-            ? _fmtDateRange()
-            : _nameCtrl.text.trim(),
-        startDate: _start,
-        endDate: _end,
-        records: _records,
-        allowance: _allowance,
-        excessAmount: _excess,
-        savedAt: DateTime.now(),
-      );
+    name: _nameCtrl.text.trim().isEmpty
+        ? _fmtDateRange()
+        : _nameCtrl.text.trim(),
+    startDate: _start,
+    endDate: _end,
+    records: _records,
+    allowance: _allowance,
+    excessAmount: _excess,
+    savedAt: DateTime.now(),
+  );
 
   /// 差补金额 = 出差天数 × 每日差补标准（100 元/天）。
   /// 按自然天计（含首尾两天），仅比较日期部分。
   double get _allowance {
-    final days = DateTime.utc(_end.year, _end.month, _end.day)
+    final days =
+        DateTime.utc(_end.year, _end.month, _end.day)
             .difference(DateTime.utc(_start.year, _start.month, _start.day))
             .inDays +
         1;
@@ -144,7 +145,9 @@ class _EditorPageState extends State<EditorPage> {
       if (c.id != o.id ||
           c.amount != o.amount ||
           c.category != o.category ||
-          c.carTripType != o.carTripType) {
+          c.carTripType != o.carTripType ||
+          c.title != o.title ||
+          c.subtitle != o.subtitle) {
         return true;
       }
     }
@@ -212,6 +215,17 @@ class _EditorPageState extends State<EditorPage> {
     _toast(excess > 0 ? '已填写超标金额 ${fmtMoney(excess)}' : '已清除超标金额');
   }
 
+  Future<void> _editRecord(Record record) async {
+    final updated = await showDialog<Record>(
+      context: context,
+      builder: (_) => _ManualAddDialog(initial: record),
+    );
+    if (!mounted || updated == null) return;
+    final index = _records.indexWhere((r) => r.id == record.id);
+    if (index < 0) return;
+    setState(() => _records[index] = updated);
+  }
+
   /// 打开扫码页；本次扫到的所有可识别明细统一追加到当前报销单，
   /// 未识别的内容按原文展示。
   Future<void> _scanToAdd() async {
@@ -229,9 +243,11 @@ class _EditorPageState extends State<EditorPage> {
     ];
     if (records.isNotEmpty) {
       setState(() => _records = [..._records, ...records]);
-      _toast(records.length == 1
-          ? '已添加：${records.first.title}'
-          : '已添加 ${records.length} 条明细');
+      _toast(
+        records.length == 1
+            ? '已添加：${records.first.title}'
+            : '已添加 ${records.length} 条明细',
+      );
     }
     if (raws.isNotEmpty) {
       _showRawContent(raws.join('\n\n——\n\n'));
@@ -271,9 +287,7 @@ class _EditorPageState extends State<EditorPage> {
           raw,
           style: TextStyle(fontSize: 14, color: c.fgMuted, height: 1.5),
         ),
-        actions: [
-          appDialogButton(ctx, label: '关闭'),
-        ],
+        actions: [appDialogButton(ctx, label: '关闭')],
       ),
     );
   }
@@ -311,8 +325,10 @@ class _EditorPageState extends State<EditorPage> {
                     onPressed: _save,
                     style: TextButton.styleFrom(
                       foregroundColor: c.accent,
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       textStyle: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -321,142 +337,152 @@ class _EditorPageState extends State<EditorPage> {
                     child: const Text('保存'),
                   ),
                 ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 表单卡片。
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: cardDecoration(c),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 表单卡片。
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: cardDecoration(c),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              FieldLabel('报销单名称'),
+                              TextField(
+                                controller: _nameCtrl,
+                                onChanged: (v) {
+                                  // 用户手动编辑名称后，不再自动跟随日期。
+                                  if (v.trim() != _fmtDateRange()) {
+                                    _nameAuto = false;
+                                  }
+                                },
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: c.fg,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: '请输入报销单名称',
+                                  hintStyle: TextStyle(color: c.fgSoft),
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 6,
+                                  ),
+                                  enabledBorder: UnderlineInputBorder(
+                                    borderSide: BorderSide(color: c.border),
+                                  ),
+                                  focusedBorder: UnderlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: c.accent,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              FieldLabel('出差日期'),
+                              const SizedBox(height: 6),
+                              DateRangePill(
+                                start: _start,
+                                end: _end,
+                                onTap: _pickDateRange,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SummaryCard(claim: current),
+                        const SizedBox(height: 16),
+                        Row(
                           children: [
-                            FieldLabel('报销单名称'),
-                            TextField(
-                              controller: _nameCtrl,
-                              onChanged: (v) {
-                                // 用户手动编辑名称后，不再自动跟随日期。
-                                if (v.trim() != _fmtDateRange()) {
-                                  _nameAuto = false;
-                                }
-                              },
+                            Text(
+                              '明细记录（${_records.length}）',
                               style: TextStyle(
-                                fontSize: 15,
-                                color: c.fg,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: '请输入报销单名称',
-                                hintStyle: TextStyle(color: c.fgSoft),
-                                isDense: true,
-                                contentPadding:
-                                    const EdgeInsets.symmetric(vertical: 6),
-                                enabledBorder: UnderlineInputBorder(
-                                  borderSide: BorderSide(color: c.border),
-                                ),
-                                focusedBorder: UnderlineInputBorder(
-                                  borderSide: BorderSide(
-                                      color: c.accent, width: 1.5),
-                                ),
+                                color: c.fg,
                               ),
                             ),
-                            const SizedBox(height: 20),
-                            FieldLabel('出差日期'),
-                            const SizedBox(height: 6),
-                            DateRangePill(
-                              start: _start,
-                              end: _end,
-                              onTap: _pickDateRange,
+                            const Spacer(),
+                            Text(
+                              '点击编辑 · 左滑删除',
+                              style: TextStyle(fontSize: 10, color: c.fgSoft),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      SummaryCard(claim: current),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Text(
-                            '明细记录（${_records.length}）',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: c.fg,
-                            ),
+                        const SizedBox(height: 12),
+                        TagSummary(counts: counts),
+                        if (_records.isEmpty)
+                          EmptyHint(
+                            icon: Icons.receipt_long_outlined,
+                            text: '暂无明细，点击右下角按钮添加',
+                            card: true,
+                          )
+                        else
+                          Column(
+                            children: [
+                              for (final record in _records)
+                                DismissibleRecordRow(
+                                  key: ValueKey(record.id),
+                                  record: record,
+                                  dismissKey: ValueKey(record.id),
+                                  onEdit: () => _editRecord(record),
+                                  onDismissed: () => setState(
+                                    () => _records.removeWhere(
+                                      (e) => e.id == record.id,
+                                    ),
+                                  ),
+                                  onTripTypeChanged:
+                                      record.category == RecordCategory.car
+                                      ? (t) => setState(() {
+                                          final index = _records.indexWhere(
+                                            (e) => e.id == record.id,
+                                          );
+                                          if (index < 0) return;
+                                          final r = _records[index];
+                                          _records[index] = Record(
+                                            id: r.id,
+                                            category: r.category,
+                                            title: r.title,
+                                            subtitle: r.subtitle,
+                                            amount: r.amount,
+                                            carTripType: t,
+                                          );
+                                        })
+                                      : null,
+                                ),
+                            ],
                           ),
-                          const Spacer(),
-                          Text(
-                            '左滑删除',
-                            style: TextStyle(fontSize: 10, color: c.fgSoft),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      TagSummary(counts: counts),
-                      if (_records.isEmpty)
-                        EmptyHint(
-                          icon: Icons.receipt_long_outlined,
-                          text: '暂无明细，点击右下角按钮添加',
-                          card: true,
-                        )
-                      else
-                        Column(
-                          children: [
-                            for (final record in _records)
-                              DismissibleRecordRow(
-                                key: ValueKey(record.id),
-                                record: record,
-                                dismissKey: ValueKey(record.id),
-                                onDismissed: () => setState(() => _records
-                                    .removeWhere((e) => e.id == record.id)),
-                                onTripTypeChanged:
-                                    record.category == RecordCategory.car
-                                        ? (t) => setState(() {
-                                              final index = _records.indexWhere(
-                                                  (e) => e.id == record.id);
-                                              if (index < 0) return;
-                                              final r = _records[index];
-                                              _records[index] = Record(
-                                                id: r.id,
-                                                category: r.category,
-                                                title: r.title,
-                                                subtitle: r.subtitle,
-                                                amount: r.amount,
-                                                carTripType: t,
-                                              );
-                                            })
-                                        : null,
-                              ),
-                          ],
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          FabMenu(
-            items: const [
-              FabMenuItem(icon: Icons.qr_code_scanner, label: '扫码添加'),
-              FabMenuItem(icon: Icons.image_outlined, label: '上传图片'),
-              FabMenuItem(icon: Icons.edit_outlined, label: '手动添加'),
-            ],
-            onAction: _fabAction,
-          ),
-        ],
-      ),
+              ],
+            ),
+            FabMenu(
+              items: const [
+                FabMenuItem(icon: Icons.qr_code_scanner, label: '扫码添加'),
+                FabMenuItem(icon: Icons.image_outlined, label: '上传图片'),
+                FabMenuItem(icon: Icons.edit_outlined, label: '手动添加'),
+              ],
+              onAction: _fabAction,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// 手动添加明细对话框：选择类型 + 输入金额（用车可选市内/往返）。
+/// 添加或编辑明细：编辑时预填现有字段并沿用原 ID。
 class _ManualAddDialog extends StatefulWidget {
-  const _ManualAddDialog();
+  final Record? initial;
+
+  const _ManualAddDialog({this.initial});
 
   @override
   State<_ManualAddDialog> createState() => _ManualAddDialogState();
@@ -464,163 +490,229 @@ class _ManualAddDialog extends StatefulWidget {
 
 class _ManualAddDialogState extends State<_ManualAddDialog> {
   // null 表示选中「超标金额」选项（不属于明细分类）。
-  RecordCategory? _category = RecordCategory.train;
-  CarTripType _carTripType = CarTripType.city;
-  final _amountCtrl = TextEditingController();
+  late RecordCategory? _category;
+  late CarTripType _carTripType;
+  late final TextEditingController _amountCtrl;
+  late final TextEditingController _titleCtrl;
+  late final TextEditingController _subtitleCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    _category = initial?.category ?? RecordCategory.train;
+    _carTripType = initial?.carTripType ?? CarTripType.city;
+    _amountCtrl = TextEditingController(text: initial?.amount.toString() ?? '');
+    _titleCtrl = TextEditingController(text: initial?.title ?? '');
+    _subtitleCtrl = TextEditingController(text: initial?.subtitle ?? '');
+  }
 
   @override
   void dispose() {
     _amountCtrl.dispose();
+    _titleCtrl.dispose();
+    _subtitleCtrl.dispose();
     super.dispose();
   }
 
   void _confirm() {
     final amount = double.tryParse(_amountCtrl.text.trim()) ?? 0;
+    if (!amount.isFinite) return;
     final category = _category;
     if (category == null) {
       // 超标金额：0 表示清除，负数按 0 处理。
-      Navigator.of(context).pop((
-        record: null,
-        excessAmount: amount < 0 ? 0 : amount,
-      ));
+      Navigator.of(
+        context,
+      ).pop((record: null, excessAmount: amount < 0 ? 0 : amount));
       return;
     }
     if (amount <= 0) return;
-    Navigator.of(context).pop((
-      record: Record(
-        id: nextRecordId(),
-        category: category,
-        title: category.label,
-        subtitle: '',
-        amount: amount,
-        carTripType: category == RecordCategory.car ? _carTripType : null,
-      ),
-      excessAmount: null,
-    ));
+    final record = Record(
+      id: widget.initial?.id ?? nextRecordId(),
+      category: category,
+      title: widget.initial == null
+          ? category.label
+          : (_titleCtrl.text.trim().isEmpty
+                ? category.label
+                : _titleCtrl.text.trim()),
+      subtitle: widget.initial == null ? '' : _subtitleCtrl.text.trim(),
+      amount: amount,
+      carTripType: category == RecordCategory.car ? _carTripType : null,
+    );
+    if (widget.initial != null) {
+      Navigator.of(context).pop(record);
+      return;
+    }
+    Navigator.of(context).pop((record: record, excessAmount: null));
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     return AppDialog(
-      title: '手动添加',
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '选择类型',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c.fgMuted),
-          ),
-          const SizedBox(height: 10),
-          // 类型选择网格。
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final cat in RecordCategory.values)
-                GestureDetector(
-                  onTap: () => setState(() => _category = cat),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _category == cat ? cat.base : c.bgSecondary,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: _category == cat ? cat.base : c.border,
+      title: widget.initial == null ? '手动添加' : '编辑明细',
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '选择类型',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: c.fgMuted,
+              ),
+            ),
+            const SizedBox(height: 10),
+            // 类型选择网格。
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final cat in RecordCategory.values)
+                  GestureDetector(
+                    onTap: () => setState(() {
+                      if (widget.initial != null &&
+                          _titleCtrl.text == _category?.label) {
+                        _titleCtrl.text = cat.label;
+                      }
+                      _category = cat;
+                    }),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _category == cat ? cat.base : c.bgSecondary,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _category == cat ? cat.base : c.border,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            cat.icon,
+                            size: 16,
+                            color: _category == cat ? Colors.white : c.fgMuted,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            cat.label,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _category == cat ? Colors.white : c.fg,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(cat.icon, size: 16,
-                            color: _category == cat ? Colors.white : c.fgMuted),
-                        const SizedBox(width: 4),
-                        Text(
-                          cat.label,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _category == cat ? Colors.white : c.fg,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
-                ),
                 // 超标金额：不属于明细分类，选中后填写超标金额。
-                GestureDetector(
-                  onTap: () => setState(() => _category = null),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _category == null
-                          ? const Color(0xFFEF4444)
-                          : c.bgSecondary,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
+                if (widget.initial == null)
+                  GestureDetector(
+                    onTap: () => setState(() => _category = null),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
                         color: _category == null
                             ? const Color(0xFFEF4444)
-                            : c.border,
+                            : c.bgSecondary,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _category == null
+                              ? const Color(0xFFEF4444)
+                              : c.border,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.warning_amber_outlined,
+                            size: 16,
+                            color: _category == null ? Colors.white : c.fgMuted,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '超标金额',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _category == null ? Colors.white : c.fg,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.warning_amber_outlined, size: 16,
-                            color: _category == null ? Colors.white : c.fgMuted),
-                        const SizedBox(width: 4),
-                        Text(
-                          '超标金额',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _category == null ? Colors.white : c.fg,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
-                ),
-            ],
-          ),
-          // 用车可选市内/往返。
-          if (_category == RecordCategory.car) ...[
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                for (final t in CarTripType.values) ...[
-                  CarTripChip(
-                    label: t.label,
-                    selected: _carTripType == t,
-                    onTap: () => setState(() => _carTripType = t),
-                  ),
-                  if (t != CarTripType.values.last) const SizedBox(width: 8),
-                ],
               ],
             ),
+            if (widget.initial != null) ...[
+              const SizedBox(height: 14),
+              TextField(
+                controller: _titleCtrl,
+                decoration: ocrInputDecoration(c, hint: '标题'),
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _subtitleCtrl,
+                decoration: ocrInputDecoration(c, hint: '备注（可选）'),
+                textInputAction: TextInputAction.next,
+              ),
+            ],
+            // 用车可选市内/往返。
+            if (_category == RecordCategory.car) ...[
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  for (final t in CarTripType.values) ...[
+                    CarTripChip(
+                      label: t.label,
+                      selected: _carTripType == t,
+                      onTap: () => setState(() => _carTripType = t),
+                    ),
+                    if (t != CarTripType.values.last) const SizedBox(width: 8),
+                  ],
+                ],
+              ),
+            ],
+            const SizedBox(height: 16),
+            Text(
+              '金额',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: c.fgMuted,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _amountCtrl,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              autofocus: true,
+              style: TextStyle(fontSize: 15, color: c.fg),
+              decoration: ocrInputDecoration(c, hint: '请输入金额'),
+              onSubmitted: (_) => _confirm(),
+            ),
           ],
-          const SizedBox(height: 16),
-          Text(
-            '金额',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c.fgMuted),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _amountCtrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            autofocus: true,
-            style: TextStyle(fontSize: 15, color: c.fg),
-            decoration: ocrInputDecoration(c, hint: '请输入金额'),
-            onSubmitted: (_) => _confirm(),
-          ),
-        ],
+        ),
       ),
       actions: [
         appDialogButton(context),
         FilledButton(
           onPressed: _confirm,
-          child: const Text('添加'),
+          child: Text(widget.initial == null ? '添加' : '保存'),
         ),
       ],
     );
@@ -664,4 +756,3 @@ class _ExitConfirmDialog extends StatelessWidget {
     );
   }
 }
-
