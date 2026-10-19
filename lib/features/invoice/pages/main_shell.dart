@@ -181,7 +181,7 @@ class _GlassTabBar extends StatefulWidget {
 }
 
 class _GlassTabBarState extends State<_GlassTabBar> {
-  // 与历史记录分段栏使用相同的位移和甩动判定。
+  // 底栏拖动的甩动判定；历史记录分段栏仅支持点按。
   static const _flingVelocity = 300.0;
 
   bool _dragging = false;

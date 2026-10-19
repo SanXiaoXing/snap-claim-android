@@ -1,6 +1,6 @@
-// 历史页「滑动分段 tab」与滑动操作回归测试。
+// 历史页点按切换 tab 与卡片滑动操作回归测试。
 //
-// 覆盖：默认 tab / 点按切换 / 拖拽 tab 切换 / 未报销左滑归档 /
+// 覆盖：默认 tab / 点按切换 / 横滑不切换 / 未报销左滑归档 /
 // 已报销右滑撤销归档 / 已报销左滑删除（二次确认）/ 两个 tab 的空态文案。
 //
 // 说明：
@@ -20,22 +20,22 @@ import 'package:snap_claim_android/features/invoice/widgets/sliding_pill.dart';
 import 'package:snap_claim_android/features/invoice/widgets/sliding_segmented_tabs.dart';
 
 Record _record(String id) => Record(
-      id: id,
-      category: RecordCategory.train,
-      title: '明细$id',
-      subtitle: '',
-      amount: 100,
-    );
+  id: id,
+  category: RecordCategory.train,
+  title: '明细$id',
+  subtitle: '',
+  amount: 100,
+);
 
 Claim _claim(String id, {bool archived = false}) => Claim(
-      id: id,
-      name: '报销单$id',
-      startDate: DateTime(2026, 7, 1),
-      endDate: DateTime(2026, 7, 3),
-      records: [_record('r$id')],
-      savedAt: DateTime(2026, 7, 3),
-      archived: archived,
-    );
+  id: id,
+  name: '报销单$id',
+  startDate: DateTime(2026, 7, 1),
+  endDate: DateTime(2026, 7, 3),
+  records: [_record('r$id')],
+  savedAt: DateTime(2026, 7, 3),
+  archived: archived,
+);
 
 /// 模拟根组件的状态外壳：持有 claims，回调里 setState 刷新。
 class _Harness extends StatefulWidget {
@@ -72,22 +72,25 @@ class _HarnessState extends State<_Harness> {
         onSaveClaim: (_) {},
         onArchiveClaim: (c) {
           widget.archivedLog.add(c.id);
-          setState(() => _claims = [
-                for (final x in _claims)
-                  x.id == c.id ? x.copyWith(archived: true) : x,
-              ]);
+          setState(
+            () => _claims = [
+              for (final x in _claims)
+                x.id == c.id ? x.copyWith(archived: true) : x,
+            ],
+          );
         },
         onRestoreClaim: (c) {
           widget.restoredLog.add(c.id);
-          setState(() => _claims = [
-                for (final x in _claims)
-                  x.id == c.id ? x.copyWith(archived: false) : x,
-              ]);
+          setState(
+            () => _claims = [
+              for (final x in _claims)
+                x.id == c.id ? x.copyWith(archived: false) : x,
+            ],
+          );
         },
         onDeleteClaim: (c) {
           widget.deletedLog.add(c.id);
-          setState(
-              () => _claims = _claims.where((x) => x.id != c.id).toList());
+          setState(() => _claims = _claims.where((x) => x.id != c.id).toList());
         },
       ),
     );
@@ -118,13 +121,10 @@ Future<void> _pump(
 /// QA 对抗性用例专用：可控选中下标的 [SlidingSegmentedTabs] 宿主。
 /// 记录每次 onChanged 收到的下标（用于断言「是否发生了切换」）。
 class _TabHost extends StatefulWidget {
-  final int initialIndex;
   final List<int>? changes;
   final bool reduceMotion;
 
   const _TabHost({
-    super.key,
-    this.initialIndex = 0,
     this.changes,
     this.reduceMotion = false,
   });
@@ -134,7 +134,7 @@ class _TabHost extends StatefulWidget {
 }
 
 class _TabHostState extends State<_TabHost> {
-  late int _index = widget.initialIndex;
+  int _index = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -182,24 +182,19 @@ void main() {
     expect(find.text('报销单u1'), findsNothing);
   });
 
-  testWidgets('在 tab 标签上横向拖拽可切换 tab', (tester) async {
+  testWidgets('在 tab 标签上横向拖拽不会切换 tab', (tester) async {
     await _pump(tester, [_claim('u1'), _claim('a1', archived: true)]);
 
-    // 从「未报销」标签向右拖拽超过半格 → 切到「已报销」。
     await tester.drag(find.text('未报销'), const Offset(300, 0));
     await tester.pumpAndSettle();
 
-    expect(find.text('报销单a1'), findsOneWidget);
-    expect(find.text('报销单u1'), findsNothing);
+    expect(find.text('报销单a1'), findsNothing);
+    expect(find.text('报销单u1'), findsOneWidget);
   });
 
   testWidgets('未报销 tab 左滑归档：卡片消失且回调收到 id', (tester) async {
     final archived = <String>[];
-    await _pump(
-      tester,
-      [_claim('u1'), _claim('u2')],
-      archivedLog: archived,
-    );
+    await _pump(tester, [_claim('u1'), _claim('u2')], archivedLog: archived);
 
     expect(find.text('报销单u1'), findsOneWidget);
     expect(find.text('报销单u2'), findsOneWidget);
@@ -214,11 +209,10 @@ void main() {
 
   testWidgets('已报销 tab 右滑撤销归档：卡片消失且回调收到 id', (tester) async {
     final restored = <String>[];
-    await _pump(
-      tester,
-      [_claim('a1', archived: true), _claim('a2', archived: true)],
-      restoredLog: restored,
-    );
+    await _pump(tester, [
+      _claim('a1', archived: true),
+      _claim('a2', archived: true),
+    ], restoredLog: restored);
 
     await tester.tap(find.text('已报销'));
     await tester.pumpAndSettle();
@@ -233,11 +227,10 @@ void main() {
 
   testWidgets('已报销 tab 左滑删除（二次确认）：卡片消失且回调收到 id', (tester) async {
     final deleted = <String>[];
-    await _pump(
-      tester,
-      [_claim('a1', archived: true), _claim('a2', archived: true)],
-      deletedLog: deleted,
-    );
+    await _pump(tester, [
+      _claim('a1', archived: true),
+      _claim('a2', archived: true),
+    ], deletedLog: deleted);
 
     await tester.tap(find.text('已报销'));
     await tester.pumpAndSettle();
@@ -267,143 +260,65 @@ void main() {
 
   // ==================== 以下为 QA 增补的对抗性 / 边界用例 ====================
 
-  testWidgets('对抗1：tab 栏小幅拖动未过阈值 → 回弹且不触发 onChanged',
-      (tester) async {
+  testWidgets('tab 栏左右拖动均不切换，胶囊不跟手', (tester) async {
     final changes = <int>[];
     await tester.pumpWidget(_TabHost(changes: changes));
     await tester.pumpAndSettle();
 
-    final rest = tester.getRect(find.byType(SlidingPill));
+    final rest = tester.getRect(find.byType(SlidingPill)).left;
+    await tester.drag(find.byType(SlidingSegmentedTabs), const Offset(400, 0));
+    await tester.pumpAndSettle();
+    expect(changes, isEmpty);
+    expect(tester.getRect(find.byType(SlidingPill)).left, closeTo(rest, 0.5));
 
-    // 轨道宽 ≈ 760，半格 ≈ 190；拖 60px 且慢速（100px/s < 300px/s）→ 不切换。
-    await tester.timedDrag(
-      find.byType(SlidingSegmentedTabs),
-      const Offset(60, 0),
-      const Duration(milliseconds: 600),
+    await tester.tap(find.text('已报销'));
+    await tester.pumpAndSettle();
+    expect(changes, [1]);
+    final selected = tester.getRect(find.byType(SlidingPill)).left;
+    await tester.drag(find.byType(SlidingSegmentedTabs), const Offset(-400, 0));
+    await tester.pumpAndSettle();
+    expect(changes, [1]);
+    expect(
+      tester.getRect(find.byType(SlidingPill)).left,
+      closeTo(selected, 0.5),
     );
-    await tester.pumpAndSettle();
-
-    expect(changes, isEmpty, reason: '未过阈值不应触发 onChanged');
-    final after = tester.getRect(find.byType(SlidingPill));
-    expect(after.left, closeTo(rest.left, 0.5), reason: '胶囊应回弹到原位');
   });
 
-  testWidgets('对抗2：tab 栏按住跟手拖动 → 胶囊实时跟随，松手落到目标段',
-      (tester) async {
-    final changes = <int>[];
-    await tester.pumpWidget(_TabHost(initialIndex: 1, changes: changes));
-    await tester.pumpAndSettle();
-
-    final track = tester.getRect(find.byType(SlidingSegmentedTabs));
-    final rest1 = tester.getRect(find.byType(SlidingPill)).left;
-
-    final g = await tester.startGesture(
-      tester.getCenter(find.byType(SlidingSegmentedTabs)),
-    );
-    // 第一段位移被 drag-start 的 touch slop 吃掉（Flutter 既定行为），
-    // 从第二段开始才计入跟手位移，故这里从第二段起采样。
-    await g.moveBy(const Offset(-50, 0));
-    await tester.pump();
-    await g.moveBy(const Offset(-60, 0));
-    await tester.pump();
-    final mid1 = tester.getRect(find.byType(SlidingPill)).left;
-    await g.moveBy(const Offset(-80, 0));
-    await tester.pump();
-    final mid2 = tester.getRect(find.byType(SlidingPill)).left;
-
-    expect(mid1, lessThan(rest1 - 20), reason: '按住左移后胶囊应跟随左移');
-    expect(mid2, lessThan(mid1 - 40), reason: '继续左移胶囊应继续跟随');
-    expect(changes, isEmpty, reason: '未松手前不应触发切换');
-
-    // 继续左移使累计位移过半格 → 松手切到 index 0。
-    await g.moveBy(const Offset(-160, 0));
-    await tester.pump();
-    await g.up();
-    await tester.pumpAndSettle();
-
-    expect(changes, [0], reason: '松手后应切到左段 index 0');
-    final landed = tester.getRect(find.byType(SlidingPill)).left;
-    expect(landed, lessThan(track.left + track.width / 2),
-        reason: '胶囊应落到左段');
-    expect(landed, lessThan(rest1 - 100), reason: '胶囊应从右段明显左移');
-  });
-
-  testWidgets('对抗3a：边界不越界（index 0 左拖 / index 1 右拖 均不回绕）',
-      (tester) async {
-    // index 0 朝左边界拖 → 不得回绕到最后一页。
-    final c0 = <int>[];
-    await tester.pumpWidget(_TabHost(key: const ValueKey('b0'), changes: c0));
-    await tester.pumpAndSettle();
-    await tester.drag(
-        find.byType(SlidingSegmentedTabs), const Offset(-400, 0));
-    await tester.pumpAndSettle();
-    expect(c0, isEmpty, reason: 'index 0 左拖不得回绕到 index 1');
-
-    // index 1 朝右边界拖 → 不得回绕到第一页。
-    // 换 key 触发全新 State，避免复用上一段的 index=0。
-    final c1 = <int>[];
-    await tester.pumpWidget(
-        _TabHost(key: const ValueKey('b1'), initialIndex: 1, changes: c1));
-    await tester.pumpAndSettle();
-    await tester.drag(
-        find.byType(SlidingSegmentedTabs), const Offset(400, 0));
-    await tester.pumpAndSettle();
-    expect(c1, isEmpty, reason: 'index 1 右拖不得回绕到 index 0');
-  });
-
-  testWidgets('对抗3b：方向语义 = 拖向右前进一格 / 拖向左后退一格',
-      (tester) async {
-    final changes = <int>[];
-    await tester.pumpWidget(_TabHost(changes: changes));
-    await tester.pumpAndSettle();
-
-    await tester.drag(
-        find.byType(SlidingSegmentedTabs), const Offset(400, 0));
-    await tester.pumpAndSettle();
-    expect(changes, [1], reason: 'index 0 向右拖 → 前进到 index 1');
-
-    await tester.drag(
-        find.byType(SlidingSegmentedTabs), const Offset(-400, 0));
-    await tester.pumpAndSettle();
-    expect(changes, [1, 0], reason: 'index 1 向左拖 → 后退到 index 0');
-  });
-
-  testWidgets('对抗4a：减少动态下 tab 点按/拖拽仍可切换且不卡死',
-      (tester) async {
+  testWidgets('减少动态下点按切换正常，拖动无效', (tester) async {
     final changes = <int>[];
     await tester.pumpWidget(_TabHost(changes: changes, reduceMotion: true));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('已报销'));
     await tester.pumpAndSettle();
-    expect(changes, [1], reason: '减少动态下点按仍应切换');
+    expect(changes, [1]);
+
+    await tester.drag(find.byType(SlidingSegmentedTabs), const Offset(-320, 0));
+    await tester.pumpAndSettle();
+    expect(changes, [1]);
 
     await tester.tap(find.text('未报销'));
     await tester.pumpAndSettle();
     expect(changes, [1, 0]);
-
-    await tester.drag(
-        find.byType(SlidingSegmentedTabs), const Offset(320, 0));
-    await tester.pumpAndSettle();
-    expect(changes, [1, 0, 1], reason: '减少动态下拖拽仍应切换');
   });
 
-  testWidgets('对抗4b：减少动态下整页 HistoryPage 切换正常（jumpToPage）',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: buildLightTheme(),
-      home: MediaQuery(
-        data: const MediaQueryData(disableAnimations: true),
-        child: Scaffold(
-          body: _Harness(
-            initial: [_claim('u1'), _claim('a1', archived: true)],
-            archivedLog: [],
-            restoredLog: [],
-            deletedLog: [],
+  testWidgets('对抗4b：减少动态下整页 HistoryPage 切换正常（jumpToPage）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildLightTheme(),
+        home: MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: Scaffold(
+            body: _Harness(
+              initial: [_claim('u1'), _claim('a1', archived: true)],
+              archivedLog: [],
+              restoredLog: [],
+              deletedLog: [],
+            ),
           ),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('已报销'));
@@ -411,19 +326,15 @@ void main() {
     expect(find.text('报销单a1'), findsOneWidget);
     expect(find.text('报销单u1'), findsNothing);
 
-    await tester.drag(find.text('未报销'), const Offset(-400, 0));
+    await tester.tap(find.text('未报销'));
     await tester.pumpAndSettle();
-    expect(find.text('报销单u1'), findsOneWidget,
-        reason: '减少动态下拖 tab 仍应切回未报销');
+    expect(find.text('报销单u1'), findsOneWidget, reason: '减少动态下点按 tab 仍应切回未报销');
   });
 
-  testWidgets('对抗5：非卡片区域横滑 → PageView 翻页并反向同步 tab',
-      (tester) async {
+  testWidgets('列表非卡片区域左右横滑不会翻页', (tester) async {
     await _pump(tester, [_claim('u1'), _claim('a1', archived: true)]);
 
     final pillBefore = tester.getRect(find.byType(SlidingPill)).left;
-
-    // 在 PageView 中部（单张卡片下方的空白区，非卡片处）向左快滑翻页。
     await tester.timedDrag(
       find.byType(PageView),
       const Offset(-320, 0),
@@ -431,10 +342,27 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final pillAfter = tester.getRect(find.byType(SlidingPill)).left;
-    expect(pillAfter, greaterThan(pillBefore + 100),
-        reason: 'PageView 翻页后应反向同步 tab（胶囊移到右段）');
-    expect(find.text('报销单a1'), findsOneWidget, reason: '应显示已报销列表');
+    expect(
+      tester.getRect(find.byType(SlidingPill)).left,
+      closeTo(pillBefore, 0.5),
+    );
+    expect(find.text('报销单u1'), findsOneWidget);
+    expect(find.text('报销单a1'), findsNothing);
+
+    await tester.tap(find.text('已报销'));
+    await tester.pumpAndSettle();
+    final archivedPill = tester.getRect(find.byType(SlidingPill)).left;
+    await tester.timedDrag(
+      find.byType(PageView),
+      const Offset(320, 0),
+      const Duration(milliseconds: 200),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(find.byType(SlidingPill)).left,
+      closeTo(archivedPill, 0.5),
+    );
+    expect(find.text('报销单a1'), findsOneWidget);
     expect(find.text('报销单u1'), findsNothing);
   });
 
@@ -454,29 +382,30 @@ void main() {
     expect(pillAfter, closeTo(pillBefore, 0.5), reason: 'tab 不应因卡片横滑而切换');
   });
 
-  testWidgets('对抗7：上层 setState 迁移 archived → 卡片在两 tab 间迁移',
-      (tester) async {
+  testWidgets('对抗7：上层 setState 迁移 archived → 卡片在两 tab 间迁移', (tester) async {
     late StateSetter setState;
     var archived = false;
     final claim = _claim('u1');
 
-    await tester.pumpWidget(MaterialApp(
-      theme: buildLightTheme(),
-      home: Scaffold(
-        body: StatefulBuilder(
-          builder: (context, ss) {
-            setState = ss;
-            return HistoryPage(
-              claims: [claim.copyWith(archived: archived)],
-              onSaveClaim: (_) {},
-              onArchiveClaim: (_) {},
-              onRestoreClaim: (_) {},
-              onDeleteClaim: (_) {},
-            );
-          },
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildLightTheme(),
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, ss) {
+              setState = ss;
+              return HistoryPage(
+                claims: [claim.copyWith(archived: archived)],
+                onSaveClaim: (_) {},
+                onArchiveClaim: (_) {},
+                onRestoreClaim: (_) {},
+                onDeleteClaim: (_) {},
+              );
+            },
+          ),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
     expect(find.text('报销单u1'), findsOneWidget);
 
@@ -497,8 +426,7 @@ void main() {
     expect(find.text('报销单u1'), findsOneWidget, reason: '应回到未报销 tab');
   });
 
-  testWidgets('对抗8：已报销左滑删除弹窗点「取消」→ 卡片仍在、onDelete 未调用',
-      (tester) async {
+  testWidgets('对抗8：已报销左滑删除弹窗点「取消」→ 卡片仍在、onDelete 未调用', (tester) async {
     final deleted = <String>[];
     await _pump(tester, [_claim('a1', archived: true)], deletedLog: deleted);
 
@@ -518,25 +446,26 @@ void main() {
 
   testWidgets('对抗9：浅色 / 深色主题下渲染同一页面均无异常', (tester) async {
     for (final theme in [buildLightTheme(), buildDarkTheme()]) {
-      await tester.pumpWidget(MaterialApp(
-        theme: theme,
-        home: Scaffold(
-          body: _Harness(
-            initial: [_claim('u1'), _claim('a1', archived: true)],
-            archivedLog: [],
-            restoredLog: [],
-            deletedLog: [],
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          home: Scaffold(
+            body: _Harness(
+              initial: [_claim('u1'), _claim('a1', archived: true)],
+              archivedLog: [],
+              restoredLog: [],
+              deletedLog: [],
+            ),
           ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
       expect(find.text('报销单u1'), findsOneWidget);
       expect(tester.takeException(), isNull);
     }
   });
 
-  testWidgets('对抗10：卸载页面不抛异常（PageController/Ticker 已释放）',
-      (tester) async {
+  testWidgets('对抗10：卸载页面不抛异常（PageController/Ticker 已释放）', (tester) async {
     await _pump(tester, [_claim('u1'), _claim('a1', archived: true)]);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();

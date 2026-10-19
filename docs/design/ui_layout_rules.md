@@ -109,13 +109,13 @@ Scaffold(
 - 编辑页明细：`DismissibleRecordRow` 左滑删除，删除后 `setState` 移除（不弹确认）。
 - 规则：**明确的"提交"动作（滑动归档/删除/添加）才给触感反馈**，且要 `if (!mounted) return` 守卫。
 
-## 4.4 分段 tab（历史页滑动切换）
+## 4.4 分段 tab（历史页点按切换）
 > 历史页把原独立「归档页」并入为第二段 tab，归档入口不再单开页面。
 - 组件 `SlidingSegmentedTabs`（`widgets/sliding_segmented_tabs.dart`）：`labels` + 可选 `counts`，由父级持有 `index` 并通过 `onChanged` 回传。
 - 尺寸：轨道 `height: 38`、底 `c.bgSecondary`、圆角 `19`、`1px c.border`；胶囊复用 `SlidingPill`（`top/bottom: 3`、`radius: 16`），`slot = 轨道宽 / labels.length`，`left = index*slot + 3`、`width = slot - 6`（用 `LayoutBuilder` 取宽）。
 - 标签：选中 `Colors.white` + `w700`、未选中 `c.fgMuted` + `w600`，字号 `13`；数量（传入时）字号 `11`；用 `AnimatedDefaultTextStyle`（220ms `easeOutCubic`）过渡。
-- 交互：点按立即切换；按住拖动胶囊实时跟手（`SlidingPill(animate:false)`），松手按「位移过半格 或 甩动速度足够」切换、否则回弹；**仅在真正发生切换时** `selectionClick()`。
-- ⚠️ 手势竞技场约束：手指落在卡片（`Dismissible`）上横滑时 `Dismissible` 必定赢，外层 `PageView` 拿不到手势；因此**内容区横滑不用于切 tab**（避免破坏归档/撤销手感），"滑动切 tab"由 tab 栏自身拖拽提供。`PageView` 仅保留在非卡片区域翻页，并用 `onPageChanged` 反向同步 tab（`history_page.dart` 顶部注释）。
+- 交互：仅点按标签切换并触发 `selectionClick()`；横向拖动标签栏不切换。
+- 内容区 `PageView` 使用 `NeverScrollableScrollPhysics`，由点按标签控制页面；列表中的卡片仍支持左滑归档、右滑撤销和左滑删除。
 
 ## 4.5 空状态
 - 统一用 `EmptyHint(icon, text, card: true/false)`（`empty_hint.dart`），不要自己写占位。
@@ -182,7 +182,7 @@ Container(padding:16, cardDecoration) ─ Column
   - 外层 `SafeArea(top:false)`，高度 `64 + 16`，`Padding.fromLTRB(20,0,20,16)`。
   - **布局**：`Row` = 主菜单胶囊 `Expanded` + 间距 `12` + 独立 AI 圆钮 `AiBallButton`（`58px`，在 `64px` 高的菜单行中垂直居中）。小球不并入主胶囊（对齐 askAI blobOnly / 参考图分隔形态）。
   - 胶囊 `ClipRRect(32)` + `BackdropFilter(blur 28)` + 半透明底色（亮色 `F8FAFC@0.92`、暗色 `2A2722@0.78`）+ `1px` 描边 + 投影。
-  - 选中胶囊 `SlidingPill`（`widgets/sliding_pill.dart`，由原 `_SelectedPill` 提取为公共组件）：与外壳内壁四周各留 `2px`；用 `LayoutBuilder` 算每格宽，**临界阻尼弹簧**（stiffness 246 / damping 31.4 ≈ 0.4s）滑动，从当前屏幕值出发可被打断重定向；底栏和历史页分段 tab 拖动时都用 `animate:false` 实时跟手，松手按半格位移或 300px/s 甩动速度切到相邻项，否则弹回；减少动态时直接切换。
+  - 选中胶囊 `SlidingPill`（`widgets/sliding_pill.dart`，由原 `_SelectedPill` 提取为公共组件）：与外壳内壁四周各留 `2px`；用 `LayoutBuilder` 算每格宽，**临界阻尼弹簧**（stiffness 246 / damping 31.4 ≈ 0.4s）滑动，从当前屏幕值出发可被打断重定向；底栏拖动时用 `animate:false` 实时跟手，松手按半格位移或 300px/s 甩动速度切到相邻项，否则弹回；历史页分段 tab 仅支持点按，减少动态时直接切换。
   - 菜单项 `_GlassTab`：`Expanded` + `Column` 图标(`22`)+文字(`10.5`)，选中 `Colors.white`、未选 `c.fgMuted`，图标 `AnimatedSwitcher` 在实心/描边间淡入缩放切换。
   - AI 小球 `AiBallButton`（`widgets/ai_mascot.dart`）：玻璃圆壳 **58px，垂直居中** + 内嵌 `AIMascot`（约 38px accent blob + 双眼；水滴、叶片轮廓每 **9s** 缓慢循环，眼睛随轮廓左右转向并在转向时眨眼；按压左/右半边会朝触点转向并眨一次眼；减少动态时固定为静态造型）。点击弹出「AI 情况说明」占位底部弹层。
   - **生成中 / 生成完成动效**（参考 grok-icon-study）：AI 弹层头部 `AIMascot` 用 `phase` 驱动——`generating` → **searching**（左右搜寻摆动 + 眼睛扫视）；`success` → **celebrate**（spinBounce 一圈 360° + 弹跳回弹，约 900ms，随后持续轻跳）。切入 celebrate 时自动播转圈；`disableAnimations` 时全部跳过。
